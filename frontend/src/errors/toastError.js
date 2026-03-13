@@ -1,0 +1,62 @@
+import { toast } from "react-toastify";
+import { i18n } from "../translate/i18n";
+import { isString } from 'lodash';
+
+const toastError = (err) => {
+  const status = err?.response?.status;
+  const isNetworkOrServer =
+    !status || status >= 500 || err?.message === "Network Error" || err?.code === "ECONNABORTED";
+
+  if (isNetworkOrServer) {
+    // Silencia erros de infraestrutura (ex.: DB/servidor indisponível) para não poluir a UI
+    // Mantém log para diagnóstico em dev (sem referenciar process diretamente)
+    const isDevEnv =
+      (typeof process !== "undefined" &&
+        process.env &&
+        process.env.NODE_ENV !== "production");
+    if (isDevEnv) {
+      // eslint-disable-next-line no-console
+      console.warn("[toastError] Silenciado erro de servidor/rede:", err);
+    }
+    return;
+  }
+
+  const errorMsg = err?.response?.data?.error || err?.response?.data?.message;
+  if (errorMsg) {
+    if (i18n.exists(`backendErrors.${errorMsg}`)) {
+      toast.error(i18n.t(`backendErrors.${errorMsg}`), {
+        toastId: errorMsg,
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+      return;
+    } else {
+      toast.error(errorMsg, {
+        toastId: errorMsg,
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+      return;
+    }
+  }
+
+  if (isString(err)) {
+    toast.error(err);
+    return;
+  }
+
+  toast.error("Ocorreu um erro. Tente novamente.");
+  return;
+};
+
+export default toastError;

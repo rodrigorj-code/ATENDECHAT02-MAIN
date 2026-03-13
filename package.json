@@ -1,0 +1,10 @@
+{
+  "name": "vbsolutionnn",
+  "private": true,
+  "description": "Script raiz para subir frontend + backend local (não afeta Railway)",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "dev:frontend": "cd frontend && npm run start",
+    "dev:backend": "cd backend && npm run dev"
+  }
+}

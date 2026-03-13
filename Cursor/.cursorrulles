@@ -1,0 +1,64 @@
+# VBSolutionCRM — Regras do Agente
+
+## Stack
+React + Node.js/Express + PostgreSQL + Redis + S3
+
+## Tipografia
+- Helvetica Neue SOMENTE
+- Títulos: font-weight 300 (Light)
+- Corpo: font-weight 400 (Regular)
+- NUNCA usar font-weight 500, 600, 700 ou "bold"
+- Hierarquia por tamanho e cor, nunca por peso
+
+## Paleta
+- Primário: #1A2E4A (azul escuro)
+- Accent: #2563EB (azul médio)
+- Fundo: #FFFFFF / Surface: #F8FAFC
+- Sempre via CSS var() — nunca hex direto no componente
+
+## Antes de criar qualquer coisa
+1. Ler os arquivos do módulo existente mais próximo
+2. Verificar o .env — usar serviços já configurados
+3. Buscar componente similar no codebase antes de criar um novo
+4. Planejar impacto de performance
+
+## Performance — Obrigatório
+- N+1 é proibido — sempre JOIN ou batch
+- Cache Redis em listagens e dados frequentes
+- Paginação cursor-based em todas as listas
+- Virtualização em listas > 50 itens
+- SELECT apenas colunas necessárias — nunca SELECT *
+- Nova feature não pode degradar tempo de resposta existente
+
+## Credenciais
+- Sempre via process.env — nunca hardcode
+- Centralizado em src/config/env.ts com validação Zod
+- S3 já configurado: usar o bucket existente
+- Redis já configurado: usar a conexão existente
+- Nunca criar serviços paralelos ao que já existe no .env
+
+## Sugestões Proativas
+Ao revisar qualquer código, SEMPRE verificar e reportar:
+- font-weight > 400 → substituir
+- Cor hex direta → substituir por var()
+- Query em loop → refatorar para batch
+- Lista sem virtualização > 50 itens → adicionar
+- Cache ausente em dado lido frequentemente → adicionar
+- process.env fora de config/ → mover
+```
+
+---
+
+## 🚀 Sugestões Extras para turbinar ainda mais
+
+**1. `CONVENTIONS.md` — na raiz do projeto**
+Um arquivo com exemplos reais do seu código (uma rota completa, um componente, uma query) para o agente calibrar exatamente no seu estilo. Mais poderoso do que qualquer documento genérico.
+
+**2. `ARCHITECTURE.md` — na raiz**
+Diagrama de como os módulos se conectam, quais são os bounded contexts, onde fica cada responsabilidade. O agente consulta antes de propor qualquer nova estrutura.
+
+**3. Pasta `.cursor/context/`**
+Coloque os dois `.docx` que criamos aqui. No `.cursorrules` referencie:
+```
+Contexto de design: .cursor/VBSolutionCRM-Design-v2.docx
+Contexto de arquitetura: .cursor/VBSolutionCRM-Architecture-v2.docx

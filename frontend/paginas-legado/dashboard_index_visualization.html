@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Index - Visualização</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1e293b;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 20px 0;
+        }
+
+        .greeting {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1e293b;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            min-height: 340px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-icon {
+            width: 20px;
+            height: 20px;
+            color: #64748b;
+        }
+
+        .card-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .activity-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .status-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-completed {
+            background-color: #10b981;
+        }
+
+        .status-in-progress {
+            background-color: #3b82f6;
+        }
+
+        .status-pending {
+            background-color: #f59e0b;
+        }
+
+        .status-overdue {
+            background-color: #ef4444;
+        }
+
+        .activity-info {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+
+        .activity-status {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .calendar-date {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .btn-today {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-today:hover {
+            background-color: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+            margin-bottom: 8px;
+            border-left: 3px solid;
+        }
+
+        .event-calendar {
+            border-left-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+
+        .event-activity {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        }
+
+        .event-project {
+            border-left-color: #8b5cf6;
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+        }
+
+        .event-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .event-time {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        .event-title {
+            font-size: 14px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: #64748b;
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            background: #f1f5f9;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .empty-text {
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            color: #64748b;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #1e293b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .card-actions {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .dashboard-card:hover .card-actions {
+            opacity: 1;
+        }
+
+        .drag-handle {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            cursor: grab;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .dashboard-card:hover .drag-handle {
+            opacity: 1;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+            
+            .greeting {
+                font-size: 24px;
+            }
+        }
+
+        /* Animações de entrada */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dashboard-card {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .dashboard-card:nth-child(1) { animation-delay: 0.1s; }
+        .dashboard-card:nth-child(2) { animation-delay: 0.2s; }
+        .dashboard-card:nth-child(3) { animation-delay: 0.3s; }
+        .dashboard-card:nth-child(4) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header com Saudação -->
+        <div class="dashboard-header">
+            <h1 class="greeting">Boa tarde, Davi</h1>
+        </div>
+
+        <!-- Grid de Cards do Dashboard -->
+        <div class="dashboard-grid">
+            <!-- Card: Recentes -->
+            <div class="dashboard-card">
+                <div class="drag-handle">⋮⋮</div>
+                <div class="card-actions">
+                    <button style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M3 12h18M3 18h18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Recentes
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <div class="activity-item">
+                        <div class="status-icon status-completed"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Revisar proposta de projeto</div>
+                            <div class="activity-status">Concluído</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="status-icon status-in-progress"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Enviar email para cliente</div>
+                            <div class="activity-status">Em andamento</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="status-icon status-pending"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Preparar apresentação</div>
+                            <div class="activity-status">Pendente</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card: Agenda -->
+            <div class="dashboard-card">
+                <div class="drag-handle">⋮⋮</div>
+                <div class="card-actions">
+                    <button style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M3 12h18M3 18h18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Agenda
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button style="background: none; border: none; cursor: pointer; padding: 4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"/>
+                                </svg>
+                            </button>
+                            <span class="calendar-date">Sábado, 10 de jan.</span>
+                            <button style="background: none; border: none; cursor: pointer; padding: 4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="btn-today">Hoje</button>
+                    </div>
+                    <div class="event-item event-calendar">
+                        <div class="event-dot" style="background-color: #3b82f6;"></div>
+                        <div class="event-time">09:00</div>
+                        <div class="event-title">Reunião de equipe</div>
+                    </div>
+                    <div class="event-item event-activity">
+                        <div class="event-dot" style="background-color: #10b981;"></div>
+                        <div class="event-time">14:00</div>
+                        <div class="event-title">Entregar relatório</div>
+                    </div>
+                    <div class="event-item event-project">
+                        <div class="event-dot" style="background-color: #8b5cf6;"></div>
+                        <div class="event-time">16:30</div>
+                        <div class="event-title">Apresentação do projeto</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card: Pendentes -->
+            <div class="dashboard-card">
+                <div class="drag-handle">⋮⋮</div>
+                <div class="card-actions">
+                    <button style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M3 12h18M3 18h18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 11l3 3L22 4"/>
+                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                        </svg>
+                        Pendentes
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <div class="activity-item">
+                        <div class="status-icon status-pending"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Aprovar orçamento</div>
+                            <div class="activity-status">Aguardando revisão</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="status-icon status-pending"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Enviar contrato</div>
+                            <div class="activity-status">Pendente</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="status-icon status-pending"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Marcar reunião</div>
+                            <div class="activity-status">Não iniciado</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card: Andamento -->
+            <div class="dashboard-card">
+                <div class="drag-handle">⋮⋮</div>
+                <div class="card-actions">
+                    <button style="background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M3 12h18M3 18h18"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        Andamento
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <div class="activity-item">
+                        <div class="status-icon status-in-progress"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Desenvolver nova feature</div>
+                            <div class="activity-status">50% completo</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="status-icon status-in-progress"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Testar aplicação</div>
+                            <div class="activity-status">Em testes</div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="status-icon status-in-progress"></div>
+                        <div class="activity-info">
+                            <div class="activity-title">Documentar código</div>
+                            <div class="activity-status">Em progresso</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado Vazio/Loading -->
+        <div style="display: none;" class="loading-state">
+            <div class="spinner"></div>
+            <div>Carregando dashboard...</div>
+        </div>
+    </div>
+
+    <script>
+        // Simulação de interatividade
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.dashboard-card');
+            const activityItems = document.querySelectorAll('.activity-item, .event-item');
+
+            // Animação de entrada dos cards
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+
+            // Interações com itens
+            activityItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // Simula abertura de modal
+                    console.log('Item clicado:', this.querySelector('.activity-title, .event-title').textContent);
+                });
+            });
+
+            // Hover effects aprimorados
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-4px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
