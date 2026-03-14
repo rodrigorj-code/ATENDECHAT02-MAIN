@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["public"]
+  "exclude": ["public", "node_modules", "node_modules.old"]
 }
