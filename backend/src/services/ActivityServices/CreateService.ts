@@ -1,6 +1,7 @@
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Activity from "../../models/Activity";
+import Project from "../../models/Project";
 
 interface Data {
   title: string;
@@ -11,6 +12,7 @@ interface Data {
   owner?: string;
   companyId: number;
   userId?: number;
+  projectId?: number | null;
 }
 
 const CreateService = async (data: Data): Promise<Activity> => {
@@ -40,8 +42,15 @@ const CreateService = async (data: Data): Promise<Activity> => {
   if (typeof data.userId !== "undefined") {
     payload.userId = data.userId;
   }
+  if (data.projectId !== undefined) {
+    payload.projectId = data.projectId;
+  }
 
   const record = await Activity.create(payload);
+
+  await record.reload({
+    include: [{ model: Project, as: "project", attributes: ["id", "name"] }]
+  });
 
   return record;
 };

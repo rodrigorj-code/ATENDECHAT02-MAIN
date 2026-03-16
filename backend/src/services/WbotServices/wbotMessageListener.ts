@@ -66,11 +66,6 @@ import ShowFileService from "../FileServices/ShowService";
 
 import OpenAI from "openai";
 import ffmpeg from "fluent-ffmpeg";
-import {
-  SpeechConfig,
-  SpeechSynthesizer,
-  AudioConfig
-} from "microsoft-cognitiveservices-speech-sdk";
 import typebotListener from "../TypebotServices/typebotListener";
 import Tag from "../../models/Tag";
 import TicketTag from "../../models/TicketTag";
@@ -2370,6 +2365,18 @@ export const convertTextToSpeechAndSaveToFile = (
   audioToFormat: string = "mp3"
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
+    let SpeechConfig: any;
+    let SpeechSynthesizer: any;
+    let AudioConfig: any;
+    try {
+      const sdk = require("microsoft-cognitiveservices-speech-sdk");
+      SpeechConfig = sdk.SpeechConfig;
+      SpeechSynthesizer = sdk.SpeechSynthesizer;
+      AudioConfig = sdk.AudioConfig;
+    } catch (err) {
+      reject(new Error("Speech SDK não disponível: " + (err instanceof Error ? err.message : String(err))));
+      return;
+    }
     const speechConfig = SpeechConfig.fromSubscription(
       subscriptionKey,
       serviceRegion

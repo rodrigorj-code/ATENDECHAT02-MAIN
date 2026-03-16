@@ -154,6 +154,9 @@ const CreateActivityModal = ({ open, onClose, onSave, activity }) => {
       const selectedCompany = Array.isArray(companiesConverted)
         ? companiesConverted.find(c => String(c.id) === String(formValues.companyId))
         : null;
+      const projectIdValue = formValues.projectId === "" || formValues.projectId == null
+        ? null
+        : Number(formValues.projectId);
       const payloadBase = {
         title: titleTrim,
         description: formValues.description || undefined,
@@ -167,9 +170,15 @@ const CreateActivityModal = ({ open, onClose, onSave, activity }) => {
           return formValues.date;
         })(),
         owner: selectedUser ? (selectedUser.name || selectedUser.fullName || selectedUser.email || `Usuário ${selectedUser.id}`) : (formValues.owner || undefined),
-        userId: selectedUser ? selectedUser.id : undefined
+        userId: selectedUser ? selectedUser.id : undefined,
+        projectId: projectIdValue
       };
-      const payload = Object.fromEntries(Object.entries(payloadBase).filter(([_, v]) => v !== undefined && v !== ""));
+      const payload = Object.fromEntries(
+        Object.entries(payloadBase).filter(([_, v]) => v !== undefined && v !== "")
+      );
+      if (payloadBase.projectId !== undefined) {
+        payload.projectId = payloadBase.projectId;
+      }
       // Here you would call the service. For now, we simulate or call the prop.
       // Assuming onSave handles the API call or we do it here.
       // If we do it here:
