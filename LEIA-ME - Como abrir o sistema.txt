@@ -1,0 +1,47 @@
+========================================
+  VBZappy - Como abrir o sistema
+========================================
+
+IMPORTANTE: Use o CMD (Prompt de Comando), nao o PowerShell,
+para evitar o erro de "execucao de scripts desabilitada".
+
+----------------------------------------
+Passo 1 - Instalar dependencias (só na primeira vez)
+----------------------------------------
+
+1. Feche o Cursor/VS Code e qualquer programa que use a pasta do projeto.
+2. Abra o CMD (Prompt de Comando):
+   - Tecla Windows, digite "cmd", Enter
+   - Ou: Win+R, digite cmd, Enter
+3. Vá até a pasta do projeto:
+   cd C:\Users\davir\Downloads\VBSOLUTION\vbsolutionn
+4. Execute:
+   instalar-dependencias.bat
+
+   Se der erro ENOTEMPTY: feche antivirus temporariamente ou mova
+   a pasta do projeto para um caminho mais curto (ex: C:\vbz) e
+   rode o script de la.
+
+----------------------------------------
+Passo 2 - Abrir Backend e Frontend
+----------------------------------------
+
+1. No CMD, na pasta do projeto, execute:
+   iniciar-sistema.bat
+
+   Ou dê dois cliques em "iniciar-sistema.bat" no Explorer.
+
+2. Serão abertas duas janelas:
+   - Backend:  http://localhost:3000
+   - Frontend: http://localhost:5174
+
+3. Abra o navegador em: http://localhost:5174
+
+----------------------------------------
+Resumo
+----------------------------------------
+
+  instalar-dependencias.bat  -> instala tudo (uma vez)
+  iniciar-sistema.bat        -> sobe backend + frontend
+
+Sempre use CMD, nao PowerShell.
