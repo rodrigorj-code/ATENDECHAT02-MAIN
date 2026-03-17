@@ -21,6 +21,7 @@ import Chip from '@material-ui/core/Chip';
 import RepeatIcon from '@material-ui/icons/Repeat';
 import VisibilityIcon from '@material-ui/icons/Visibility';
 import MicIcon from "@material-ui/icons/Mic";
+import PhoneIcon from "@material-ui/icons/Phone";
 import { isNil } from "lodash";
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
@@ -237,6 +238,14 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'center',
     fontSize: 14,
     fontWeight: 600,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  whatsappHeaderAvatarImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
   },
   whatsappHeaderText: {
     display: 'flex',
@@ -251,6 +260,32 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 11,
     opacity: 0.9,
   },
+  whatsappHeaderLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  whatsappHeaderPhoneBtn: {
+    color: '#fff',
+    padding: 6,
+    '& .MuiSvgIcon-root': { fontSize: 20 },
+  },
+  whatsappDateTag: {
+    display: 'block',
+    textAlign: 'center',
+    marginBottom: 8,
+    '& span': {
+      display: 'inline-block',
+      padding: '4px 12px',
+      borderRadius: 8,
+      backgroundColor: 'rgba(0,0,0,0.12)',
+      color: 'rgba(0,0,0,0.7)',
+      fontSize: 12,
+      fontWeight: 500,
+    },
+  },
   whatsappPreviewChat: {
     flex: 1,
     overflowY: 'auto',
@@ -261,14 +296,14 @@ const useStyles = makeStyles((theme) => ({
   whatsappBubble: {
     maxWidth: '85%',
     marginLeft: 'auto',
-    marginBottom: 4,
-    padding: '8px 12px',
-    borderRadius: 18,
+    marginBottom: 3,
+    padding: '6px 10px',
+    borderRadius: 16,
     borderTopRightRadius: 4,
     backgroundColor: '#dcf8c6',
     boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
-    fontSize: 14,
-    lineHeight: 1.4,
+    fontSize: 13,
+    lineHeight: 1.35,
     wordBreak: 'break-word',
     textAlign: 'left',
   },
@@ -282,17 +317,22 @@ const useStyles = makeStyles((theme) => ({
   },
   whatsappFooterInput: {
     flex: 1,
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: '6px 10px',
     fontSize: 12,
-    color: '#999',
     border: '1px solid rgba(0,0,0,0.08)',
+    outline: 'none',
+    color: 'rgba(0,0,0,0.87)',
+    '&::placeholder': { color: '#999' },
   },
   whatsappBubbleTime: {
-    fontSize: 11,
+    fontSize: 10,
     color: 'rgba(0,0,0,0.45)',
-    marginTop: 2,
+    marginTop: 1,
     display: 'flex',
     justifyContent: 'flex-end',
   },
@@ -1470,15 +1510,23 @@ const handleSaveCampaign = async (values) => {
                             <span>🔋 100%</span>
                           </div>
                           <div className={classes.whatsappPreviewHeader}>
-                            <div className={classes.whatsappHeaderAvatar}>
-                              J
+                            <div className={classes.whatsappHeaderLeft}>
+                              <div className={classes.whatsappHeaderAvatar}>
+                                <img src="/favicon.png" alt="" className={classes.whatsappHeaderAvatarImg} />
+                              </div>
+                              <div className={classes.whatsappHeaderText}>
+                                <span className={classes.whatsappHeaderTitle}>VB</span>
+                                <span className={classes.whatsappHeaderSubtitle}>online</span>
+                              </div>
                             </div>
-                            <div className={classes.whatsappHeaderText}>
-                              <span className={classes.whatsappHeaderTitle}>João Cliente</span>
-                              <span className={classes.whatsappHeaderSubtitle}>online</span>
-                            </div>
+                            <IconButton className={classes.whatsappHeaderPhoneBtn} size="small" disableRipple>
+                              <PhoneIcon />
+                            </IconButton>
                           </div>
                           <div className={classes.whatsappPreviewChat}>
+                            <div className={classes.whatsappDateTag}>
+                              <span>Hoje</span>
+                            </div>
                             {(() => {
                               const textBubbles = getPreviewBubbles(values);
                               const hasFile = !!(attachment || campaign.mediaPath);
@@ -1529,9 +1577,13 @@ const handleSaveCampaign = async (values) => {
                             })()}
                           </div>
                           <div className={classes.whatsappPreviewFooter}>
-                            <div className={classes.whatsappFooterInput}>
-                              Mensagem
-                            </div>
+                            <input
+                              type="text"
+                              className={classes.whatsappFooterInput}
+                              placeholder="Mensagem"
+                              value={values[`message${messageTab + 1}`] || ''}
+                              onChange={(e) => setFieldValue(`message${messageTab + 1}`, e.target.value)}
+                            />
                             <MicIcon style={{ fontSize: 20, color: '#128c7e' }} />
                           </div>
                         </div>
