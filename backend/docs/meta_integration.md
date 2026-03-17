@@ -37,6 +37,12 @@ Saída:
 - `FACEBOOK_APP_SECRET`: App Secret para verificação de assinatura.
 - `BACKEND_URL`: base pública para servir mídias (ex.: `https://sua-api.com`).
 
+### Deploy no Railway
+
+- Essas variáveis são **só de runtime** (não são usadas no build). Se o build falhar com `secret FACEBOOK_APP_SECRET not found`, configure no Railway:
+  1. **Variables**: adicione `VERIFY_TOKEN`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `BACKEND_URL` como variáveis normais do serviço (não como "Build" secrets).
+  2. O `nixpacks.toml` na raiz do backend define o build **sem** exigir secrets na fase de build; o Railway usará essas variáveis apenas ao rodar o container.
+
 ## Assinatura de Eventos
 
 - A assinatura é realizada em `WhatsAppController.storeFacebook` via `subscribeApp(pageId, accessTokenDaPágina)`.

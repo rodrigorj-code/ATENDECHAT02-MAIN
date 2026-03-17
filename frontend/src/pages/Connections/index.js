@@ -65,6 +65,9 @@ import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 import ForbiddenPage from "../../components/ForbiddenPage";
 import { Can } from "../../components/Can";
 
+// App ID Meta (Facebook/Instagram): env ou fallback em desenvolvimento para o popup abrir
+const FACEBOOK_APP_ID = process.env.REACT_APP_FACEBOOK_APP_ID || (process.env.NODE_ENV === "development" ? "2005927163294829" : "");
+
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
@@ -880,56 +883,76 @@ const Connections = () => {
             />
             WhatsApp Oficial
           </MenuItem>
-          <FacebookLogin
-            appId={process.env.REACT_APP_FACEBOOK_APP_ID}
-            autoLoad={false}
-            fields="name,email,picture"
-            version="9.0"
-            scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
-              "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
-              : "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
-            callback={responseFacebook}
-            render={(renderProps) => (
-              <MenuItem
-                disabled={planConfig?.plan?.useFacebook ? false : true}
-                onClick={renderProps.onClick}
-              >
-                <Facebook
-                  fontSize="small"
-                  style={{
-                    marginRight: "10px",
-                    color: "#3b5998",
-                  }}
-                />
-                Facebook
-              </MenuItem>
-            )}
-          />
-          <FacebookLogin
-            appId={process.env.REACT_APP_FACEBOOK_APP_ID}
-            autoLoad={false}
-            fields="name,email,picture"
-            version="9.0"
-            scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
-              "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
-              : "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
-            callback={responseInstagram}
-            render={(renderProps) => (
-              <MenuItem
-                disabled={planConfig?.plan?.useInstagram ? false : true}
-                onClick={renderProps.onClick}
-              >
-                <Instagram
-                  fontSize="small"
-                  style={{
-                    marginRight: "10px",
-                    color: "#e1306c",
-                  }}
-                />
-                Instagram
-              </MenuItem>
-            )}
-          />
+          {FACEBOOK_APP_ID ? (
+            <FacebookLogin
+              appId={FACEBOOK_APP_ID}
+              autoLoad={false}
+              fields="name,email,picture"
+              version="9.0"
+              scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
+                "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                : "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
+              callback={responseFacebook}
+              render={(renderProps) => (
+                <MenuItem
+                  disabled={planConfig?.plan?.useFacebook ? false : true}
+                  onClick={(e) => { e.stopPropagation(); renderProps.onClick(e); }}
+                >
+                  <Facebook
+                    fontSize="small"
+                    style={{
+                      marginRight: "10px",
+                      color: "#3b5998",
+                    }}
+                  />
+                  Facebook
+                </MenuItem>
+              )}
+            />
+          ) : (
+            <MenuItem
+              disabled={planConfig?.plan?.useFacebook ? false : true}
+              onClick={() => toast.warning("Configure REACT_APP_FACEBOOK_APP_ID no .env do frontend e reinicie o servidor (npm run start).")}
+            >
+              <Facebook fontSize="small" style={{ marginRight: "10px", color: "#3b5998" }} />
+              Facebook
+            </MenuItem>
+          )}
+          {FACEBOOK_APP_ID ? (
+            <FacebookLogin
+              appId={FACEBOOK_APP_ID}
+              autoLoad={false}
+              fields="name,email,picture"
+              version="9.0"
+              scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
+                "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                : "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
+              callback={responseInstagram}
+              render={(renderProps) => (
+                <MenuItem
+                  disabled={planConfig?.plan?.useInstagram ? false : true}
+                  onClick={(e) => { e.stopPropagation(); renderProps.onClick(e); }}
+                >
+                  <Instagram
+                    fontSize="small"
+                    style={{
+                      marginRight: "10px",
+                      color: "#e1306c",
+                    }}
+                  />
+                  Instagram
+                </MenuItem>
+              )}
+            />
+          ) : (
+            <MenuItem
+              disabled={planConfig?.plan?.useInstagram ? false : true}
+              onClick={() => toast.warning("Configure REACT_APP_FACEBOOK_APP_ID no .env do frontend e reinicie o servidor (npm run start).")}
+            >
+              <Instagram fontSize="small" style={{ marginRight: "10px", color: "#e1306c" }} />
+              Instagram
+            </MenuItem>
+          )}
         </Menu>
 
           {

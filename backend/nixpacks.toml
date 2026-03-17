@@ -1,0 +1,15 @@
+# Nixpacks: build sem usar secrets (VERIFY_TOKEN, FACEBOOK_APP_SECRET, etc.
+# são só em runtime no Railway; não declarar em [phases.*].secrets)
+# Ref: https://station.railway.com/questions/build-failing-with-secret-jwt-secret-n-a56cf3c5
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "node dist/server.js"
