@@ -141,8 +141,9 @@ const useStyles = makeStyles((theme) => ({
     width: '100%'
   },
   dialogPaperSmall: {
-    width: 640,
-    maxWidth: '85vw',
+    width: 1000,
+    minWidth: 320,
+    maxWidth: '95vw',
     margin: '0 auto',
     borderRadius: 16,
     borderTopLeftRadius: 16,
@@ -152,8 +153,153 @@ const useStyles = makeStyles((theme) => ({
     overflow: 'hidden'
   },
   dialogContentScrollable: {
-    maxHeight: '60vh',
+    maxHeight: '75vh',
     overflowY: 'auto'
+  },
+  /* Layout step Template: form à esquerda, preview à direita */
+  templateStepRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: theme.spacing(2),
+    alignItems: 'flex-start',
+  },
+  templateFormColumn: {
+    flex: '1 1 400px',
+    minWidth: 0,
+  },
+  templatePreviewColumn: {
+    flex: '0 0 320px',
+    [theme.breakpoints.down('sm')]: {
+      flex: '1 1 100%',
+    },
+  },
+  /* iPhone frame (mockup) */
+  iphoneFrame: {
+    width: 280,
+    margin: '0 auto',
+    position: 'relative',
+    borderRadius: 36,
+    padding: 4,
+    paddingTop: 4,
+    paddingBottom: 4,
+    background: 'linear-gradient(145deg, #2c2c2e 0%, #1c1c1e 100%)',
+    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
+    border: '2px solid #3a3a3c',
+  },
+  iphoneNotch: {
+    position: 'absolute',
+    top: 4,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 90,
+    height: 20,
+    borderRadius: 16,
+    backgroundColor: '#000',
+    margin: '0 auto',
+    zIndex: 2,
+  },
+  iphoneScreen: {
+    width: '100%',
+    height: 480,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#e5ddd5',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  iphoneStatusBar: {
+    height: 18,
+    padding: '2px 10px 0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#075e54',
+    color: '#fff',
+    fontSize: 10,
+    opacity: 0.9,
+  },
+  whatsappPreviewHeader: {
+    background: '#075e54',
+    color: '#fff',
+    padding: '8px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    borderBottom: '1px solid rgba(0,0,0,0.2)',
+  },
+  whatsappHeaderAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: '50%',
+    backgroundColor: '#128c7e',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 14,
+    fontWeight: 600,
+  },
+  whatsappHeaderText: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  whatsappHeaderTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.1,
+  },
+  whatsappHeaderSubtitle: {
+    fontSize: 11,
+    opacity: 0.9,
+  },
+  whatsappPreviewChat: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '8px 10px 16px',
+    backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M30 0L30 60M0 30L60 30\' stroke=\'%23d4cdc4\' stroke-width=\'0.5\' fill=\'none\'/%3E%3C/svg%3E")',
+    backgroundColor: '#e5ddd5',
+  },
+  whatsappBubble: {
+    maxWidth: '85%',
+    marginLeft: 'auto',
+    marginBottom: 4,
+    padding: '8px 12px',
+    borderRadius: 18,
+    borderTopRightRadius: 4,
+    backgroundColor: '#dcf8c6',
+    boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+    fontSize: 14,
+    lineHeight: 1.4,
+    wordBreak: 'break-word',
+    textAlign: 'left',
+  },
+  whatsappPreviewFooter: {
+    padding: '6px 8px',
+    backgroundColor: '#f0f0f0',
+    borderTop: '1px solid rgba(0,0,0,0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  whatsappFooterInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: '6px 10px',
+    fontSize: 12,
+    color: '#999',
+    border: '1px solid rgba(0,0,0,0.08)',
+  },
+  whatsappBubbleTime: {
+    fontSize: 11,
+    color: 'rgba(0,0,0,0.45)',
+    marginTop: 2,
+    display: 'flex',
+    justifyContent: 'flex-end',
+  },
+  whatsappBubbleWithIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
   },
   contactListToolbar: {
     display: 'flex',
@@ -963,6 +1109,34 @@ const handleSaveCampaign = async (values) => {
     trim: true,
   });
 
+  // Placeholders para preview (substitui variáveis por texto de exemplo)
+  const previewPlaceholders = {
+    nome: "João", email: "joao@email.com", telefone: "(11) 99999-9999", numero: "5511999999999",
+    empresa: "Minha Empresa", razao_social: "Empresa Ltda", endereco: "Rua Exemplo, 123",
+    data: moment().format("DD/MM/YYYY"), hora: moment().format("HH:mm"), produto: "Produto X",
+    valor: "R$ 100,00", vencimento: "25/03/2025", cargo: "Gerente"
+  };
+  const getPreviewText = (text) => {
+    if (!text || typeof text !== "string") return "";
+    let out = text;
+    campaignVariables.forEach(({ token }) => {
+      const key = token.replace(/[{}]/g, "");
+      const placeholder = previewPlaceholders[key] || token;
+      out = out.split(token).join(placeholder);
+    });
+    return out;
+  };
+  const getPreviewBubbles = (values) => {
+    const bubbles = [];
+    ["message1", "message2", "message3", "message4", "message5"].forEach((key) => {
+      const raw = values[key];
+      if (!raw || typeof raw !== "string" || !raw.trim()) return;
+      const lines = getPreviewText(raw.trim()).split(/\n/).filter(Boolean);
+      lines.forEach((line) => bubbles.push(line));
+    });
+    return bubbles;
+  };
+
   return (
     <div className={classes.root}>
       {!onSendNowStart && (
@@ -998,7 +1172,7 @@ const handleSaveCampaign = async (values) => {
       <Dialog
         open={open}
         onClose={handleClose}
-        maxWidth="md"
+        maxWidth="lg"
         classes={{ paper: classes.dialogPaperSmall }}
         scroll="paper"
       >
@@ -1044,38 +1218,11 @@ const handleSaveCampaign = async (values) => {
                 </Box>
                 <Grid spacing={2} container>
                   {activeStep === 0 && (
-                  <>
-                      <Grid item xs={12}>
-                        <Card>
-                          <CardContent>
-                            <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
-                              Variáveis Dinâmicas
-                            </Typography>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                              {campaignVariables.map(v => (
-                                <Chip
-                                  key={v.token}
-                                  label={`${v.token} — ${v.label}`}
-                                  onClick={() => {
-                                    const fieldId =
-                                      currentField ||
-                                      (messageTab === 0 ? "message1" :
-                                      messageTab === 1 ? "message2" :
-                                      messageTab === 2 ? "message3" :
-                                      messageTab === 3 ? "message4" : "message5");
-                                    const prev = values[fieldId] || "";
-                                    setFieldValue(fieldId, `${prev}${v.token}`);
-                                  }}
-                                />
-                              ))}
-                            </div>
-                            <FormHelperText>
-                              Clique para inserir no campo de mensagem em foco.
-                            </FormHelperText>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                  <Grid xs={12} md={6} item>
+                  <Grid item xs={12}>
+                  <Box className={classes.templateStepRow} width="100%">
+                    <Box className={classes.templateFormColumn}>
+                  <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
                     <Field
                       as={TextField}
                       label={i18n.t("campaigns.dialog.form.name")}
@@ -1215,6 +1362,38 @@ const handleSaveCampaign = async (values) => {
                     </Box>
                   </Grid>
 
+                  {/* Variáveis Dinâmicas — abaixo do campo de mensagem */}
+                  <Grid item xs={12}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+                          Variáveis Dinâmicas
+                        </Typography>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {campaignVariables.map(v => (
+                            <Chip
+                              key={v.token}
+                              label={`${v.token} — ${v.label}`}
+                              onClick={() => {
+                                const fieldId =
+                                  currentField ||
+                                  (messageTab === 0 ? "message1" :
+                                  messageTab === 1 ? "message2" :
+                                  messageTab === 2 ? "message3" :
+                                  messageTab === 3 ? "message4" : "message5");
+                                const prev = values[fieldId] || "";
+                                setFieldValue(fieldId, `${prev}${v.token}`);
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <FormHelperText>
+                          Clique para inserir no campo de mensagem em foco.
+                        </FormHelperText>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
                   {/* Seção de Mídia com anexar arquivo e gravar áudio */}
                   <Grid xs={12} item>
                     <Box className={classes.mediaContainer}>
@@ -1276,7 +1455,90 @@ const handleSaveCampaign = async (values) => {
                       )}
                     </Box>
                   </Grid>
-                  </>
+                    </Grid>
+                    </Box>
+                    <Box className={classes.templatePreviewColumn}>
+                      <Typography variant="subtitle2" gutterBottom style={{ textAlign: "center" }}>
+                        Preview do disparo
+                      </Typography>
+                      <div className={classes.iphoneFrame}>
+                        <div className={classes.iphoneNotch} />
+                        <div className={classes.iphoneScreen}>
+                          <div className={classes.iphoneStatusBar}>
+                            <span>09:41</span>
+                            <span>WhatsApp</span>
+                            <span>🔋 100%</span>
+                          </div>
+                          <div className={classes.whatsappPreviewHeader}>
+                            <div className={classes.whatsappHeaderAvatar}>
+                              J
+                            </div>
+                            <div className={classes.whatsappHeaderText}>
+                              <span className={classes.whatsappHeaderTitle}>João Cliente</span>
+                              <span className={classes.whatsappHeaderSubtitle}>online</span>
+                            </div>
+                          </div>
+                          <div className={classes.whatsappPreviewChat}>
+                            {(() => {
+                              const textBubbles = getPreviewBubbles(values);
+                              const hasFile = !!(attachment || campaign.mediaPath);
+                              const fileLabel = attachment ? attachment.name : (campaign.mediaName || "Arquivo");
+                              const hasAudio = !!audioBlob;
+                              const isEmpty = textBubbles.length === 0 && !hasFile && !hasAudio;
+                              if (isEmpty) {
+                                return (
+                                  <Typography variant="body2" color="textSecondary" style={{ textAlign: "center", padding: 24 }}>
+                                    As mensagens aparecerão aqui conforme você preencher os campos.
+                                  </Typography>
+                                );
+                              }
+                              return (
+                                <>
+                                  {textBubbles.map((text, idx) => (
+                                    <div key={`t-${idx}`} className={classes.whatsappBubble}>
+                                      {text}
+                                      <div className={classes.whatsappBubbleTime}>
+                                        {moment().format("HH:mm")}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {hasFile && (
+                                    <div className={classes.whatsappBubble}>
+                                      <div className={classes.whatsappBubbleWithIcon}>
+                                        <AttachFileIcon style={{ fontSize: 18, color: "rgba(0,0,0,0.6)" }} />
+                                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{fileLabel}</span>
+                                      </div>
+                                      <div className={classes.whatsappBubbleTime}>
+                                        {moment().format("HH:mm")}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {hasAudio && (
+                                    <div className={classes.whatsappBubble}>
+                                      <div className={classes.whatsappBubbleWithIcon}>
+                                        <MicIcon style={{ fontSize: 18, color: "rgba(0,0,0,0.6)" }} />
+                                        <span>Áudio</span>
+                                      </div>
+                                      <div className={classes.whatsappBubbleTime}>
+                                        {moment().format("HH:mm")}
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          <div className={classes.whatsappPreviewFooter}>
+                            <div className={classes.whatsappFooterInput}>
+                              Mensagem
+                            </div>
+                            <MicIcon style={{ fontSize: 20, color: '#128c7e' }} />
+                          </div>
+                        </div>
+                      </div>
+                    </Box>
+                  </Box>
+                  </Grid>
                   )}
 
                   {activeStep === 1 && (
