@@ -118,7 +118,16 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use(Sentry.Handlers.requestHandler());
-app.use("/public", express.static(uploadConfig.directory));
+
+// Servir arquivos estáticos em /public SEM auth (logo, foto de perfil, etc.)
+app.use("/public", (req, res, next) => {
+  express.static(uploadConfig.directory)(req, res, () => {
+    // Se static não enviou resposta (arquivo não encontrado), devolve 404 em vez de passar às rotas (evita 401)
+    if (!res.headersSent) {
+      res.status(404).send("Not found");
+    }
+  });
+});
 
 app.get("/", (_req, res) => res.json({ ok: true }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
