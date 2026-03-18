@@ -65,8 +65,8 @@ import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 import ForbiddenPage from "../../components/ForbiddenPage";
 import { Can } from "../../components/Can";
 
-// App ID Meta (Facebook/Instagram): env ou fallback em desenvolvimento para o popup abrir
-const FACEBOOK_APP_ID = process.env.REACT_APP_FACEBOOK_APP_ID || (process.env.NODE_ENV === "development" ? "2005927163294829" : "");
+// App ID Meta (Facebook/Instagram): env ou fallback (ID público do app VBS) para o popup abrir em dev e produção
+const FACEBOOK_APP_ID = process.env.REACT_APP_FACEBOOK_APP_ID || "2005927163294829";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
