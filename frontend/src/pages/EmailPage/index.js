@@ -465,6 +465,7 @@ const EmailPage = () => {
   const [templatesList, setTemplatesList] = useState([]);
   const [contactsList, setContactsList] = useState([]);
   const [contactsSource, setContactsSource] = useState("email"); // 'email' | 'system'
+  const [contactsLoading, setContactsLoading] = useState(false);
   const [schedulesList, setSchedulesList] = useState([]);
   const [multiSelect, setMultiSelect] = useState(true);
   const [selectAll, setSelectAll] = useState(false);
@@ -695,51 +696,153 @@ const EmailPage = () => {
     }
   };
 
+  const isValidEmail = (email) => {
+    if (!email) return false;
+    const v = String(email).trim();
+    return v.includes("@");
+  };
+
+  const mergeRecipientsByEmail = (systemContacts, convertedLeads) => {
+    const byEmail = new Map();
+    [...systemContacts, ...convertedLeads].forEach((item) => {
+      const key = String(item.email).toLowerCase();
+      if (!byEmail.has(key) || byEmail.get(key)?._source !== "system") {
+        byEmail.set(key, item);
+      }
+    });
+    return Array.from(byEmail.values());
+  };
+
+  const fetchAllSystemContactsWithEmail = async ({ searchParam = "" } = {}) => {
+    let pageNumber = 1;
+    let hasMore = true;
+    const acc = [];
+    while (hasMore) {
+      const res = await api.request({
+        url: "/contacts",
+        method: "GET",
+        params: { pageNumber, ...(searchParam ? { searchParam } : {}) },
+      });
+      const rows = (res.data?.contacts || res.data?.rows || res.data?.records || []).filter(
+        (c) => isValidEmail(c?.email)
+      );
+      acc.push(...rows.map((c) => ({ ...c, _source: "system" })));
+      hasMore = !!res.data?.hasMore;
+      pageNumber += 1;
+      if (pageNumber > 200) break; // segurança contra loop infinito
+    }
+    return acc;
+  };
+
+  const fetchAllConvertedLeadsWithEmail = async ({ searchParam = "" } = {}) => {
+    let pageNumber = 1;
+    let hasMore = true;
+    const acc = [];
+    while (hasMore) {
+      const data = await convertedLeadsService.list({
+        pageNumber,
+        ...(searchParam ? { searchParam } : {}),
+      });
+      const rows = (data?.leads || []).filter((l) => isValidEmail(l?.email));
+      acc.push(
+        ...rows.map((l) => ({
+          id: `lead-${l.id}`,
+          name: l.name,
+          email: l.email,
+          phone: l.phone || l.contact?.number || "",
+          _source: "converted-lead",
+        }))
+      );
+      hasMore = !!data?.hasMore;
+      pageNumber += 1;
+      if (pageNumber > 200) break; // segurança contra loop infinito
+    }
+    return acc;
+  };
+
+  const loadRecipientsCatalog = async ({ searchParam = "" } = {}) => {
+    setContactsLoading(true);
+    try {
+      // Preferir catálogo do sistema (contacts + converted leads) e cair para /email/contacts se vazio
+      const [systemContacts, convertedLeads] = await Promise.all([
+        fetchAllSystemContactsWithEmail({ searchParam }),
+        fetchAllConvertedLeadsWithEmail({ searchParam }),
+      ]);
+
+      const merged = mergeRecipientsByEmail(systemContacts, convertedLeads);
+      if (merged.length > 0) {
+        setContactsList(merged);
+        setContactsSource("system");
+        return merged;
+      }
+
+      const res = await emailService.contacts.list({ pageNumber: 1, ...(searchParam ? { searchParam } : {}) });
+      const emailContacts = (res?.contacts || res?.records || res?.rows || []).filter((c) => isValidEmail(c?.email));
+      const normalized = emailContacts.map((c) => ({ ...c, _source: "email" }));
+      setContactsList(normalized);
+      setContactsSource("email");
+      return normalized;
+    } catch (e) {
+      setContactsList([]);
+      setContactsSource("email");
+      return [];
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
+  const findEmailContactIdByEmail = async (email) => {
+    const needle = String(email || "").trim().toLowerCase();
+    if (!needle) return null;
+    let pageNumber = 1;
+    let hasMore = true;
+    while (hasMore) {
+      const data = await emailService.contacts.list({ searchParam: needle, pageNumber });
+      const rows = data?.contacts || data?.records || data?.rows || [];
+      const found = rows.find((c) => String(c?.email || "").trim().toLowerCase() === needle);
+      if (found?.id) return found.id;
+      hasMore = !!data?.hasMore;
+      pageNumber += 1;
+      if (pageNumber > 200) break;
+    }
+    return null;
+  };
+
+  const ensureEmailContactId = async (item) => {
+    const email = String(item?.email || "").trim();
+    if (!isValidEmail(email)) return null;
+    const payload = {
+      name: item?.name || "",
+      email,
+      phone: item?.phone || item?.number || ""
+    };
+    try {
+      const created = await api.request({
+        url: "/email/contacts",
+        method: "POST",
+        data: payload
+      });
+      return created?.data?.id || null;
+    } catch (e) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        return await findEmailContactIdByEmail(email);
+      }
+      return null;
+    }
+  };
+
   const openScheduleWizard = (presetRecipients = []) => {
     if (presetRecipients.length) setRecipients(presetRecipients);
     setScheduleStep(0);
     setScheduleOpen(true);
     (async () => {
       try {
-        // Carregar contatos do sistema e empresas de /leads-convertidos
-        const [systemRes, convRes] = await Promise.all([
-          api.request({ url: "/contacts", method: "GET", params: { pageNumber: 1 } }),
-          convertedLeadsService.list({ pageNumber: 1 })
-        ]);
-        const baseContacts = (systemRes.data?.contacts || systemRes.data?.rows || systemRes.data?.records || [])
-          .filter(c => c?.email && String(c.email).includes("@"))
-          .map(c => ({ ...c, _source: "system" }));
-        const companies = (convRes?.leads || [])
-          .filter(l => l?.email && String(l.email).includes("@"))
-          .map(l => ({
-            id: `lead-${l.id}`,
-            name: l.name,
-            email: l.email,
-            phone: l.phone || l.contact?.number || "",
-            _source: "converted-lead"
-          }));
-        // Deduplicar por email (prioriza contato do sistema)
-        const byEmail = new Map();
-        [...baseContacts, ...companies].forEach(item => {
-          const key = String(item.email).toLowerCase();
-          if (!byEmail.has(key) || byEmail.get(key)?._source !== "system") {
-            byEmail.set(key, item);
-          }
-        });
-        const merged = Array.from(byEmail.values());
-        if (merged.length > 0) {
-          setContactsList(merged);
-          setContactsSource("system");
-        } else {
-          const res = await emailService.contacts.list({ pageNumber: 1 });
-          const emailContacts = res?.contacts || res?.records || res?.rows || [];
-          setContactsList(emailContacts.map(c => ({ ...c, _source: "email" })));
-          setContactsSource("email");
-        }
+        await loadRecipientsCatalog();
       } catch {
         try {
           const res = await emailService.contacts.list({ pageNumber: 1 });
-          const emailContacts = res?.contacts || res?.records || res?.rows || [];
+          const emailContacts = (res?.contacts || res?.records || res?.rows || []).filter(c => isValidEmail(c?.email));
           setContactsList(emailContacts.map(c => ({ ...c, _source: "email" })));
           setContactsSource("email");
         } catch {
@@ -1245,38 +1348,8 @@ const EmailPage = () => {
                 />
                 <Button variant="outlined" onClick={async () => {
                   if (!contactsList.length) {
-                    if (contactsSource === "system") {
-                      try {
-                        const [res, conv] = await Promise.all([
-                          api.request({ url: "/contacts", method: "GET", params: { pageNumber: 1 } }),
-                          convertedLeadsService.list({ pageNumber: 1 })
-                        ]);
-                        const base = (res.data?.contacts || res.data?.rows || res.data?.records || [])
-                          .filter(c => c?.email && String(c.email).includes("@"))
-                          .map(c => ({ ...c, _source: "system" }));
-                        const companies = (conv?.leads || [])
-                          .filter(l => l?.email && String(l.email).includes("@"))
-                          .map(l => ({ id: `lead-${l.id}`, name: l.name, email: l.email, phone: l.phone || l.contact?.number || "", _source: "converted-lead" }));
-                        const byEmail = new Map();
-                        [...base, ...companies].forEach(item => {
-                          const key = String(item.email).toLowerCase();
-                          if (!byEmail.has(key) || byEmail.get(key)?._source !== "system") {
-                            byEmail.set(key, item);
-                          }
-                        });
-                        const merged = Array.from(byEmail.values());
-                        setContactsList(merged);
-                        setRecipients(merged.map(c => String(c.id)));
-                      } catch {
-                        setContactsList([]);
-                        setRecipients([]);
-                      }
-                    } else {
-                      const res = await emailService.contacts.list({ pageNumber: 1 });
-                      const list = res?.contacts || res?.records || res?.rows || [];
-                      setContactsList(list.map(c => ({ ...c, _source: "email" })));
-                      setRecipients(list.map(c => String(c.id)));
-                    }
+                    const list = await loadRecipientsCatalog();
+                    setRecipients(list.map(c => String(c.id)));
                   } else {
                     setRecipients(contactsList.map(c => String(c.id)));
                   }
@@ -1295,34 +1368,7 @@ const EmailPage = () => {
                 fullWidth
                 onChange={async (e) => {
                   const term = e.target.value;
-                  if (contactsSource === "email") {
-                    const res = await emailService.contacts.list({ searchParam: term, pageNumber: 1 });
-                    const arr = res?.contacts || res?.records || res?.rows || [];
-                    setContactsList(arr.map(c => ({ ...c, _source: "email" })));
-                  } else {
-                    try {
-                      const [res, conv] = await Promise.all([
-                        api.request({ url: "/contacts", method: "GET", params: { searchParam: term, pageNumber: 1 } }),
-                        convertedLeadsService.list({ pageNumber: 1, searchParam: term })
-                      ]);
-                      const base = (res.data?.contacts || res.data?.rows || res.data?.records || [])
-                        .filter(c => c?.email && String(c.email).includes("@"))
-                        .map(c => ({ ...c, _source: "system" }));
-                      const companies = (conv?.leads || [])
-                        .filter(l => l?.email && String(l.email).includes("@"))
-                        .map(l => ({ id: `lead-${l.id}`, name: l.name, email: l.email, phone: l.phone || l.contact?.number || "", _source: "converted-lead" }));
-                      const byEmail = new Map();
-                      [...base, ...companies].forEach(item => {
-                        const key = String(item.email).toLowerCase();
-                        if (!byEmail.has(key) || byEmail.get(key)?._source !== "system") {
-                          byEmail.set(key, item);
-                        }
-                      });
-                      setContactsList(Array.from(byEmail.values()));
-                    } catch {
-                      setContactsList([]);
-                    }
-                  }
+                  await loadRecipientsCatalog({ searchParam: term });
                 }}
                 style={{ marginBottom: 8 }}
               />
@@ -1397,23 +1443,8 @@ const EmailPage = () => {
                     const ids = [];
                     for (const rid of recipients) {
                       const item = contactsList.find(x => String(x.id) === String(rid));
-                      if (!item || !item.email) continue;
-                      try {
-                        const created = await api.request({
-                          url: "/email/contacts",
-                          method: "POST",
-                          data: { name: item.name, email: item.email, phone: item.phone }
-                        });
-                        ids.push(created.data.id);
-                      } catch (e) {
-                        const status = e?.response?.status;
-                        if (status === 409) {
-                          // Já existe: buscar por email
-                          const lookup = await emailService.contacts.list({ searchParam: item.email, pageNumber: 1 });
-                          const found = (lookup?.contacts || []).find(c => c.email === item.email);
-                          if (found) ids.push(found.id);
-                        }
-                      }
+                      const id = await ensureEmailContactId(item);
+                      if (id) ids.push(id);
                     }
                     return ids;
                   };
@@ -1444,22 +1475,8 @@ const EmailPage = () => {
                     const ids = [];
                     for (const rid of recipients) {
                       const item = contactsList.find(x => String(x.id) === String(rid));
-                      if (!item || !item.email) continue;
-                      try {
-                        const created = await api.request({
-                          url: "/email/contacts",
-                          method: "POST",
-                          data: { name: item.name, email: item.email, phone: item.phone }
-                        });
-                        ids.push(created.data.id);
-                      } catch (e) {
-                        const status = e?.response?.status;
-                        if (status === 409) {
-                          const lookup = await emailService.contacts.list({ searchParam: item.email, pageNumber: 1 });
-                          const found = (lookup?.contacts || []).find(c => c.email === item.email);
-                          if (found) ids.push(found.id);
-                        }
-                      }
+                      const id = await ensureEmailContactId(item);
+                      if (id) ids.push(id);
                     }
                     return ids;
                   };
