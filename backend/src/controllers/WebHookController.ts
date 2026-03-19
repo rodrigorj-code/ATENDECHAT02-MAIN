@@ -15,14 +15,22 @@ import { handleMessage } from "../services/FacebookServices/facebookMessageListe
 // import { handleMessage } from "../services/FacebookServices/facebookMessageListener";
 
 export const index = async (req: any, res: any): Promise<any> => {
-  const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "whaticket";
+  // O Meta chama este endpoint para validar o webhook.
+  // Em alguns deployments, o VERIFY_TOKEN no painel pode não ser exatamente
+  // o padrão do projeto (ex.: "whaticket-vbs-2025").
+  // Para evitar travar a integração, aceitamos alguns tokens legados.
+  const verifyTokenFromEnv = process.env.VERIFY_TOKEN;
+  const legacyTokens = ["whaticket", "whaticket-vbs-2025"].filter(Boolean);
+  const allowedTokens = [verifyTokenFromEnv, ...legacyTokens].filter(
+    (t) => typeof t === "string" && t.length > 0
+  );
 
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
   if (mode && token) {
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    if (mode === "subscribe" && allowedTokens.includes(String(token))) {
       return res.status(200).send(challenge);
     }
   }
