@@ -141,7 +141,7 @@ const FindOrCreateTicketService = async (
     ticket = await ShowTicketService(ticket.id, companyId);
     console.log(`[RDS-TICKET] Ticket atualizado ID=${ticket.id}, novo status=${ticket.status}`);
 
-    io.of(String(companyId))
+    io.of("/" + String(companyId))
       .emit(`company-${companyId}-ticket`, {
         action: "update",
         ticket
@@ -276,7 +276,7 @@ const FindOrCreateTicketService = async (
 
   ticket = await ShowTicketService(ticket.id, companyId);
 
-  io.of(String(companyId))
+  io.of("/" + String(companyId))
   .emit(`company-${companyId}-ticket`, {
     action: "update",
     ticket

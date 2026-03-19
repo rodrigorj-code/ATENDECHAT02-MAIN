@@ -211,14 +211,146 @@ export const getPageProfile = async (
   token: string
 ): Promise<any> => {
   try {
-    const { data } = await apiBase(token).get(
-      `${id}/accounts?fields=name,access_token,instagram_business_account{id,username,profile_picture_url,name}`
-    );
+    logger.info("[getPageProfile] Chamando Graph API", { userId: id, tokenLength: token?.length ?? 0 });
+    const endpoints = [
+      // mais simples (geralmente funciona em mais casos)
+      `${id}/accounts?fields=name,access_token,instagram_business_account{id}`,
+      `${id}/accounts?fields=name,access_token,instagram_business_account`,
+      // variação comum em alguns casos
+      `${id}/accounts?fields=name,access_token,instagram_business_accounts{id}`
+    ];
+
+    let response: any = null;
+    for (const endpoint of endpoints) {
+      try {
+        response = await apiBase(token).get(endpoint);
+        break;
+      } catch (e) {
+        // tenta próximo endpoint
+      }
+    }
+
+    if (!response) throw new Error("ERR_FETCHING_FB_PAGES");
+
+    const data = response.data;
+
+    if (data?.error) {
+      logger.error("[getPageProfile] Graph API retornou erro", {
+        code: data.error.code,
+        message: data.error.message,
+        type: data.error.type,
+        subcode: data.error.error_subcode
+      });
+      throw new Error(`ERR_FETCHING_FB_PAGES: ${data.error.message || data.error.code}`);
+    }
+
+    if (!Array.isArray(data?.data)) {
+      logger.warn("[getPageProfile] Resposta sem array data", { keys: data ? Object.keys(data) : [] });
+      return { data: [] };
+    }
+
+    logger.info("[getPageProfile] Páginas encontradas", { count: data.data.length });
     return data;
-  } catch (error) {
-    console.log(error);
+  } catch (error: any) {
+    const status = error?.response?.status;
+    const errData = error?.response?.data;
+    logger.error("[getPageProfile] Falha na requisição", {
+      message: error?.message,
+      status,
+      apiError: errData?.error?.message || errData?.error?.code,
+      apiErrorType: errData?.error?.type
+    });
     throw new Error("ERR_FETCHING_FB_PAGES");
   }
+};
+
+export const getInstagramBusinessAccountFromPage = async (
+  pageId: string,
+  pageToken: string
+): Promise<any> => {
+  // Graph costuma variar o formato do campo/endpoint retornado conforme token/permissões.
+  // Então aqui fazemos 2 tentativas e um parser bem permissivo.
+  // A API pode rejeitar campos específicos dependendo do token/nível de acesso,
+  // então tentamos múltiplos conjuntos de fields (do mais simples pro mais completo).
+  const fieldSets = [
+    "id",
+    "id,username",
+    "id,username,name",
+    "id,username,name,profile_picture_url"
+  ];
+
+  const extract = (payload: any): any => {
+    if (!payload) return null;
+
+    // Caso 1: /{pageId}?fields=instagram_business_account{...}
+    if (payload?.instagram_business_account?.id) return payload.instagram_business_account;
+    if (Array.isArray(payload?.instagram_business_account) && payload.instagram_business_account?.[0]?.id) {
+      return payload.instagram_business_account[0];
+    }
+    if (payload?.data?.instagram_business_account?.id) return payload.data.instagram_business_account;
+    if (Array.isArray(payload?.data?.instagram_business_account) && payload.data.instagram_business_account?.[0]?.id) {
+      return payload.data.instagram_business_account[0];
+    }
+
+    // Caso 2: /{pageId}/instagram_business_account?fields=...
+    // (pode vir como objeto direto ou como "data")
+    if (payload?.id && (payload?.username || payload?.name)) return payload;
+    if (payload?.data?.id && (payload?.data?.username || payload?.data?.name)) return payload.data;
+
+    if (Array.isArray(payload?.data) && payload.data[0]?.id) return payload.data[0];
+    if (Array.isArray(payload?.data?.instagram_business_account) && payload.data.instagram_business_account[0]?.id) {
+      return payload.data.instagram_business_account[0];
+    }
+
+    return null;
+  };
+
+  const attempts: Array<() => Promise<any>> = [];
+
+  // 1) Tentativas via Page: /{pageId}?fields=...
+  attempts.push(async () => {
+    const response = await apiBase(pageToken).get(
+      `${pageId}?fields=instagram_business_account`
+    );
+    return extract(response?.data);
+  });
+
+  for (const fields of fieldSets) {
+    attempts.push(async () => {
+      const response = await apiBase(pageToken).get(
+        `${pageId}?fields=instagram_business_account{${fields}}`
+      );
+      return extract(response?.data);
+    });
+  }
+
+  // 2) Tentativas via sub-recurso: /{pageId}/instagram_business_account(s)?fields=...
+  for (const fields of fieldSets) {
+    attempts.push(async () => {
+      const response = await apiBase(pageToken).get(
+        `${pageId}/instagram_business_account?fields=${fields}`
+      );
+      return extract(response?.data);
+    });
+    attempts.push(async () => {
+      // Alguns casos retornam como lista em plural
+      const response = await apiBase(pageToken).get(
+        `${pageId}/instagram_business_accounts?fields=${fields}`
+      );
+      return extract(response?.data);
+    });
+  }
+
+  for (const attempt of attempts) {
+    try {
+      const acc = await attempt();
+      if (acc?.id) return acc;
+    } catch {
+      // segue
+    }
+  }
+
+  return null;
 };
 
 export const profilePsid = async (id: string, token: string): Promise<any> => {
@@ -283,10 +415,13 @@ export const getAccessTokenFromPage = async (
   token: string
 ): Promise<string> => {
   try {
-
     if (!token) throw new Error("ERR_FETCHING_FB_USER_TOKEN");
 
-    const data = await axios.get(
+    const hasAppId = !!process.env.FACEBOOK_APP_ID;
+    const hasSecret = !!process.env.FACEBOOK_APP_SECRET;
+    logger.info("[getAccessTokenFromPage] Troca de token", { hasAppId, hasSecret });
+
+    const response = await axios.get(
       "https://graph.facebook.com/v20.0/oauth/access_token",
       {
         params: {
@@ -298,9 +433,21 @@ export const getAccessTokenFromPage = async (
       }
     );
 
-    return data.data.access_token;
-  } catch (error) {
-    console.log(error);
+    const accessToken = response.data?.access_token;
+    if (!accessToken) {
+      logger.error("[getAccessTokenFromPage] Resposta sem access_token", { dataKeys: Object.keys(response.data || {}) });
+      throw new Error("ERR_FETCHING_FB_USER_TOKEN");
+    }
+    return accessToken;
+  } catch (error: any) {
+    const status = error?.response?.status;
+    const errData = error?.response?.data;
+    logger.error("[getAccessTokenFromPage] Falha na troca de token", {
+      message: error?.message,
+      status,
+      apiError: errData?.error?.message || errData?.error?.code,
+      apiErrorType: errData?.error?.type
+    });
     throw new Error("ERR_FETCHING_FB_USER_TOKEN");
   }
 };

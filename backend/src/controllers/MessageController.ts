@@ -22,7 +22,7 @@ import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 
-import { sendFacebookMessageMedia } from "../services/FacebookServices/sendFacebookMessageMedia";
+import { sendFacebookMessageMedia, typeAttachment as typeAttachmentFacebook } from "../services/FacebookServices/sendFacebookMessageMedia";
 import { sendFacebookMessage } from "../services/FacebookServices/sendFacebookMessage";
 
 import ShowPlanCompanyService from "../services/CompanyService/ShowPlanCompanyService";
@@ -36,7 +36,7 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import ListSettingsService from "../services/SettingServices/ListSettingsService";
 import ShowMessageService, { GetWhatsAppFromMessage } from "../services/MessageServices/ShowMessageService";
 import CompaniesSettings from "../models/CompaniesSettings";
-import { verifyMessageFace, verifyMessageMedia } from "../services/FacebookServices/facebookMessageListener";
+import { verifyMessageFace } from "../services/FacebookServices/facebookMessageListener";
 import EditWhatsAppMessage from "../services/MessageServices/EditWhatsAppMessage";
 import SendWhatsAppOficialMessage from "../services/WhatsAppOficial/SendWhatsAppOficialMessage";
 import ShowService from "../services/QuickMessageService/ShowService";
@@ -232,8 +232,24 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
                 body: Array.isArray(body) ? body[index] : body
               });
 
-              if (ticket.channel === "facebook") {
-                await verifyMessageMedia(sentMedia, ticket, ticket.contact, true);
+              if (sentMedia?.message_id) {
+                await CreateMessageService({
+                  messageData: {
+                    wid: sentMedia.message_id,
+                    ticketId: ticket.id,
+                    contactId: undefined,
+                    body: Array.isArray(body) ? body[index] : body || media.filename,
+                    fromMe: true,
+                    read: true,
+                    quotedMsgId: null,
+                    ack: 3,
+                    dataJson: JSON.stringify(sentMedia),
+                    channel: ticket.channel,
+                    mediaType: typeAttachmentFacebook(media),
+                    mediaUrl: media.filename
+                  },
+                  companyId: ticket.companyId
+                });
               }
             } catch (error) {
               console.log(error);
@@ -604,7 +620,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       } else if (["facebook", "instagram"].includes(ticket.channel) && isPrivate === "false") {
         const sendText = await sendFacebookMessage({ body, ticket, quotedMsg });
 
-        if (ticket.channel === "facebook") {
+        if (ticket.channel === "facebook" || ticket.channel === "instagram") {
           await verifyMessageFace(sendText, body, ticket, ticket.contact, true);
         }
       }

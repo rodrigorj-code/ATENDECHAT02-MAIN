@@ -145,7 +145,7 @@ const CreateMessageService = async ({
   const io = getIO();
 
   if (!messageData?.ticketImported) {
-    io.of(String(companyId))
+    io.of("/" + String(companyId))
       .emit(`company-${companyId}-appMessage`, {
         action: "create",
         message,

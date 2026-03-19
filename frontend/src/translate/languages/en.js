@@ -353,6 +353,15 @@ const messages = {
         totalConnections: "Total connections",
         total: "Total",
         connections: " Connections:",
+        facebook: {
+          success: "Facebook/Instagram connected successfully!",
+          loginCancelledOrFailed:
+            "Login cancelled or not completed. Try again and accept the permissions in the Facebook window.",
+          onlyPasswordHint:
+            "If only the password field appears, click \"Not you?\" in the Facebook window to sign in with email and password.",
+          noPageError:
+            "You need a Facebook Page (public fan page) to connect. Create one at facebook.com/pages and try again.",
+        },
         toasts: {
           deleted: "Connection successfully deleted!",
           closedimported:

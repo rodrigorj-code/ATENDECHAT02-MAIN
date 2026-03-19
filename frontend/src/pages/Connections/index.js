@@ -162,7 +162,7 @@ const IconChannel = (channel) => {
 const Connections = () => {
   const classes = useStyles();
 
-  const { whatsApps, loading } = useContext(WhatsAppsContext);
+  const { whatsApps, loading, fetchWhatsApps } = useContext(WhatsAppsContext);
   const [searchParam, setSearchParam] = useState("");
   const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
   const [newConnMenuOpen, setNewConnMenuOpen] = useState(false);
@@ -225,7 +225,6 @@ const Connections = () => {
   const responseFacebook = (response) => {
     if (response.status !== "unknown") {
       const { accessToken, id } = response;
-
       api
         .post("/facebook", {
           facebookUserId: id,
@@ -233,17 +232,45 @@ const Connections = () => {
         })
         .then((response) => {
           toast.success(i18n.t("connections.facebook.success"));
+          if (typeof fetchWhatsApps === "function") fetchWhatsApps();
         })
         .catch((error) => {
-          toastError(error);
+          const errData = error?.response?.data;
+          const errMsg = errData?.error || errData?.message;
+          console.warn("[Connections] POST /facebook falhou (Facebook)", {
+            status: error?.response?.status,
+            data: errData,
+            message: error?.message
+          });
+          if (errMsg && (errMsg.includes("página") || errMsg.includes("page") || errMsg.includes("Nenhuma"))) {
+            toast.error(
+              i18n.t("connections.facebook.noPageError") ||
+                "É necessário ter uma Página do Facebook (página pública de fãs) para conectar. Crie uma em facebook.com/pages e tente novamente.",
+              { autoClose: 6000 }
+            );
+          } else {
+            toastError(error);
+          }
         });
+    } else {
+      console.warn("[Connections] Facebook Login callback status unknown", {
+        status: response?.status,
+        fullResponse: response,
+        responseKeys: response ? Object.keys(response) : []
+      });
+      toast.warning(
+        i18n.t("connections.facebook.loginCancelledOrFailed") ||
+          "Login cancelado ou não concluído. Tente novamente e aceite as permissões ao abrir a janela do Facebook."
+      );
+      setTimeout(() => {
+        if (typeof fetchWhatsApps === "function") fetchWhatsApps();
+      }, 2000);
     }
   };
 
   const responseInstagram = (response) => {
     if (response.status !== "unknown") {
       const { accessToken, id } = response;
-
       api
         .post("/facebook", {
           addInstagram: true,
@@ -252,10 +279,39 @@ const Connections = () => {
         })
         .then((response) => {
           toast.success(i18n.t("connections.facebook.success"));
+          if (typeof fetchWhatsApps === "function") fetchWhatsApps();
         })
         .catch((error) => {
-          toastError(error);
+          const errData = error?.response?.data;
+          const errMsg = errData?.error || errData?.message;
+          console.warn("[Connections] POST /facebook falhou (Instagram)", {
+            status: error?.response?.status,
+            data: errData,
+            message: error?.message
+          });
+          if (errMsg && (errMsg.includes("página") || errMsg.includes("page") || errMsg.includes("Nenhuma"))) {
+            toast.error(
+              i18n.t("connections.facebook.noPageError") ||
+                "É necessário ter uma Página do Facebook (página pública de fãs) para conectar. Crie uma em facebook.com/pages e tente novamente.",
+              { autoClose: 6000 }
+            );
+          } else {
+            toastError(error);
+          }
         });
+    } else {
+      console.warn("[Connections] Instagram Login callback status unknown", {
+        status: response?.status,
+        fullResponse: response,
+        responseKeys: response ? Object.keys(response) : []
+      });
+      toast.warning(
+        i18n.t("connections.facebook.loginCancelledOrFailed") ||
+          "Login cancelado ou não concluído. Tente novamente e aceite as permissões ao abrir a janela do Facebook."
+      );
+      setTimeout(() => {
+        if (typeof fetchWhatsApps === "function") fetchWhatsApps();
+      }, 2000);
     }
   };
 
@@ -539,6 +595,11 @@ const Connections = () => {
           <Button size="small" variant="outlined" disabled color="default">
             {i18n.t("connections.buttons.connecting")}
           </Button>
+        )}
+        {((whatsApp.channel === "facebook" || whatsApp.channel === "instagram") && whatsApp.status === "CONNECTED") && (
+          <span style={{ fontSize: 12, color: green[500] }}>
+            {i18n.t("connections.toolTips.connected.title")}
+          </span>
         )}
       </>
     );
@@ -888,7 +949,8 @@ const Connections = () => {
               appId={FACEBOOK_APP_ID}
               autoLoad={false}
               fields="name,email,picture"
-              version="9.0"
+              version="19.0"
+              redirectUri={typeof window !== "undefined" ? window.location.origin : undefined}
               scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
                 "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
                 : "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
@@ -896,7 +958,10 @@ const Connections = () => {
               render={(renderProps) => (
                 <MenuItem
                   disabled={planConfig?.plan?.useFacebook ? false : true}
-                  onClick={(e) => { e.stopPropagation(); renderProps.onClick(e); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    renderProps.onClick(e);
+                  }}
                 >
                   <Facebook
                     fontSize="small"
@@ -923,7 +988,8 @@ const Connections = () => {
               appId={FACEBOOK_APP_ID}
               autoLoad={false}
               fields="name,email,picture"
-              version="9.0"
+              version="19.0"
+              redirectUri={typeof window !== "undefined" ? window.location.origin : undefined}
               scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
                 "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
                 : "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
@@ -931,7 +997,10 @@ const Connections = () => {
               render={(renderProps) => (
                 <MenuItem
                   disabled={planConfig?.plan?.useInstagram ? false : true}
-                  onClick={(e) => { e.stopPropagation(); renderProps.onClick(e); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    renderProps.onClick(e);
+                  }}
                 >
                   <Instagram
                     fontSize="small"

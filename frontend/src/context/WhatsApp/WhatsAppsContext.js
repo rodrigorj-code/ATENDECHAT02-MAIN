@@ -9,7 +9,7 @@ const WhatsAppsContext = createContext();
 const WhatsAppsProvider = ({ children }) => {
   // Add fallback values to prevent destructuring errors
   const whatsAppData = useWhatsApps();
-  const { loading = false, whatsApps = [] } = whatsAppData || {};
+  const { loading = false, whatsApps = [], fetchWhatsApps } = whatsAppData || {};
   const { user } = useContext(AuthContext);
   
   const [wavoipToken, setWavoipToken] = useState(null);
@@ -45,7 +45,7 @@ const WhatsAppsProvider = ({ children }) => {
   }
 
   return (
-    <WhatsAppsContext.Provider value={{ whatsApps, loading, error }}>
+    <WhatsAppsContext.Provider value={{ whatsApps, loading, error, fetchWhatsApps }}>
       {children}
       {wavoipToken && (
         <WavoipPhoneWidget

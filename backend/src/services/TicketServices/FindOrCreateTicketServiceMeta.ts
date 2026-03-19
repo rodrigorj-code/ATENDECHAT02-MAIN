@@ -50,12 +50,13 @@ const FindOrCreateTicketServiceMeta = async (
         userId: null,
         unreadMessages,
         companyId,
-        channel
+        channel,
+        whatsappId
       });
       await FindOrCreateATicketTrakingService({
         ticketId: ticket.id,
         companyId,
-        whatsappId: ticket.whatsappId,
+        whatsappId,
         userId: ticket.userId
       });
     }
@@ -83,12 +84,13 @@ const FindOrCreateTicketServiceMeta = async (
         userId: null,
         unreadMessages,
         companyId,
-        channel
+        channel,
+        whatsappId
       });
       await FindOrCreateATicketTrakingService({
         ticketId: ticket.id,
         companyId,
-        whatsappId: ticket.whatsappId,
+        whatsappId,
         userId: ticket.userId
       });
     }

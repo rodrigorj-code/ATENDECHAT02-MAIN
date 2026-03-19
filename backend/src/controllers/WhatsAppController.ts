@@ -9,7 +9,8 @@ import ShowCompanyService from "../services/CompanyService/ShowCompanyService";
 import {
   getAccessTokenFromPage,
   getPageProfile,
-  subscribeApp
+  subscribeApp,
+  getInstagramBusinessAccountFromPage
 } from "../services/FacebookServices/graphAPI";
 import ShowPlanService from "../services/PlanService/ShowPlanService";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
@@ -312,20 +313,24 @@ export const storeFacebook = async (
     } = req.body;
     const { companyId } = req.user;
 
-    // const company = await ShowCompanyService(companyId)
-    // const plan = await ShowPlanService(company.planId);
+    logger.info("[storeFacebook] Início", {
+      companyId,
+      facebookUserId,
+      addInstagram: !!addInstagram,
+      tokenLength: facebookUserToken?.length ?? 0
+    });
 
-    // if (!plan.useFacebook) {
-    //   return res.status(400).json({
-    //     error: "Você não possui permissão para acessar este recurso!"
-    //   });
-    // }
+    const rawPages = await getPageProfile(facebookUserId, facebookUserToken);
+    const data = rawPages?.data;
 
-    const { data } = await getPageProfile(facebookUserId, facebookUserToken);
-
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
+      logger.warn("[storeFacebook] Nenhuma página retornada", {
+        facebookUserId,
+        hasRawPages: !!rawPages,
+        rawKeys: rawPages ? Object.keys(rawPages) : []
+      });
       return res.status(400).json({
-        error: "Facebook page not found"
+        error: "Nenhuma página do Facebook encontrada para esta conta. Vincule uma página em facebook.com/pages."
       });
     }
     const io = getIO();
@@ -334,98 +339,191 @@ export const storeFacebook = async (
     for await (const page of data) {
       const { name, access_token, id, instagram_business_account } = page;
 
-      const acessTokenPage = await getAccessTokenFromPage(access_token);
+      logger.info("[storeFacebook][Page]", {
+        companyId,
+        pageId: id,
+        pageName: name,
+        addInstagram,
+        hasInstagramBusinessAccountInList: !!instagram_business_account,
+        instagramBusinessAccountIdInList: instagram_business_account?.id || null
+      });
 
-      if (instagram_business_account && addInstagram) {
-        const {
-          id: instagramId,
-          username,
-          name: instagramName
-        } = instagram_business_account;
-
-        pages.push({
-          companyId,
-          name: `Insta ${username || instagramName}`,
-          facebookUserId: facebookUserId,
-          facebookPageUserId: instagramId,
-          facebookUserToken: acessTokenPage,
-          tokenMeta: facebookUserToken,
-          isDefault: false,
-          channel: "instagram",
-          status: "CONNECTED",
-          greetingMessage: "",
-          farewellMessage: "",
-          queueIds: [],
-          isMultidevice: false
+      // A troca de token para "long-lived" pode falhar se o app credentials estiverem
+      // divergentes/incompletos. Para não bloquear a conexão (e permitir webhooks/tickets),
+      // fazemos fallback para o token original retornado pela Graph API.
+      let acessTokenPage = access_token;
+      try {
+        acessTokenPage = await getAccessTokenFromPage(access_token);
+      } catch (err: any) {
+        logger.warn("[storeFacebook] Falha ao trocar token da página. Usando token original.", {
+          facebookUserId,
+          facebookPageId: id,
+          hasInstagramBusinessAccount: !!instagram_business_account,
+          error: err?.message
         });
-
-        pages.push({
-          companyId,
-          name,
-          facebookUserId: facebookUserId,
-          facebookPageUserId: id,
-          facebookUserToken: acessTokenPage,
-          tokenMeta: facebookUserToken,
-          isDefault: false,
-          channel: "facebook",
-          status: "CONNECTED",
-          greetingMessage: "",
-          farewellMessage: "",
-          queueIds: [],
-          isMultidevice: false
-        });
-
-        await subscribeApp(id, acessTokenPage);
       }
 
-      if (!instagram_business_account) {
-        pages.push({
-          companyId,
-          name,
-          facebookUserId: facebookUserId,
-          facebookPageUserId: id,
-          facebookUserToken: acessTokenPage,
-          tokenMeta: facebookUserToken,
-          isDefault: false,
-          channel: "facebook",
-          status: "CONNECTED",
-          greetingMessage: "",
-          farewellMessage: "",
-          queueIds: [],
-          isMultidevice: false
-        });
+      // Se o list endpoint não retornar instagram_business_account, tentamos recuperar via endpoint do próprio Page.
+      // IMPORTANTE: para não depender de um formato/endpoint específico do Graph,
+      // quando `addInstagram` estiver ativo tentamos resolver novamente via Page token.
+      let instagramBusinessAccount = instagram_business_account;
+      if (addInstagram) {
+        // 1) Tenta com o token da página (long-lived, se possível)
+        const resolvedWithPageToken = await getInstagramBusinessAccountFromPage(id, acessTokenPage);
+        if (resolvedWithPageToken?.id) instagramBusinessAccount = resolvedWithPageToken;
+        else {
+          // 2) Fallback: tenta com o token original do usuário
+          // (alguns apps/escopos deixam a leitura do vínculo IG apenas no token do usuário)
+          const resolvedWithUserToken = await getInstagramBusinessAccountFromPage(id, facebookUserToken);
+          if (resolvedWithUserToken?.id) instagramBusinessAccount = resolvedWithUserToken;
+        }
+      }
 
-        await subscribeApp(page.id, acessTokenPage);
+      if (addInstagram) {
+        logger.info("[storeFacebook][InstagramResolve]", {
+          companyId,
+          pageId: id,
+          addInstagram,
+          instagramResolved: !!instagramBusinessAccount,
+          instagramBusinessAccountId: instagramBusinessAccount?.id || null,
+          instagramResolvedUsername: instagramBusinessAccount?.username || null
+        });
+      }
+
+      // Sempre garante a conexão do Page no canal "facebook".
+      // Isso evita o bug onde a conexão do facebook não é criada quando o Graph já traz o IG linked.
+      pages.push({
+        companyId,
+        name,
+        facebookUserId: facebookUserId,
+        facebookPageUserId: id,
+        facebookUserToken: acessTokenPage,
+        tokenMeta: facebookUserToken,
+        isDefault: false,
+        channel: "facebook",
+        status: "CONNECTED",
+        greetingMessage: "",
+        farewellMessage: "",
+        queueIds: [],
+        isMultidevice: false
+      });
+
+      // Inscreve webhook na Página do Facebook (necessário para receber eventos do canal "facebook").
+      try {
+        await subscribeApp(id, acessTokenPage);
+      } catch (err: any) {
+        logger.warn("[storeFacebook] Falha ao inscrever webhook na Página do Facebook.", {
+          facebookPageId: id,
+          error: err?.message
+        });
+      }
+
+      // Se conseguir resolver o IG business account, cria também a conexão "instagram" e subscreve webhooks nela.
+      if (addInstagram) {
+        if (instagramBusinessAccount) {
+          const { id: instagramId, username, name: instagramName } = instagramBusinessAccount;
+
+          pages.push({
+            companyId,
+            name: `Insta ${username || instagramName}`,
+            facebookUserId: facebookUserId,
+            facebookPageUserId: instagramId,
+            facebookUserToken: acessTokenPage,
+            tokenMeta: facebookUserToken,
+            isDefault: false,
+            channel: "instagram",
+            status: "CONNECTED",
+            greetingMessage: "",
+            farewellMessage: "",
+            queueIds: [],
+            isMultidevice: false
+          });
+
+          try {
+            await subscribeApp(instagramId, acessTokenPage);
+          } catch (err: any) {
+            logger.warn("[storeFacebook] Falha ao inscrever webhook na conta do Instagram.", {
+              instagramBusinessAccountId: instagramId,
+              error: err?.message
+            });
+          }
+        } else {
+          // Placeholder para garantir o ícone "Instagram" na lista de conexões
+          // quando o Graph não retorna o `instagram_business_account`.
+          pages.push({
+            companyId,
+            name: "Instagram",
+            facebookUserId: facebookUserId,
+            // sem o IG business account id, reaproveitamos o id da Page
+            facebookPageUserId: id,
+            facebookUserToken: acessTokenPage,
+            tokenMeta: facebookUserToken,
+            isDefault: false,
+            channel: "instagram",
+            status: "CONNECTED",
+            greetingMessage: "",
+            farewellMessage: "",
+            queueIds: [],
+            isMultidevice: false
+          });
+        }
       }
     }
 
     for await (const pageConection of pages) {
       const exist = await Whatsapp.findOne({
         where: {
-          facebookPageUserId: pageConection.facebookPageUserId
+          facebookPageUserId: pageConection.facebookPageUserId,
+          channel: pageConection.channel,
+          companyId
         }
       });
 
+      let whatsapp;
       if (exist) {
         await exist.update({
           ...pageConection
         });
+        whatsapp = exist;
+      } else {
+        const created = await CreateWhatsAppService(pageConection);
+        whatsapp = created.whatsapp;
       }
 
-      if (!exist) {
-        const { whatsapp } = await CreateWhatsAppService(pageConection);
-
-        io.of(String(companyId)).emit(`company-${companyId}-whatsapp`, {
-          action: "update",
-          whatsapp
-        });
-      }
+      io.of("/" + String(companyId)).emit(`company-${companyId}-whatsapp`, {
+        action: "update",
+        whatsapp
+      });
     }
-    return res.status(200);
-  } catch (error) {
-    console.log(error);
+    logger.info("[storeFacebook] Conexão(ões) criada(s) com sucesso", { companyId, pagesCount: pages.length });
+    return res.status(200).json({ ok: true, count: pages.length });
+  } catch (error: any) {
+    logger.error("[storeFacebook] Erro ao conectar Facebook/Instagram", {
+      message: error?.message,
+      stack: error?.stack,
+      responseStatus: error?.response?.status,
+      responseData: error?.response?.data
+    });
+
+    const message = error?.message;
+    if (message === "ERR_FETCHING_FB_PAGES") {
+      return res.status(400).json({
+        error: "Nenhuma página do Facebook encontrada para esta conta ou token expirado. Tente fazer login novamente."
+      });
+    }
+    if (message === "ERR_FETCHING_FB_USER_TOKEN") {
+      return res.status(400).json({
+        error: "Não foi possível validar o token. Verifique FACEBOOK_APP_ID e FACEBOOK_APP_SECRET no servidor."
+      });
+    }
+    if (message === "ERR_SUBSCRIBING_PAGE_TO_MESSAGE_WEBHOOKS") {
+      return res.status(400).json({
+        error: "Erro ao inscrever a página no webhook. Verifique as permissões do app na Meta."
+      });
+    }
+
     return res.status(400).json({
-      error: "Facebook page not found"
+      error: "Erro ao conectar ao Facebook. Tente novamente ou verifique as permissões do app."
     });
   }
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer, useContext } from "react";
+import { useState, useEffect, useReducer, useContext, useCallback } from "react";
 import { toast } from "react-toastify";
 
 import api from "../../services/api";
@@ -57,21 +57,22 @@ const useWhatsApps = () => {
   const [loading, setLoading] = useState(true);
   const { user, socket } = useContext(AuthContext);
 
+  const fetchWhatsApps = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/whatsapp/?session=0");
+      dispatch({ type: "LOAD_WHATSAPPS", payload: data });
+    } catch (err) {
+      console.error("Erro ao carregar WhatsApps:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Effect para carregar os dados iniciais
   useEffect(() => {
-    setLoading(true);
-    const fetchSession = async () => {
-      try {
-        const { data } = await api.get("/whatsapp/?session=0");
-        dispatch({ type: "LOAD_WHATSAPPS", payload: data });
-        setLoading(false);
-      } catch (err) {
-        console.error("Erro ao carregar WhatsApps:", err);
-        setLoading(false);
-      }
-    };
-    fetchSession();
-  }, []);
+    fetchWhatsApps();
+  }, [fetchWhatsApps]);
 
   // Effect para configurar os listeners do socket
   useEffect(() => {
@@ -136,7 +137,7 @@ const useWhatsApps = () => {
     }
   }, [socket, user?.companyId]); // Dependências corretas
 
-  return { whatsApps, loading };
+  return { whatsApps, loading, fetchWhatsApps };
 };
 
 export default useWhatsApps;
