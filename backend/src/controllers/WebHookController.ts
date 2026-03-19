@@ -86,6 +86,20 @@ export const webHook = async (
     }
 
     const { body } = req;
+
+    // Se a Meta estiver chamando um callback que inclui `:companyId/:connectionId`,
+    // usamos a conexão diretamente (evita falha quando o payload usa um ID diferente
+    // do `facebookPageUserId` salvo).
+    const companyIdFromParams = req?.params?.companyId
+      ? Number(req.params.companyId)
+      : null;
+    const connectionIdFromParams = req?.params?.connectionId
+      ? Number(req.params.connectionId)
+      : null;
+    const connectionFromParams = connectionIdFromParams
+      ? await Whatsapp.findByPk(connectionIdFromParams)
+      : null;
+
     // Debug básico para confirmar se o webhook Meta está chegando
     try {
       const obj = body?.object;
@@ -104,12 +118,15 @@ export const webHook = async (
       }
 
       body.entry?.forEach(async (entry: any) => {
-        const getTokenPage = await (Whatsapp as any).findOne({
-          where: {
-            facebookPageUserId: entry.id,
-            channel
-          }
-        });
+        const getTokenPage =
+          (connectionFromParams && connectionFromParams.channel === channel
+            ? connectionFromParams
+            : await (Whatsapp as any).findOne({
+                where: {
+                  facebookPageUserId: entry.id,
+                  channel
+                }
+              }));
 
         if (Array.isArray(entry.messaging)) {
           // Facebook (page) envia eventos em entry.messaging
@@ -161,6 +178,9 @@ export const webHook = async (
               (async () => {
                 const token =
                   getTokenPage ||
+                  (connectionFromParams && connectionFromParams.channel === channel
+                    ? connectionFromParams
+                    : null) ||
                   (await findTokenByIds(recipientId)) ||
                   (await findTokenByIds(entry?.id));
 
@@ -191,7 +211,12 @@ export const webHook = async (
                   // ignore log errors
                 }
 
-                handleMessage(token, normalized, channel, token.companyId);
+                handleMessage(
+                  token,
+                  normalized,
+                  channel,
+                  companyIdFromParams ?? token.companyId
+                );
               })();
             });
           });
