@@ -751,7 +751,7 @@ const MainListItems = ({ collapsed, drawerClose, section }) => {
               collapsed={collapsed}
            />
 
-           {showOpenAi && (
+           {(showOpenAi || user.profile !== "user") && (
              <ListItemLink
                 to="/prompts"
                 primary="Agente IA"

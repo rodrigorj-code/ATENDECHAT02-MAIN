@@ -57,15 +57,22 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid, ticket }) => 
   }, []);
 
   useEffect(() => {
-    if (isMounted.current) {
-      const loadQueues = async () => {
+    if (!isMounted.current) return;
+    const loadQueues = async () => {
+      try {
         const list = await findAllQueues();
-        setAllQueues(list);
-        setQueues(list);
-
-      };
-      loadQueues();
-    }
+        if (isMounted.current) {
+          setAllQueues(Array.isArray(list) ? list : []);
+          setQueues(Array.isArray(list) ? list : []);
+        }
+      } catch (err) {
+        if (isMounted.current) {
+          setAllQueues([]);
+          setQueues([]);
+        }
+      }
+    };
+    loadQueues();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

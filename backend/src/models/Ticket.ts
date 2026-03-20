@@ -192,6 +192,16 @@ class Ticket extends Model<Ticket> {
       aguardandoContrato?: boolean;
       contratoSelecionado?: string;
     };
+    agentProactive?: {
+      followUpAttempts?: number;
+      lastFollowUpAt?: string;
+      lastUserInboundAt?: string;
+      hotPending?: boolean;
+      hotProposalSent?: boolean;
+      automationInactive?: boolean;
+      inactiveMarkedAt?: string;
+      lastReengagementAt?: string;
+    };
   } | null;
 
   @AllowNull(false)

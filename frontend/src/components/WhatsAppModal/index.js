@@ -289,16 +289,26 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
   }, [whatsAppId, whatsApp.token]);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchData() {
-      const companyId = user.companyId;
-      const planConfigs = await getPlanCompany(undefined, companyId);
-
-      setShowOpenAi(planConfigs.plan.useOpenAi);
-      setShowIntegrations(planConfigs.plan.useIntegrations);
-      setUseWhatsappOfficial(planConfigs.plan.useWhatsappOfficial);
-      setShowWavoipCall(planConfigs.plan.wavoip);
+      const companyId = user?.companyId;
+      if (!companyId) return;
+      try {
+        const planConfigs = await getPlanCompany(undefined, companyId);
+        if (cancelled) return;
+        const plan = planConfigs?.plan;
+        setShowOpenAi(!!plan?.useOpenAi);
+        setShowIntegrations(!!plan?.useIntegrations);
+        setUseWhatsappOfficial(!!plan?.useWhatsappOfficial);
+        setShowWavoipCall(!!plan?.wavoip);
+      } catch (err) {
+        if (!cancelled) toastError(err);
+      }
     }
     fetchData();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -306,9 +316,10 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
     (async () => {
       try {
         const { data } = await api.get("/prompt");
-        setPrompts(data.prompts);
+        setPrompts(Array.isArray(data?.prompts) ? data.prompts : []);
       } catch (err) {
         toastError(err);
+        setPrompts([]);
       }
     })();
   }, [whatsAppId]);
@@ -342,25 +353,31 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
     (async () => {
       try {
         const { data } = await api.get("/flowbuilder");
-        setWebhooks(data.flows);
+        setWebhooks(Array.isArray(data?.flows) ? data.flows : []);
       } catch (err) {
         toastError(err);
+        setWebhooks([]);
       }
     })();
   }, []);
 
   useEffect(() => {
     const fetchData = async () => {
-      const settingSchedules = await getSetting({
-        column: "scheduleType",
-      });
-      setSchedulesEnabled(settingSchedules.scheduleType === "connection");
-      const settingNPS = await getSetting({
-        column: "userRating",
-      });
-      setNPSEnabled(settingNPS.userRating === "enabled");
+      try {
+        const settingSchedules = await getSetting({
+          column: "scheduleType",
+        });
+        setSchedulesEnabled(settingSchedules?.scheduleType === "connection");
+        const settingNPS = await getSetting({
+          column: "userRating",
+        });
+        setNPSEnabled(settingNPS?.userRating === "enabled");
+      } catch (err) {
+        toastError(err);
+      }
     };
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleEnableImportMessage = async (e) => {
@@ -422,10 +439,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
         } else {
           setSelectedPrompt("__agent_settings__");
         }
-        const whatsQueueIds = data.queues?.map((queue) => queue.id);
+        const whatsQueueIds = Array.isArray(data.queues)
+          ? data.queues.map((queue) => queue.id)
+          : [];
         setSelectedQueueIds(whatsQueueIds);
         setIsOficial(channel === "whatsapp_oficial");
-        setSchedules(data.schedules);
+        if (Array.isArray(data.schedules) && data.schedules.length > 0) {
+          setSchedules(data.schedules);
+        }
         if (!isNil(data?.importOldMessages)) {
           setEnableImportMessage(true);
           setImportOldMessages(data?.importOldMessages);
@@ -444,9 +465,10 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
     (async () => {
       try {
         const { data } = await api.get("/queue");
-        setQueues(data);
+        setQueues(Array.isArray(data) ? data : []);
       } catch (err) {
         toastError(err);
+        setQueues([]);
       }
     })();
   }, []);
@@ -455,10 +477,10 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
     (async () => {
       try {
         const { data } = await api.get("/queueIntegration");
-
-        setIntegrations(data.queueIntegrations);
+        setIntegrations(Array.isArray(data?.queueIntegrations) ? data.queueIntegrations : []);
       } catch (err) {
         toastError(err);
+        setIntegrations([]);
       }
     })();
   }, []);
@@ -1184,7 +1206,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                                   labelId="queueIdImportMessages-selection-label"
                                 >
                                   <MenuItem value={0}>&nbsp;</MenuItem>
-                                  {queues.map((queue) => (
+                                  {(queues || []).map((queue) => (
                                     <MenuItem key={queue.id} value={queue.id}>
                                       {queue.name}
                                     </MenuItem>
@@ -1267,7 +1289,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                               labelId="sendIdQueue-selection-label"
                             >
                               <MenuItem value={0}>&nbsp;</MenuItem>
-                              {queues.map((queue) => (
+                              {(queues || []).map((queue) => (
                                 <MenuItem key={queue.id} value={queue.id}>
                                   {queue.name}
                                 </MenuItem>
@@ -1339,12 +1361,12 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                           placeholder={i18n.t("queueModal.form.integrationId")}
                           labelId="integrationId-selection-label"
                         >
-                          {integrations.length === 0 ? (
+                          {(integrations || []).length === 0 ? (
                             <MenuItem value={null} disabled>{"Nenhuma integração cadastrada"}</MenuItem>
                           ) : (
                             <MenuItem value={null}>{"Desabilitado"}</MenuItem>
                           )}
-                          {integrations.map((integration) => (
+                          {(integrations || []).map((integration) => (
                             <MenuItem
                               key={integration.id}
                               value={integration.id}
@@ -1388,7 +1410,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                               {`Agente (Integração): ${integrationAgentName || "Padrão"}`}
                             </MenuItem>
                           )}
-                          {prompts.map((prompt) => (
+                          {(prompts || []).map((prompt) => (
                             <MenuItem key={prompt.id} value={prompt.id}>
                               {prompt.name}
                             </MenuItem>
@@ -1462,7 +1484,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                               onChange={handleIntegrationTypeChange}
                             >
                               <MenuItem value={null}>{"Desabilitado"}</MenuItem>
-                              {integrations
+                              {(integrations || [])
                                 .filter(
                                   (integration) =>
                                     integration.type === "n8n" ||
@@ -1913,7 +1935,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                                 labelId="flowIdInactiveTime-selection-label"
                               >
                                 <MenuItem value={null}>{"Desabilitado"}</MenuItem>
-                                {webhooks.map((webhook) => (
+                                {(webhooks || []).map((webhook) => (
                                   <MenuItem key={webhook.id} value={webhook.id}>
                                     {webhook.name}
                                   </MenuItem>
@@ -1963,7 +1985,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                               labelId="timeAwaitActiveFlowId-selection-label"
                             >
                               <MenuItem value={null}>{"Desabilitado"}</MenuItem>
-                              {webhooks.map((webhook) => (
+                              {(webhooks || []).map((webhook) => (
                                 <MenuItem key={webhook.id} value={webhook.id}>
                                   {webhook.name}
                                 </MenuItem>
@@ -2073,7 +2095,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                             labelId="flowIdNotPhrase-selection-label"
                           >
                             <MenuItem value={null}>{"Desabilitado"}</MenuItem>
-                            {webhooks.map((webhook) => (
+                            {(webhooks || []).map((webhook) => (
                               <MenuItem key={webhook.id} value={webhook.id}>
                                 {webhook.name}
                               </MenuItem>
@@ -2104,7 +2126,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId, channel }) => {
                             labelId="flowIdWelcome-selection-label"
                           >
                             <MenuItem value={null}>{"Desabilitado"}</MenuItem>
-                            {webhooks.map((webhook) => (
+                            {(webhooks || []).map((webhook) => (
                               <MenuItem key={webhook.id} value={webhook.id}>
                                 {webhook.name}
                               </MenuItem>

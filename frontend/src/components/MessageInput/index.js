@@ -608,34 +608,54 @@ const MessageInput = ({
   }, [ticketStatus]);
 
   useEffect(() => {
+    if (!useWhatsappOfficial) return;
+    let cancelled = false;
     async function fetchTemplates() {
-      const templates = await api.request({
-        url: `/quick-messages/list`,
-        method: "GET",
-        params: {
-          isOficial: "true",
-          userId: user.id,
-          companyId: user.companyId,
-          status: "APPROVED",
-          // whatsappId,
-        },
-      });
-      setTemplates(templates.data);
+      try {
+        const templates = await api.request({
+          url: `/quick-messages/list`,
+          method: "GET",
+          params: {
+            isOficial: "true",
+            userId: user.id,
+            companyId: user.companyId,
+            status: "APPROVED"
+          }
+        });
+        if (!cancelled) setTemplates(templates.data);
+      } catch (err) {
+        if (!cancelled) toastError(err);
+      }
     }
-    if (useWhatsappOfficial) {
-      fetchTemplates();
-    }
-  }, [useWhatsappOfficial]);
+    fetchTemplates();
+    return () => {
+      cancelled = true;
+    };
+  }, [useWhatsappOfficial, user.id, user.companyId]);
 
   useEffect(() => {
+    const companyId = user.companyId;
+    if (!companyId) return;
+    let cancelled = false;
     async function fetchData() {
-      const companyId = user.companyId;
-      const planConfigs = await getPlanCompany(undefined, companyId);
-      setShowSchedules(planConfigs.plan.useSchedules);
-      setUseWhatsappOfficial(planConfigs.plan.useWhatsappOfficial);
+      try {
+        const planConfigs = await getPlanCompany(undefined, companyId);
+        if (cancelled) return;
+        const plan = planConfigs?.plan;
+        if (plan) {
+          setShowSchedules(!!plan.useSchedules);
+          setUseWhatsappOfficial(!!plan.useWhatsappOfficial);
+        }
+      } catch (err) {
+        if (!cancelled) toastError(err);
+      }
     }
     fetchData();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.companyId]);
 
   useEffect(() => {
     const fetchAIConfig = async () => {
@@ -899,31 +919,39 @@ const MessageInput = ({
 
   useEffect(() => {
     const fetchSettings = async () => {
-      const setting = await getSetting({
-        column: "sendSignMessage",
-      });
+      try {
+        const setting = await getSetting({
+          column: "sendSignMessage",
+        });
 
-      if (isMounted.current) {
-        if (setting.sendSignMessage === "enabled") {
+        if (!isMounted.current) return;
+        if (setting?.sendSignMessage === "enabled") {
           setSignMessagePar(true);
-          const signMessageStorage = JSON.parse(
-            localStorage.getItem("persistentSignMessage")
-          );
-          if (isNil(signMessageStorage)) {
+          try {
+            const signMessageStorage = JSON.parse(
+              localStorage.getItem("persistentSignMessage")
+            );
+            if (isNil(signMessageStorage)) {
+              setSignMessage(true);
+            } else {
+              setSignMessage(signMessageStorage);
+            }
+          } catch {
             setSignMessage(true);
-          } else {
-            setSignMessage(signMessageStorage);
           }
-        } else if (setting.sendSignMessage === "dontSend") {
+        } else if (setting?.sendSignMessage === "dontSend") {
           localStorage.setItem("persistentSignMessage", false);
           setSignMessage(false);
           setSignMessagePar(false);
         } else {
           setSignMessagePar(false);
         }
+      } catch (err) {
+        toastError(err);
       }
     };
     fetchSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // CORREÇÃO DO ERRO charAt - Função mais robusta
@@ -1471,32 +1499,41 @@ const MessageInput = ({
   };
 
   useEffect(() => {
+    const companyId = user.companyId;
+    if (!companyId || !user.id) return;
+    let cancelled = false;
     async function fetchData() {
-      const companyId = user.companyId;
-      const messages = await listQuickMessages({
-        companyId,
-        userId: user.id,
-        isOficial: ticketChannel === "whatsapp_oficial" ? "true" : "false",
-      });
-      const options = messages.map((m) => {
-        let truncatedMessage = m.message;
-        if (isString(truncatedMessage) && truncatedMessage.length > 90) {
-          truncatedMessage = m.message.substring(0, 90) + "...";
-        }
-        return {
-          value: m.message,
-          label: `/${m.shortcode} - ${truncatedMessage}`,
-          mediaPath: m.mediaPath,
-          mediaType: m.mediaType,
-          shortcode: m.shortcode,
-        };
-      });
-      if (isMounted.current) {
+      try {
+        const messages = await listQuickMessages({
+          companyId,
+          userId: user.id,
+          isOficial: ticketChannel === "whatsapp_oficial" ? "true" : "false"
+        });
+        if (cancelled || !isMounted.current) return;
+        const options = messages.map((m) => {
+          let truncatedMessage = m.message;
+          if (isString(truncatedMessage) && truncatedMessage.length > 90) {
+            truncatedMessage = m.message.substring(0, 90) + "...";
+          }
+          return {
+            value: m.message,
+            label: `/${m.shortcode} - ${truncatedMessage}`,
+            mediaPath: m.mediaPath,
+            mediaType: m.mediaType,
+            shortcode: m.shortcode
+          };
+        });
         setQuickAnswer(options);
+      } catch (err) {
+        if (!cancelled && isMounted.current) toastError(err);
       }
     }
     fetchData();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.companyId, user.id, ticketChannel]);
 
   useEffect(() => {
     if (

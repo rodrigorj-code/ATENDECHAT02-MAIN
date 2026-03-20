@@ -464,14 +464,24 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 	};
 
 	useEffect(() => {
+		let cancelled = false;
 		async function fetchData() {
-			const lgpdHideNumber = await get({
-				"column": "lgpdHideNumber"
-			});
-
-			if (lgpdHideNumber === "enabled") setHideNum(true);
+			try {
+				const lgpdHideNumber = await get({
+					column: "lgpdHideNumber"
+				});
+				if (cancelled) return;
+				if (lgpdHideNumber === "enabled") setHideNum(true);
+			} catch (err) {
+				if (!cancelled) toastError(err);
+			}
 		}
 		fetchData();
+		return () => {
+			cancelled = true;
+		};
+		// get do hook não é memoizado
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	useEffect(() => {

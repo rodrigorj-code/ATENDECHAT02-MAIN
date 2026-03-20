@@ -30,6 +30,7 @@ import User from "../../models/User";
 import Whatsapp from "../../models/Whatsapp";
 import axios from "axios";
 import { getMessageOptions } from "../WbotServices/SendWhatsAppMedia";
+import { onAgentUserInboundText } from "../AgentProactiveServices/onUserInboundAgent";
 
 type Session = WASocket & {
   id?: number;
@@ -88,6 +89,65 @@ const sanitizeName = (name: string): string => {
   sanitized = sanitized.replace(/[^a-zA-Z0-9]/g, "");
   return sanitized.substring(0, 60);
 };
+
+async function loadAgentActionsSetting(companyId: number): Promise<Record<string, any>> {
+  try {
+    const row = await ListSettingsServiceOne({ companyId, key: "agent_actions" });
+    if (!row?.value) return {};
+    return typeof row.value === "string" ? JSON.parse(row.value as string) : (row.value as any) || {};
+  } catch {
+    return {};
+  }
+}
+
+/** Fila (e opcionalmente usuário) para transferência: prioriza Ações > fila do prompt de integração */
+function resolveAgentTransferTarget(
+  aiSettings: IOpenAi,
+  agentActions: Record<string, any>
+): { queueId: number | null; userId?: number } {
+  const enabled = Array.isArray(agentActions?.enabled) ? agentActions.enabled : [];
+  const transferActionOn = enabled.includes("Transferir Chamado");
+  const tc = agentActions?.transferChamado;
+  const cfgQueue = tc != null ? Number(tc.queueId) : NaN;
+  const cfgUser = tc != null ? Number(tc.userId) : NaN;
+
+  if (transferActionOn && Number.isFinite(cfgQueue) && cfgQueue > 0) {
+    return {
+      queueId: cfgQueue,
+      ...(Number.isFinite(cfgUser) && cfgUser > 0 ? { userId: cfgUser } : {})
+    };
+  }
+
+  if (aiSettings.queueId && aiSettings.queueId > 0) {
+    return { queueId: aiSettings.queueId };
+  }
+  return { queueId: null };
+}
+
+async function loadProactiveMediaFlags(
+  companyId: number
+): Promise<{ vision: boolean; ack: boolean }> {
+  try {
+    const row = await ListSettingsServiceOne({ companyId, key: "agent_proactive" });
+    const v = row?.value
+      ? typeof row.value === "string"
+        ? JSON.parse(row.value as string)
+        : row.value
+      : {};
+    return {
+      vision: v.openAiVisionInbound === true,
+      ack: v.acknowledgeMedia !== false
+    };
+  } catch {
+    return { vision: false, ack: true };
+  }
+}
+
+function pickVisionModel(model: string): string {
+  const m = (model || "").toLowerCase();
+  if (m.includes("gpt-4o")) return model || "gpt-4o-mini";
+  return "gpt-4o-mini";
+}
 
 // Função para detectar solicitação de transferência para atendente
 const detectTransferRequest = (message: string): boolean => {
@@ -262,14 +322,13 @@ const prepareMessagesAI = (pastMessages: Message[], isGeminiModel: boolean, prom
     messagesAI.push({ role: "system", content: promptSystem });
   }
 
-  // Mapear mensagens passadas para formato da IA
   for (const message of pastMessages) {
-    if (message.mediaType === "conversation" || message.mediaType === "extendedTextMessage") {
-      if (message.fromMe) {
-        messagesAI.push({ role: "assistant", content: message.body });
-      } else {
-        messagesAI.push({ role: "user", content: message.body });
-      }
+    const content = (message.body || "").trim();
+    if (!content) continue;
+    if (message.fromMe) {
+      messagesAI.push({ role: "assistant", content });
+    } else {
+      messagesAI.push({ role: "user", content });
     }
   }
 
@@ -284,7 +343,7 @@ const processResponse = async (
   ticket: Ticket,
   contact: Contact,
   aiSettings: IOpenAi,
-  ticketTraking: TicketTraking
+  ticketTraking?: TicketTraking
 ): Promise<void> => {
   let response = responseText;
 
@@ -299,6 +358,11 @@ const processResponse = async (
   // Verificar se o usuário pediu para falar com atendente
   const userMessage = getBodyMessage(msg) || "";
   const userRequestedTransfer = detectTransferRequest(userMessage);
+  const agentActions = await loadAgentActionsSetting(ticket.companyId);
+  const { queueId: transferQueueId, userId: transferUserId } = resolveAgentTransferTarget(
+    aiSettings,
+    agentActions
+  );
 
   if (userRequestedTransfer) {
     logger.info(`[AI SERVICE] Usuário solicitou transferência para atendente - ticket ${ticket.id}`);
@@ -318,8 +382,8 @@ const processResponse = async (
     });
     await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
 
-    if (aiSettings.queueId && aiSettings.queueId > 0) {
-      await transferQueue(aiSettings.queueId, ticket, contact);
+    if (transferQueueId && transferQueueId > 0) {
+      await transferQueue(transferQueueId, ticket, contact, transferUserId);
     }
 
     logger.info(`[AI SERVICE] Ticket ${ticket.id} transferido para atendimento humano`);
@@ -337,8 +401,8 @@ const processResponse = async (
       status: "pending"
     });
 
-    if (aiSettings.queueId && aiSettings.queueId > 0) {
-      await transferQueue(aiSettings.queueId, ticket, contact);
+    if (transferQueueId && transferQueueId > 0) {
+      await transferQueue(transferQueueId, ticket, contact, transferUserId);
     }
 
     response = response.replace(/ação: transferir para o setor de atendimento/i, "").trim();
@@ -692,9 +756,16 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
       }
     }
 
-    // Se não tem bodyMessage e não é áudio, não processar
-    if (!bodyMessage && !msg.message?.audioMessage) {
-      logger.warn("[AI SERVICE] Nenhum conteúdo de texto ou áudio encontrado");
+    const hasInboundMedia = !!(
+      msg.message?.audioMessage ||
+      msg.message?.imageMessage ||
+      msg.message?.videoMessage ||
+      msg.message?.documentMessage ||
+      msg.message?.stickerMessage
+    );
+
+    if (!bodyMessage.trim() && !hasInboundMedia) {
+      logger.warn("[AI SERVICE] Nenhum conteúdo de texto ou mídia encontrado");
       return;
     }
 
@@ -787,7 +858,8 @@ ${roleLang ? `\n${roleLang}` : ""}${roleForm ? `\n${roleForm}` : ""}${roleFunc ?
 ${aiSettings.prompt}`;
 
     // Processar mensagem de texto
-    if (bodyMessage) {
+    if (bodyMessage.trim()) {
+      await onAgentUserInboundText(ticket, bodyMessage);
       const scheduleAttempt = await tryScheduleMeeting(bodyMessage, ticket, contact);
       if (scheduleAttempt.handled) {
         const when = scheduleAttempt.when!;
@@ -918,8 +990,20 @@ ${aiSettings.prompt}`;
         });
         await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
       }
-    } else if (msg.message?.imageMessage && mediaSent) {
+    } else if ((msg.message?.imageMessage || msg.message?.stickerMessage) && mediaSent) {
       try {
+        const { vision, ack } = await loadProactiveMediaFlags(ticket.companyId);
+        const fileName = typeof mediaSent.mediaUrl === "string" ? mediaSent.mediaUrl.split("/").pop() : null;
+        const publicFolderLocal: string = path.resolve(
+          __dirname,
+          "..",
+          "..",
+          "..",
+          "public",
+          `company${ticket.companyId}`
+        );
+        const filePath = fileName ? path.join(publicFolderLocal, fileName) : null;
+
         if (isGeminiModel && gemini) {
           const model = gemini.getGenerativeModel({
             model: aiSettings.model,
@@ -930,10 +1014,6 @@ ${aiSettings.prompt}`;
             role: m.role === "assistant" ? "model" : "user",
             parts: [{ text: m.content }],
           }));
-
-          const fileName = typeof mediaSent.mediaUrl === "string" ? mediaSent.mediaUrl.split("/").pop() : null;
-          const publicFolder: string = path.resolve(__dirname, "..", "..", "..", "public", `company${ticket.companyId}`);
-          const filePath = fileName ? path.join(publicFolder, fileName) : null;
 
           if (!filePath || !fs.existsSync(filePath)) {
             const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
@@ -953,16 +1033,48 @@ ${aiSettings.prompt}`;
 
           const chat = model.startChat({ history: geminiHistory });
           const promptText = "Descreva a imagem e responda ao usuário considerando o contexto da conversa.";
-          const result = await chat.sendMessage([ { text: promptText }, imagePart ]);
+          const result = await chat.sendMessage([{ text: promptText }, imagePart]);
           const responseText = result.response.text();
 
           if (responseText) {
             const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, { text: `\u200e ${responseText}` });
             await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
           }
+        } else if (isOpenAIModel && openai && vision && filePath && fs.existsSync(filePath)) {
+          const buf = fs.readFileSync(filePath);
+          const mimeGuess = msg.message?.stickerMessage ? "image/webp" : "image/jpeg";
+          const b64 = buf.toString("base64");
+          const dataUrl = `data:${mimeGuess};base64,${b64}`;
+          const messagesAI = prepareMessagesAI(messages, false, promptSystem);
+          const userLine =
+            "O cliente enviou uma imagem ou figurinho. Descreva o que for relevante e responda de forma breve e útil.";
+          messagesAI.push({
+            role: "user",
+            content: [
+              { type: "text", text: userLine },
+              { type: "image_url", image_url: { url: dataUrl } }
+            ] as any
+          });
+          const visionModel = pickVisionModel(aiSettings.model);
+          const chat = await openai.chat.completions.create({
+            model: visionModel,
+            messages: messagesAI as any,
+            max_tokens: Math.min(aiSettings.maxTokens || 500, 800),
+            temperature: aiSettings.temperature
+          });
+          const responseText = (chat.choices[0]?.message?.content || "").trim();
+          if (responseText) {
+            const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, { text: `\u200e ${responseText}` });
+            await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
+          }
+        } else if (ack) {
+          const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
+            text: "\u200e Recebi sua imagem! Se quiser que eu analise com mais detalhe, ative OpenAI Vision em Proativo & mídia ou descreva em texto o que precisa."
+          });
+          await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
         } else {
           const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
-            text: "Ainda não consigo analisar imagens com este provedor de IA. Por favor, descreva em texto."
+            text: "\u200e Ainda não consigo analisar imagens com esta configuração. Por favor, descreva em texto."
           });
           await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
         }
@@ -972,6 +1084,54 @@ ${aiSettings.prompt}`;
           text: "Houve um erro ao analisar sua imagem. Por favor, tente novamente."
         });
         await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
+      }
+    } else if (msg.message?.videoMessage && mediaSent) {
+      try {
+        const { ack } = await loadProactiveMediaFlags(ticket.companyId);
+        const cap = bodyMessage?.trim() || "";
+        const synthetic = `[Mídia recebida: vídeo]${cap ? ` Legenda: ${cap}` : ""} Reconheça o envio e responda de forma breve; se precisar de análise detalhada, peça que descrevam em texto.`;
+        const messagesAI = prepareMessagesAI(messages, isGeminiModel, promptSystem);
+        let responseText: string | null = null;
+        if (isOpenAIModel && openai) {
+          messagesAI.push({ role: "user", content: synthetic });
+          responseText = await handleOpenAIRequest(openai, messagesAI, aiSettings);
+        } else if (isGeminiModel && gemini) {
+          responseText = await handleGeminiRequest(gemini, messagesAI, aiSettings, synthetic, promptSystem);
+        }
+        if (responseText) {
+          await processResponse(responseText, wbot, msg, ticket, contact, aiSettings, ticketTraking);
+        } else if (ack) {
+          const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
+            text: "\u200e Recebi seu vídeo! Se precisar de algo específico, conte em texto que eu te ajudo."
+          });
+          await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
+        }
+      } catch (error: any) {
+        logger.error("[AI SERVICE] Erro ao processar vídeo:", error);
+      }
+    } else if (msg.message?.documentMessage && mediaSent) {
+      try {
+        const { ack } = await loadProactiveMediaFlags(ticket.companyId);
+        const fn = msg.message.documentMessage?.fileName || "documento";
+        const synthetic = `[Mídia recebida: documento: ${fn}] Reconheça o envio e ofereça ajuda; para análise profunda, peça um resumo em texto do que precisa.`;
+        const messagesAI = prepareMessagesAI(messages, isGeminiModel, promptSystem);
+        let responseText: string | null = null;
+        if (isOpenAIModel && openai) {
+          messagesAI.push({ role: "user", content: synthetic });
+          responseText = await handleOpenAIRequest(openai, messagesAI, aiSettings);
+        } else if (isGeminiModel && gemini) {
+          responseText = await handleGeminiRequest(gemini, messagesAI, aiSettings, synthetic, promptSystem);
+        }
+        if (responseText) {
+          await processResponse(responseText, wbot, msg, ticket, contact, aiSettings, ticketTraking);
+        } else if (ack) {
+          const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
+            text: "\u200e Recebi seu arquivo! Diga em poucas palavras o que você precisa que eu faça com ele."
+          });
+          await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
+        }
+      } catch (error: any) {
+        logger.error("[AI SERVICE] Erro ao processar documento:", error);
       }
     } else if (msg.message?.audioMessage && isGeminiModel) {
       // Gemini não suporta áudio, apenas texto

@@ -527,22 +527,34 @@ const MessagesList = ({
   };
 
   useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
     async function fetchData() {
-      const settings = (await getAll(companyId)) || {};
+      try {
+        const settings = (await getAll(companyId)) || {};
+        if (cancelled) return;
 
-      let settinglgpdDeleteMessage;
-      let settingEnableLGPD;
+        let settinglgpdDeleteMessage;
+        let settingEnableLGPD;
 
-      for (const [key, value] of Object.entries(settings)) {
-        if (key === "lgpdDeleteMessage") settinglgpdDeleteMessage = value
-        if (key === "enableLGPD") settingEnableLGPD = value
-      }
-      if (settingEnableLGPD === "enabled" && settinglgpdDeleteMessage === "enabled") {
-        setLGPDDeleteMessage(true);
+        for (const [key, value] of Object.entries(settings)) {
+          if (key === "lgpdDeleteMessage") settinglgpdDeleteMessage = value;
+          if (key === "enableLGPD") settingEnableLGPD = value;
+        }
+        if (settingEnableLGPD === "enabled" && settinglgpdDeleteMessage === "enabled") {
+          setLGPDDeleteMessage(true);
+        }
+      } catch (err) {
+        if (!cancelled) toastError(err);
       }
     }
     fetchData();
-  }, [])
+    return () => {
+      cancelled = true;
+    };
+    // getAll vem de hook sem useCallback — evitar dependência para não loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });

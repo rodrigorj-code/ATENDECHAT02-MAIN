@@ -1,15 +1,14 @@
 import React, { useContext, useEffect, useReducer, useState } from "react";
 
-import openSocket from "socket.io-client";
-
 import {
+  Box,
   Button,
+  FormControl,
   Grid,
-  IconButton,
   InputAdornment,
+  InputLabel,
   MenuItem,
   Chip,
-  Paper,
   Select,
   Switch,
   Table,
@@ -27,22 +26,23 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
-import { DeleteOutline, Edit, Visibility, VisibilityOff, Settings as SettingsIcon, WorkOutline as WorkOutlineIcon, Memory as MemoryIcon, FlashOn as FlashOnIcon, BugReport as BugReportIcon, List as ListIcon, Business, Flag, Gavel, Category as CategoryIcon, InfoOutlined, EventNote, PersonAdd, Assignment, DragHandle } from "@material-ui/icons";
+import { WorkOutline as WorkOutlineIcon, Memory as MemoryIcon, FlashOn as FlashOnIcon, BugReport as BugReportIcon, Business, Flag, Gavel, Category as CategoryIcon, InfoOutlined, EventNote, PersonAdd, Assignment, DragHandle, NotificationsActive, PermMedia, Note, TrendingUp, Repeat, LocalOffer, SwapHoriz } from "@material-ui/icons";
 // Ícone oficial da OpenAI via react-icons (simple-icons)
 import { SiOpenai } from "react-icons/si";
 import { toast } from "react-toastify";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import usePlans from "../../hooks/usePlans";
-import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 import ForbiddenPage from "../../components/ForbiddenPage";
 import ActivitiesStyleLayout from "../../components/ActivitiesStyleLayout";
+import SectionCard from "./components/shared/SectionCard";
+import ProactivityTab from "./components/ProactivityTab";
+import MediaTab from "./components/MediaTab";
+import IntegrationTab from "./components/IntegrationTab";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(2),
-    overflowY: "auto",
-    ...theme.scrollbarStyles,
+    padding: theme.spacing(1, 2),
+    overflow: "visible"
   },
   mainPaperTight: {
     paddingTop: theme.spacing(0)
@@ -69,7 +69,7 @@ const useStyles = makeStyles((theme) => ({
   },
   inputDense: {
     marginTop: 2,
-    marginBottom: 6,
+    marginBottom: 4,
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#fff',
       borderRadius: 10
@@ -162,11 +162,11 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2)
   },
   rightModelCard: {
-    background: "rgba(255,255,255,0.6)",
-    border: "1px solid rgba(229,231,235,0.6)",
-    borderRadius: 12,
-    padding: theme.spacing(2),
-    boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+    background: "transparent",
+    border: "none",
+    borderRadius: 0,
+    padding: theme.spacing(0, 0, 0, 1),
+    boxShadow: "none",
     height: "100%"
   },
   rightSection: {
@@ -238,7 +238,73 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "wrap",
     gap: theme.spacing(1),
     marginBottom: theme.spacing(1)
-  }
+  },
+  pageContent: {
+    width: "100%",
+    maxWidth: "100%",
+    padding: theme.spacing(0, 1)
+  },
+  formFooterBar: {
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginTop: theme.spacing(1)
+  },
+  brainSectionCard: {
+    marginBottom: theme.spacing(2)
+  },
+  qaListRow: {
+    padding: "8px 0",
+    borderBottom: "1px solid #f1f5f9"
+  },
+  chatTesterShell: {
+    display: "flex",
+    flexDirection: "column",
+    height: 480,
+    maxHeight: "60vh"
+  },
+  chatTesterMessages: {
+    flex: 1,
+    overflowY: "auto",
+    padding: theme.spacing(1),
+    border: "1px solid #e5e7eb",
+    borderRadius: 10,
+    marginBottom: theme.spacing(1),
+    background: "#fafafa"
+  },
+  chatBubbleUser: {
+    maxWidth: "80%",
+    padding: "8px 12px",
+    borderRadius: 14,
+    background: "#131B2D",
+    color: "#fff"
+  },
+  chatBubbleAssistant: {
+    maxWidth: "80%",
+    padding: "8px 12px",
+    borderRadius: 14,
+    background: "#e5e7eb",
+    color: "#111"
+  },
+  sectionCardSpacing: {
+    marginBottom: theme.spacing(1)
+  },
+  sectionCardSpacingTop: {
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(1)
+  },
+  promptsAccordion: {
+    marginTop: theme.spacing(1),
+    background: "transparent",
+    border: "none",
+    borderBottom: "1px solid #e5e7eb",
+    borderRadius: 0,
+    boxShadow: "none",
+    "&:before": { display: "none" }
+  },
+  integrationTabRoot: {
+    paddingTop: theme.spacing(2)
+  },
 }));
 
 const ExpandableField = ({
@@ -382,8 +448,6 @@ const Prompts = () => {
   //   const socketManager = useContext(SocketContext);
   const { user, socket } = useContext(AuthContext);
 
-  const { getPlanCompany } = usePlans();
-  const history = useHistory();
   const companyId = user.companyId;
   const [activeTab, setActiveTab] = useState("integracao");
 
@@ -397,7 +461,8 @@ const Prompts = () => {
     frequencyPenalty: 0,
     stopSequences: "###, FIM",
     active: true,
-    scope: "Pessoal"
+    scope: "Pessoal",
+    responderGrupo: false
   });
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -439,19 +504,63 @@ const Prompts = () => {
     maxMessages: 10
   });
   const [queues, setQueues] = useState([]);
-  const [advancedState, setAdvancedState] = useState({
-    responderGrupo: false,
-    welcomeMessage: "",
-    farewellMessage: "",
-    transferMessage: "",
-    voice: "texto",
-    voiceKey: "",
-    voiceRegion: ""
+  const [tags, setTags] = useState([]);
+  const [contactLists, setContactLists] = useState([]);
+  const emptySeg = () => ({ tagIds: [], contactListId: "" });
+  const [proactiveState, setProactiveState] = useState({
+    enabled: false,
+    followUpEnabled: true,
+    hotLeadEnabled: true,
+    reengagementEnabled: true,
+    followUpAfterDays: 2,
+    reengageAfterWeeks: 2,
+    hotLeadKeywords: "preço, proposta, orçamento, quero, valor, contratar",
+    useHotLeadButtons: true,
+    openAiVisionInbound: false,
+    acknowledgeMedia: true,
+    hintFollowUp: "",
+    hintHotLead: "",
+    hintReengagement: "",
+    hintColdOutreach: "",
+    objectives: {
+      follow_up: "",
+      hot_lead: "",
+      reengagement: "",
+      cold_outreach: ""
+    },
+    segments: {
+      follow_up: emptySeg(),
+      hot_lead: emptySeg(),
+      reengagement: emptySeg(),
+      cold_outreach: emptySeg()
+    },
+    businessHoursEnabled: false,
+    businessStartHour: 9,
+    businessEndHour: 18,
+    playbook: "",
+    mediaByContext: {},
+    defaultOutbound: { allowAgentToSuggestUrls: false },
+    maxProactivePerContactPerDay: "",
+    sequenceSteps: [],
+    coldOutreachBlendMode: "merge",
+    applySegmentFilters: true,
+    proactiveMission: "balanced",
+    maxFollowUpAttempts: 3,
+    minHoursBetweenFollowUps: "",
+    maxReengagementAttempts: "",
+    customProactiveText: {
+      follow_up: "",
+      hot_lead: "",
+      reengagement: "",
+      cold_outreach: ""
+    }
   });
   const [actionsState, setActionsState] = useState({
     enabled: ["Agendamento"],
-    custom: []
+    custom: [],
+    transferChamado: { queueId: "", userId: "" }
   });
+  const [actionsUsers, setActionsUsers] = useState([]);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
   const openAiModels = [
     "gpt-4o-mini",
@@ -481,22 +590,6 @@ const Prompts = () => {
     "text-embedding-3-small": { title: "Embeddings 3 Small", desc: "Custo reduzido.", capability: "Embeddings", context: "-", output: "-", speed: "Rápido", quality: "Boa", cost: "Baixo", iconColor: "#94a3b8" },
     "text-embedding-ada-002": { title: "Embeddings Ada 002", desc: "Legado.", capability: "Embeddings", context: "-", output: "-", speed: "Rápido", quality: "Média", cost: "Baixo", iconColor: "#94a3b8" }
   };
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const planConfigs = await getPlanCompany(undefined, companyId);
-        if (planConfigs && planConfigs.plan && !planConfigs.plan.useOpenAi) {
-          toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
-          setTimeout(() => {
-            history.push(`/`);
-          }, 1000);
-        }
-      } catch (e) {}
-    }
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -552,11 +645,26 @@ const Prompts = () => {
       if (key === "agent_brain" && parsed) {
         setBrainState((prev) => ({ ...prev, ...parsed }));
       }
-      if (key === "agent_advanced" && parsed) {
-        setAdvancedState((prev) => ({ ...prev, ...parsed }));
+      if (key === "agent_proactive" && parsed) {
+        setProactiveState((prev) => ({ ...prev, ...parsed }));
       }
       if (key === "agent_actions" && parsed) {
-        setActionsState((prev) => ({ ...prev, ...parsed }));
+        setActionsState((prev) => ({
+          ...prev,
+          ...parsed,
+          transferChamado: parsed.transferChamado
+            ? {
+                queueId:
+                  parsed.transferChamado.queueId != null && parsed.transferChamado.queueId !== ""
+                    ? parsed.transferChamado.queueId
+                    : "",
+                userId:
+                  parsed.transferChamado.userId != null && parsed.transferChamado.userId !== ""
+                    ? parsed.transferChamado.userId
+                    : ""
+              }
+            : prev.transferChamado
+        }));
       }
     };
     socket.on(`company-${user.companyId}-settings`, onSettingsEvent);
@@ -573,7 +681,8 @@ const Prompts = () => {
           const v = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
           setIntegrationState(prev => ({
             ...prev,
-            ...v
+            ...v,
+            responderGrupo: typeof v.responderGrupo === "boolean" ? v.responderGrupo : prev.responderGrupo
           }));
         }
       } catch {}
@@ -600,22 +709,112 @@ const Prompts = () => {
         }
       } catch {}
       try {
-        const { data } = await api.get("/settings/agent_advanced");
+        const { data } = await api.get("/settings/agent_proactive");
         if (data && data.value) {
           const v = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
-          setAdvancedState(prev => ({ ...prev, ...v }));
+          const kw = Array.isArray(v.hotLeadKeywords) ? v.hotLeadKeywords.join(", ") : (v.hotLeadKeywords || "");
+          const mergeSeg = (key) => ({
+            tagIds: v.segments?.[key]?.tagIds || [],
+            contactListId:
+              v.segments?.[key]?.contactListId != null && v.segments[key].contactListId !== ""
+                ? v.segments[key].contactListId
+                : ""
+          });
+          const seq = v.sequences?.cold_outreach;
+          setProactiveState(prev => ({
+            ...prev,
+            ...v,
+            hotLeadKeywords: kw || prev.hotLeadKeywords,
+            hintFollowUp: v.hints?.follow_up || v.hintFollowUp || "",
+            hintHotLead: v.hints?.hot_lead || v.hintHotLead || "",
+            hintReengagement: v.hints?.reengagement || v.hintReengagement || "",
+            hintColdOutreach: v.hints?.cold_outreach || v.hintColdOutreach || "",
+            objectives: {
+              follow_up: v.objectives?.follow_up || "",
+              hot_lead: v.objectives?.hot_lead || "",
+              reengagement: v.objectives?.reengagement || "",
+              cold_outreach: v.objectives?.cold_outreach || ""
+            },
+            segments: {
+              follow_up: mergeSeg("follow_up"),
+              hot_lead: mergeSeg("hot_lead"),
+              reengagement: mergeSeg("reengagement"),
+              cold_outreach: mergeSeg("cold_outreach")
+            },
+            businessHoursEnabled: !!v.businessHours?.enabled,
+            businessStartHour: v.businessHours?.startHour ?? 9,
+            businessEndHour: v.businessHours?.endHour ?? 18,
+            playbook: v.playbook || "",
+            mediaByContext: v.mediaByContext || {},
+            defaultOutbound: v.defaultOutbound || { allowAgentToSuggestUrls: false },
+            maxProactivePerContactPerDay:
+              v.maxProactivePerContactPerDay != null ? String(v.maxProactivePerContactPerDay) : "",
+            sequenceSteps:
+              Array.isArray(seq) && seq.length
+                ? seq.map(s => ({
+                    delayHours: s.delayHours || 24,
+                    hint: s.hint || ""
+                  }))
+                : [],
+            coldOutreachBlendMode: v.coldOutreachBlendMode || "merge",
+            applySegmentFilters: v.applySegmentFilters !== false,
+            proactiveMission: v.proactiveMission || "balanced",
+            maxFollowUpAttempts:
+              v.maxFollowUpAttempts != null && v.maxFollowUpAttempts !== ""
+                ? Number(v.maxFollowUpAttempts)
+                : 3,
+            minHoursBetweenFollowUps:
+              v.minHoursBetweenFollowUps != null && v.minHoursBetweenFollowUps !== ""
+                ? String(v.minHoursBetweenFollowUps)
+                : "",
+            maxReengagementAttempts:
+              v.maxReengagementAttempts != null && v.maxReengagementAttempts !== ""
+                ? String(v.maxReengagementAttempts)
+                : "",
+            customProactiveText: {
+              follow_up: v.customProactiveText?.follow_up || "",
+              hot_lead: v.customProactiveText?.hot_lead || "",
+              reengagement: v.customProactiveText?.reengagement || "",
+              cold_outreach: v.customProactiveText?.cold_outreach || ""
+            }
+          }));
         }
       } catch {}
       try {
         const { data } = await api.get("/settings/agent_actions");
         if (data && data.value) {
           const v = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
-          setActionsState(prev => ({ ...prev, ...v }));
+          setActionsState(prev => ({
+            ...prev,
+            ...v,
+            transferChamado: {
+              queueId: v?.transferChamado?.queueId != null && v.transferChamado.queueId !== ""
+                ? v.transferChamado.queueId
+                : "",
+              userId: v?.transferChamado?.userId != null && v.transferChamado.userId !== ""
+                ? v.transferChamado.userId
+                : ""
+            }
+          }));
         }
       } catch {}
       try {
         const { data } = await api.get("/queue");
         setQueues(data || []);
+      } catch {}
+      try {
+        const { data: usersResp } = await api.get("/users", { params: { searchParam: "" } });
+        setActionsUsers(Array.isArray(usersResp?.users) ? usersResp.users : []);
+      } catch {}
+      try {
+        const { data: tagData } = await api.get("/tags/list");
+        setTags(Array.isArray(tagData) ? tagData : []);
+      } catch {}
+      try {
+        const { data: listData } = await api.get("/contact-lists/", {
+          params: { pageNumber: "1" }
+        });
+        setContactLists(listData?.records || []);
       } catch {}
     })();
   }, []);
@@ -626,10 +825,10 @@ const Prompts = () => {
   const handleCloseConfirmationModal = () => {};
   const handleDeletePrompt = async () => {};
 
-  const saveSetting = async (key, value) => {
+  const saveSetting = async (key, value, successMessage) => {
     try {
       const { data } = await api.put(`/settings/${key}`, { value });
-      toast.success("Configurações salvas");
+      toast.success(successMessage || "Configurações salvas");
       return data;
     } catch (err) {
       toastError(err);
@@ -638,17 +837,168 @@ const Prompts = () => {
   };
 
   const handleSaveIntegration = async () => {
-    await saveSetting("agent_integration", integrationState);
+    const { status, ...rest } = integrationState;
+    await saveSetting("agent_integration", rest);
   };
 
   const handleSaveRole = async () => {
     await saveSetting("agent_role", roleState);
   };
-  const handleSaveAdvanced = async () => {
-    await saveSetting("agent_advanced", advancedState);
+  const sanitizeMediaByContext = (raw) => {
+    if (!raw || typeof raw !== "object") return undefined;
+    const out = {};
+    ["follow_up", "hot_lead", "reengagement", "cold_outreach"].forEach((ctx) => {
+      const v = raw[ctx];
+      if (!v || typeof v !== "object") return;
+      const imageUrls = (v.imageUrls || []).map(String).map((s) => s.trim()).filter(Boolean);
+      const documentUrls = (v.documentUrls || []).map(String).map((s) => s.trim()).filter(Boolean);
+      const videoUrls = (v.videoUrls || []).map(String).map((s) => s.trim()).filter(Boolean);
+      const delayAfterTextSec = Math.min(180, Math.max(0, Number(v.delayAfterTextSec) || 0));
+      const skipIfRecentOutboundMedia = !!v.skipIfRecentOutboundMedia;
+      const beforeMediaContext = String(v.beforeMediaContext || "").trim();
+      if (
+        !imageUrls.length &&
+        !documentUrls.length &&
+        !videoUrls.length &&
+        !delayAfterTextSec &&
+        !skipIfRecentOutboundMedia &&
+        !beforeMediaContext
+      ) {
+        return;
+      }
+      out[ctx] = {
+        imageUrls,
+        documentUrls,
+        videoUrls
+      };
+      if (delayAfterTextSec > 0) out[ctx].delayAfterTextSec = delayAfterTextSec;
+      if (skipIfRecentOutboundMedia) out[ctx].skipIfRecentOutboundMedia = true;
+      if (beforeMediaContext) out[ctx].beforeMediaContext = beforeMediaContext;
+    });
+    return Object.keys(out).length ? out : undefined;
+  };
+
+  const buildProactivePayload = () => {
+    const hints = {
+      follow_up: proactiveState.hintFollowUp || undefined,
+      hot_lead: proactiveState.hintHotLead || undefined,
+      reengagement: proactiveState.hintReengagement || undefined,
+      cold_outreach: proactiveState.hintColdOutreach || undefined
+    };
+    const objectives = {};
+    ["follow_up", "hot_lead", "reengagement", "cold_outreach"].forEach((k) => {
+      const t = (proactiveState.objectives && proactiveState.objectives[k]) || "";
+      if (t.trim()) objectives[k] = t.trim();
+    });
+    const segments = {};
+    ["follow_up", "hot_lead", "reengagement", "cold_outreach"].forEach((k) => {
+      const s = proactiveState.segments?.[k] || {};
+      const tagIds = (s.tagIds || []).filter(Boolean);
+      const lid = s.contactListId === "" || s.contactListId == null ? null : Number(s.contactListId);
+      if (tagIds.length || (lid && lid > 0)) {
+        segments[k] = {};
+        if (tagIds.length) segments[k].tagIds = tagIds;
+        if (lid && lid > 0) segments[k].contactListId = lid;
+      }
+    });
+    const seq = (proactiveState.sequenceSteps || [])
+      .filter(st => st && Number(st.delayHours) > 0)
+      .map(st => ({
+        delayHours: Number(st.delayHours),
+        hint: (st.hint && st.hint.trim()) || undefined
+      }));
+    const maxDay = parseInt(String(proactiveState.maxProactivePerContactPerDay || ""), 10);
+    const customProactiveText = {};
+    ["follow_up", "hot_lead", "reengagement", "cold_outreach"].forEach((k) => {
+      const t = (proactiveState.customProactiveText && proactiveState.customProactiveText[k]) || "";
+      if (String(t).trim()) customProactiveText[k] = String(t).trim();
+    });
+    const maxReRaw = parseInt(String(proactiveState.maxReengagementAttempts || ""), 10);
+    return {
+      enabled: proactiveState.enabled,
+      followUpEnabled: proactiveState.followUpEnabled,
+      hotLeadEnabled: proactiveState.hotLeadEnabled,
+      reengagementEnabled: proactiveState.reengagementEnabled,
+      followUpAfterDays: Number(proactiveState.followUpAfterDays) || 2,
+      reengageAfterWeeks: Number(proactiveState.reengageAfterWeeks) || 2,
+      hotLeadKeywords: String(proactiveState.hotLeadKeywords || "")
+        .split(/[,;\n]+/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+      useHotLeadButtons: proactiveState.useHotLeadButtons,
+      openAiVisionInbound: proactiveState.openAiVisionInbound,
+      acknowledgeMedia: proactiveState.acknowledgeMedia,
+      hints,
+      objectives: Object.keys(objectives).length ? objectives : undefined,
+      playbook: proactiveState.playbook || undefined,
+      segments: Object.keys(segments).length ? segments : undefined,
+      businessHours: proactiveState.businessHoursEnabled
+        ? {
+            enabled: true,
+            startHour: Math.min(23, Math.max(0, Number(proactiveState.businessStartHour) || 9)),
+            endHour: Math.min(24, Math.max(0, Number(proactiveState.businessEndHour) || 18))
+          }
+        : { enabled: false },
+      mediaByContext: sanitizeMediaByContext(proactiveState.mediaByContext),
+      coldOutreachBlendMode:
+        proactiveState.coldOutreachBlendMode && proactiveState.coldOutreachBlendMode !== "merge"
+          ? proactiveState.coldOutreachBlendMode
+          : undefined,
+      defaultOutbound: proactiveState.defaultOutbound?.allowAgentToSuggestUrls
+        ? { allowAgentToSuggestUrls: true }
+        : undefined,
+      maxProactivePerContactPerDay: Number.isFinite(maxDay) && maxDay > 0 ? maxDay : undefined,
+      sequences: seq.length ? { cold_outreach: seq } : undefined,
+      applySegmentFilters: proactiveState.applySegmentFilters !== false,
+      proactiveMission: proactiveState.proactiveMission || "balanced",
+      maxFollowUpAttempts: Math.min(
+        15,
+        Math.max(1, Number(proactiveState.maxFollowUpAttempts) || 3)
+      ),
+      minHoursBetweenFollowUps: (() => {
+        const n = parseInt(String(proactiveState.minHoursBetweenFollowUps || ""), 10);
+        return Number.isFinite(n) && n > 0 ? Math.min(168, n) : undefined;
+      })(),
+      maxReengagementAttempts:
+        Number.isFinite(maxReRaw) && maxReRaw > 0 ? Math.min(50, maxReRaw) : undefined,
+      customProactiveText:
+        Object.keys(customProactiveText).length > 0 ? customProactiveText : undefined
+    };
+  };
+
+  const handleSaveProactive = async () => {
+    await saveSetting("agent_proactive", buildProactivePayload(), "Proatividade salva");
+  };
+  const handleSaveMedia = async () => {
+    await saveSetting("agent_proactive", buildProactivePayload(), "Mídias salvas");
   };
   const handleSaveActions = async () => {
-    await saveSetting("agent_actions", actionsState);
+    if (actionsState.enabled?.includes("Transferir Chamado")) {
+      const q = actionsState.transferChamado?.queueId;
+      const u = actionsState.transferChamado?.userId;
+      if (q === "" || q == null || Number(q) <= 0) {
+        toast.error("Com Transferir Chamado ativo, selecione a fila de atendimento.");
+        return;
+      }
+      if (u === "" || u == null || Number(u) <= 0) {
+        toast.error("Com Transferir Chamado ativo, selecione o usuário responsável.");
+        return;
+      }
+    }
+    const payload = {
+      ...actionsState,
+      transferChamado: {
+        queueId:
+          actionsState.transferChamado?.queueId === "" || actionsState.transferChamado?.queueId == null
+            ? null
+            : Number(actionsState.transferChamado.queueId),
+        userId:
+          actionsState.transferChamado?.userId === "" || actionsState.transferChamado?.userId == null
+            ? null
+            : Number(actionsState.transferChamado.userId)
+      }
+    };
+    await saveSetting("agent_actions", payload, "Ações salvas");
   };
 
   const uploadBrainFiles = async (opts, files, listId) => {
@@ -777,8 +1127,9 @@ const Prompts = () => {
     { value: "cargo", label: "Cargo", icon: <WorkOutlineIcon /> },
     { value: "cerebro", label: "Cérebro", icon: <MemoryIcon /> },
     { value: "acoes", label: "Ações", icon: <FlashOnIcon /> },
-    { value: "avancado", label: "Avançado", icon: <SettingsIcon /> },
-    { value: "teste", label: "Teste", icon: <BugReportIcon /> },
+    { value: "proatividade", label: "Proatividade", icon: <NotificationsActive /> },
+    { value: "midias", label: "Mídias", icon: <PermMedia /> },
+    { value: "teste", label: "Teste", icon: <BugReportIcon /> }
   ];
 
   return (
@@ -789,229 +1140,37 @@ const Prompts = () => {
         <>
           <ActivitiesStyleLayout
             title={null}
-            description="Configura o agente de IA e gerencia Prompts"
+            description={null}
             disableFilterBar
             hideHeaderDivider
             hideNavDivider
             hideSearch
             compactHeader
+            enableTabsScroll
+            scrollContent={false}
             viewModes={tabViewModes}
             currentViewMode={activeTab}
             onViewModeChange={setActiveTab}
           >
+            <Box className={classes.pageContent}>
             {activeTab === "integracao" && (
-              <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
-                <Grid container spacing={2} className={classes.formRow} alignItems="flex-start">
-                  <Grid item xs={12} md={6}>
-                    <Paper className={classes.card}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 8 }}>
-                        <div className={classes.switchRow}>
-                          <span className={classes.labelSmall}>Ativo</span>
-                          <Switch
-                            checked={integrationState.active}
-                            onChange={(e) => setIntegrationState(prev => ({ ...prev, active: e.target.checked }))}
-                            color="primary"
-                          />
-                        </div>
-                        <div className={classes.switchRow}>
-                          <span className={classes.labelSmall}>Responder em grupos do WhatsApp</span>
-                          <Switch
-                            checked={advancedState.responderGrupo}
-                            onChange={(e) => setAdvancedState(prev => ({ ...prev, responderGrupo: e.target.checked }))}
-                            color="primary"
-                          />
-                        </div>
-                      </div>
-
-                      <span className={classes.labelSmall}>API Key</span>
-                      <TextField
-                        placeholder="sk-..."
-                        type={showApiKey ? "text" : "password"}
-                        value={integrationState.apiKey}
-                        onChange={(e) => setIntegrationState(prev => ({ ...prev, apiKey: e.target.value }))}
-                        fullWidth
-                        variant="outlined"
-                        size="small"
-                        className={classes.inputDense}
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton onClick={() => setShowApiKey(s => !s)}>
-                                {showApiKey ? <VisibilityOff /> : <Visibility />}
-                              </IconButton>
-                            </InputAdornment>
-                          )
-                        }}
-                      />
-
-                      <span className={classes.labelSmall}>Modelo</span>
-                      <Select
-                        fullWidth
-                        variant="outlined"
-                        value={integrationState.model}
-                        onChange={(e) => setIntegrationState(prev => ({ ...prev, model: e.target.value }))}
-                        className={`${classes.inputDense} ${classes.selectWhite}`}
-                      >
-                        {openAiModels.map(m => (
-                          <MenuItem key={m} value={m}>{m}</MenuItem>
-                        ))}
-                      </Select>
-
-                      <span className={classes.labelSmall}>Escopo</span>
-                      <Select
-                        fullWidth
-                        variant="outlined"
-                        value={integrationState.scope}
-                        onChange={(e) => setIntegrationState(prev => ({ ...prev, scope: e.target.value }))}
-                        className={`${classes.inputDense} ${classes.selectWhite}`}
-                      >
-                        <MenuItem value="Pessoal">Pessoal</MenuItem>
-                        <MenuItem value="Equipe">Equipe</MenuItem>
-                        <MenuItem value="Global">Global</MenuItem>
-                      </Select>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                        <div>
-                          <span className={classes.labelSmall}>top_p</span>
-                          <TextField
-                            value={integrationState.topP}
-                            onChange={(e) => setIntegrationState(prev => ({ ...prev, topP: Number(e.target.value) }))}
-                            fullWidth
-                            variant="outlined"
-                            size="small"
-                            type="number"
-                            inputProps={{ step: "0.01", min: "0", max: "1" }}
-                            className={classes.inputDense}
-                          />
-                        </div>
-                        <div>
-                          <span className={classes.labelSmall}>presence_penalty</span>
-                          <TextField
-                            value={integrationState.presencePenalty}
-                            onChange={(e) => setIntegrationState(prev => ({ ...prev, presencePenalty: Number(e.target.value) }))}
-                            fullWidth
-                            variant="outlined"
-                            size="small"
-                            type="number"
-                            inputProps={{ step: "0.1", min: "-2", max: "2" }}
-                            className={classes.inputDense}
-                          />
-                        </div>
-                        <div>
-                          <span className={classes.labelSmall}>frequency_penalty</span>
-                          <TextField
-                            value={integrationState.frequencyPenalty}
-                            onChange={(e) => setIntegrationState(prev => ({ ...prev, frequencyPenalty: Number(e.target.value) }))}
-                            fullWidth
-                            variant="outlined"
-                            size="small"
-                            type="number"
-                            inputProps={{ step: "0.1", min: "-2", max: "2" }}
-                            className={classes.inputDense}
-                          />
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 10 }}>
-                        <span className={classes.labelSmall}>stop (separe por vírgula)</span>
-                        <TextField
-                          value={integrationState.stopSequences}
-                          onChange={(e) => setIntegrationState(prev => ({ ...prev, stopSequences: e.target.value }))}
-                          fullWidth
-                          variant="outlined"
-                          size="small"
-                          placeholder="###, FIM"
-                          className={classes.inputDense}
-                        />
-                      </div>
-
-                      <div className={classes.formRow} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
-                        <Switch
-                          checked={integrationState.aplicarTodos}
-                          onChange={(e) => setIntegrationState(prev => ({ ...prev, aplicarTodos: e.target.checked }))}
-                          color="primary"
-                          size="small"
-                        />
-                        <Typography>Aplicar configurações a todas as filas</Typography>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                        <Button color="primary" variant="contained" onClick={handleSaveIntegration} size="small">
-                          Salvar Integração
-                        </Button>
-                      </div>
-                    </Paper>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Paper className={classes.rightModelCard}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                        <SiOpenai size={24} color={"#111827"} />
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 14 }}>
-                            {(modelInfo[integrationState.model] && modelInfo[integrationState.model].title) || integrationState.model}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#6b7280" }}>
-                            {(modelInfo[integrationState.model] && modelInfo[integrationState.model].desc) || "Modelo selecionado da OpenAI."} Ideal para: Chat, automação.
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
-                        <div>Contexto: <b>{modelInfo[integrationState.model]?.context || "-"}</b></div>
-                        <div>Saída Máx.: <b>{modelInfo[integrationState.model]?.output || "-"}</b></div>
-                        <div>Velocidade: <b>{modelInfo[integrationState.model]?.speed || "-"}</b></div>
-                        <div>Qualidade: <b>{modelInfo[integrationState.model]?.quality || "-"}</b></div>
-                        <div>Custo: <b>{modelInfo[integrationState.model]?.cost || "-"}</b></div>
-                      </div>
-
-                      <div className={classes.rightSection} style={{ fontSize: 12 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 6 }}>Resumo da Configuração</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                          <div>Modelo: <b>{modelInfo[integrationState.model]?.title || integrationState.model}</b></div>
-                          <div>Escopo: <b>{integrationState.scope}</b></div>
-                          <div>Status: <b>{integrationState.active ? "Pronto" : "Desativado"}</b></div>
-                          <div>Grupos do WhatsApp: <b>{advancedState.responderGrupo ? "Sim" : "Não"}</b></div>
-                        </div>
-                      </div>
-
-                      <div className={classes.rightSection}>
-                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Preços (por 1M tokens)</div>
-                        <div className={classes.priceRow}>
-                          <span>Entrada</span>
-                          <span>$0.15/1M</span>
-                        </div>
-                        <div className={classes.priceRow} style={{ marginTop: 4 }}>
-                          <span>Saída</span>
-                          <span>$0.60/1M</span>
-                        </div>
-                      </div>
-
-                      <div className={classes.rightSection} style={{ fontSize: 12 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 6 }}>Conexão Ativa</div>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                          <span>Status API</span>
-                          <span>{integrationState.apiKey ? "Operacional" : "Indisponível"}</span>
-                        </div>
-                      </div>
-
-                      {/* dica removida para compactar o card */}
-                    </Paper>
-                    <div className={classes.statusRow} style={{ marginTop: 10 }}>
-                      <span className={integrationState.status.whatsapp ? classes.statusBadgeOk : classes.statusBadgeWarn}>
-                        WhatsApp {integrationState.status.whatsapp ? "OK" : "Não conectado"}
-                      </span>
-                      <span className={integrationState.apiKey ? classes.statusBadgeOk : classes.statusBadgeWarn}>
-                        API Key {integrationState.apiKey ? "informada" : "não informada"}
-                      </span>
-                    </div>
-                  </Grid>
-                </Grid>
-                
-              </div>
+              <IntegrationTab
+                rootClassName={classes.integrationTabRoot}
+                classes={classes}
+                integrationState={integrationState}
+                setIntegrationState={setIntegrationState}
+                showApiKey={showApiKey}
+                setShowApiKey={setShowApiKey}
+                openAiModels={openAiModels}
+                modelInfo={modelInfo}
+                handleSaveIntegration={handleSaveIntegration}
+              />
             )}
 
             {activeTab === "cargo" && (
               <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
-                <Grid container spacing={2} className={classes.formRow}>
+                <SectionCard>
+                <Grid container spacing={1} className={classes.formRow} alignItems="flex-start">
                   <Grid item xs={12}>
                     {(roleState.funcao || roleState.formalidade || roleState.personalidade || roleState.idioma) ? (
                       <div className={classes.summaryRow}>
@@ -1200,20 +1359,21 @@ const Prompts = () => {
                     />
                   </Grid>
                 </Grid>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div className={classes.formFooterBar}>
                   <Button color="primary" variant="contained" onClick={handleSaveRole} size="small">
                     Salvar Cargo
                   </Button>
                 </div>
+                </SectionCard>
               </div>
             )}
 
             {activeTab === "cerebro" && (
               <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
-                <Grid container spacing={2} className={classes.formRow}>
+                <Grid container spacing={1} className={classes.formRow}>
                   <Grid item xs={12} md={12}>
+                    <SectionCard className={classes.brainSectionCard}>
                     <div className={`${classes.section} ${classes.brainWrapper}`}>
-                      <Typography variant="subtitle1">Arquivos</Typography>
                       <div className={classes.uploadBox}>
                         <div className={classes.helperText}>Selecione um ou mais arquivos para treinar o agente.</div>
                         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -1225,7 +1385,6 @@ const Prompts = () => {
                       </div>
                     </div>
                     <div className={`${classes.section} ${classes.brainWrapper}`}>
-                      <Typography variant="subtitle1">Sites</Typography>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
                         <TextField
                           placeholder="https://..."
@@ -1239,16 +1398,17 @@ const Prompts = () => {
                       </div>
                       <div style={{ marginTop: 8 }}>
                         {(brainState.websites || []).map((url, idx) => (
-                          <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #eee" }}>
+                          <div key={idx} className={classes.qaListRow} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <span>{url}</span>
                             <Button size="small" onClick={() => handleRemoveWebsite(idx)}>Remover</Button>
                           </div>
                         ))}
                       </div>
                     </div>
+                    </SectionCard>
                   </Grid>
                   <Grid item xs={12} md={12}>
-                    <div className={classes.cardTitle}>Q&A</div>
+                    <SectionCard>
                     <div className={`${classes.section} ${classes.brainWrapper}`}>
                       <Grid container spacing={2} className={classes.formRow}>
                         <Grid item xs={12} md={6}>
@@ -1293,7 +1453,7 @@ const Prompts = () => {
                       </div>
                       <div style={{ marginTop: 12 }}>
                         {(brainState.qna || []).map((qa, idx) => (
-                          <div key={idx} style={{ padding: "8px 0", borderBottom: "1px solid #eee" }}>
+                          <div key={idx} className={classes.qaListRow}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <Typography style={{ fontWeight: 600 }}>{qa.pergunta}</Typography>
                               <Button size="small" onClick={() => handleRemoveQa(idx)}>Remover</Button>
@@ -1304,6 +1464,7 @@ const Prompts = () => {
                         ))}
                       </div>
                     </div>
+                    </SectionCard>
                   </Grid>
                   
                 </Grid>
@@ -1312,41 +1473,129 @@ const Prompts = () => {
 
             {activeTab === "acoes" && (
               <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
-                <Grid container spacing={2} className={classes.formRow}>
-                  <Grid item xs={12} md={6}>
-                    <div className={classes.cardTitle} style={{ marginLeft: 8 }}>Ações disponíveis</div>
-                    <Grid container spacing={2}>
-                      {[
-                        { name: "Agendamento", desc: "Cria compromissos e lembretes", icon: <EventNote style={{ opacity: 0.8 }} /> },
-                        { name: "Criar Lead", desc: "Gera leads na área de Vendas", icon: <PersonAdd style={{ opacity: 0.8 }} /> },
-                        { name: "Criar Empresa", desc: "Registra empresas no CRM", icon: <Business style={{ opacity: 0.8 }} /> },
-                        { name: "Consultar Pedidos", desc: "Busca pedidos no sistema", icon: <Assignment style={{ opacity: 0.8 }} /> },
-                      ].map((a) => (
-                        <Grid key={a.name} item xs={12} md={6}>
-                          <div className={classes.actionItem} onClick={() => setActionsState(prev => ({ ...prev, selected: a.name }))}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span>{a.icon}</span>
-                              <div>
-                                <Typography style={{ fontWeight: 600 }}>{a.name}</Typography>
-                                <Typography variant="caption" color="textSecondary">{a.desc}</Typography>
-                              </div>
-                            </div>
-                            <Switch
-                              checked={actionsState.enabled.includes(a.name)}
-                              onChange={(e) => {
-                                const set = new Set(actionsState.enabled);
-                                if (e.target.checked) set.add(a.name); else set.delete(a.name);
-                                setActionsState(prev => ({ ...prev, enabled: Array.from(set) }));
-                              }}
-                              color="primary"
-                            />
+                <SectionCard>
+                <Grid container spacing={1} className={classes.formRow} alignItems="flex-start">
+                  {[
+                    { name: "Agendamento", desc: "Cria compromissos e lembretes", icon: <EventNote style={{ opacity: 0.8 }} /> },
+                    { name: "Criar Lead", desc: "Gera leads na área de Vendas", icon: <PersonAdd style={{ opacity: 0.8 }} /> },
+                    { name: "Criar Empresa", desc: "Registra empresas no CRM", icon: <Business style={{ opacity: 0.8 }} /> },
+                    { name: "Consultar Pedidos", desc: "Busca pedidos no sistema", icon: <Assignment style={{ opacity: 0.8 }} /> },
+                    { name: "Transferir Chamado", desc: "Encaminha ao responsável e/ou fila de atendimento", icon: <SwapHoriz style={{ opacity: 0.8 }} /> },
+                    { name: "Resumo p/ handoff", desc: "Contexto curto ao transferir para humano", icon: <Note style={{ opacity: 0.8 }} /> },
+                    { name: "Qualificar interesse", desc: "Perguntas de fit antes de propor valor", icon: <TrendingUp style={{ opacity: 0.8 }} /> },
+                    { name: "Follow-up suave", desc: "Relembrar próximo passo sem pressionar", icon: <Repeat style={{ opacity: 0.8 }} /> },
+                    { name: "Oferta contextual", desc: "Sugerir pacote ou add-on alinhado ao que falou", icon: <LocalOffer style={{ opacity: 0.8 }} /> },
+                  ].map((a) => (
+                    <Grid key={a.name} item xs={12} sm={6}>
+                      <div className={classes.actionItem} onClick={() => setActionsState(prev => ({ ...prev, selected: a.name }))}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span>{a.icon}</span>
+                          <div>
+                            <Typography style={{ fontWeight: 600 }}>{a.name}</Typography>
+                            <Typography variant="caption" color="textSecondary">{a.desc}</Typography>
                           </div>
-                        </Grid>
-                      ))}
+                        </div>
+                        <Switch
+                          checked={actionsState.enabled.includes(a.name)}
+                          onChange={(e) => {
+                            const set = new Set(actionsState.enabled);
+                            if (e.target.checked) set.add(a.name); else set.delete(a.name);
+                            setActionsState(prev => ({ ...prev, enabled: Array.from(set) }));
+                          }}
+                          color="primary"
+                          inputProps={{ "aria-label": `Ação ${a.name}` }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
                     </Grid>
-                  </Grid>
-                  <Grid item xs={12} md={12}>
-                    <Grid container spacing={2}>
+                  ))}
+                  {actionsState.enabled.includes("Transferir Chamado") && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>
+                        Destino da transferência (chamado)
+                      </Typography>
+                      <Grid container spacing={1}>
+                        <Grid item xs={12} md={6}>
+                          <FormControl fullWidth variant="outlined" className={classes.inputDense}>
+                            <InputLabel shrink id="transfer-queue-label">
+                              Fila de atendimento
+                            </InputLabel>
+                            <Select
+                              labelId="transfer-queue-label"
+                              label="Fila de atendimento"
+                              displayEmpty
+                              value={actionsState.transferChamado?.queueId === "" || actionsState.transferChamado?.queueId == null ? "" : actionsState.transferChamado.queueId}
+                              onChange={(e) =>
+                                setActionsState(prev => ({
+                                  ...prev,
+                                  transferChamado: {
+                                    ...(prev.transferChamado || { queueId: "", userId: "" }),
+                                    queueId: e.target.value === "" ? "" : e.target.value
+                                  }
+                                }))
+                              }
+                              className={classes.selectWhite}
+                            >
+                              <MenuItem value="">
+                                <em>Selecione a fila</em>
+                              </MenuItem>
+                              {(queues || []).map(q => (
+                                <MenuItem key={q.id} value={q.id}>
+                                  {q.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <FormControl fullWidth variant="outlined" className={classes.inputDense}>
+                            <InputLabel shrink id="transfer-user-label">
+                              Usuário responsável
+                            </InputLabel>
+                            <Select
+                              labelId="transfer-user-label"
+                              label="Usuário responsável"
+                              displayEmpty
+                              value={actionsState.transferChamado?.userId === "" || actionsState.transferChamado?.userId == null ? "" : actionsState.transferChamado.userId}
+                              onChange={(e) =>
+                                setActionsState(prev => ({
+                                  ...prev,
+                                  transferChamado: {
+                                    ...(prev.transferChamado || { queueId: "", userId: "" }),
+                                    userId: e.target.value === "" ? "" : e.target.value
+                                  }
+                                }))
+                              }
+                              className={classes.selectWhite}
+                            >
+                              <MenuItem value="">
+                                <em>Selecione o usuário</em>
+                              </MenuItem>
+                              {(actionsUsers || []).map(u => (
+                                <MenuItem key={u.id} value={u.id}>
+                                  {u.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      </Grid>
+                      <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 6 }}>
+                        Usado quando o cliente pede atendente ou a IA indica transferência para o setor. Salve as ações após alterar.
+                      </Typography>
+                      <Button
+                        color="primary"
+                        variant="outlined"
+                        size="small"
+                        style={{ marginTop: 8 }}
+                        onClick={() => handleSaveActions()}
+                      >
+                        Salvar destino da transferência
+                      </Button>
+                    </Grid>
+                  )}
+                  <Grid item xs={12}>
+                    <Grid container spacing={1}>
                       <Grid item xs={12} md={6}>
                         <TextField
                           label="Nome da Ação"
@@ -1455,167 +1704,48 @@ const Prompts = () => {
                     </Grid>
                   </Grid>
                 </Grid>
+                </SectionCard>
               </div>
             )}
 
-            {activeTab === "avancado" && (
-              <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
-                <Grid container spacing={2} className={classes.formRow}>
-                  <Grid item xs={12}>
-                    <div className={classes.cardTitle}>Exemplos de Conversação</div>
-                    <div className={classes.tipBox}>Adicione pares de mensagens que representem o tom desejado.</div>
-                    <Grid container spacing={1}>
-                      {(advancedState.examples || [{ user: "", assistant: "" }]).map((ex, idx) => (
-                        <>
-                          <Grid item xs={12}>
-                          <ExpandableField
-                            placeholder="Mensagem do usuário"
-                            label={null}
-                            value={ex.user}
-                            onChange={(e) => {
-                                const arr = [...(advancedState.examples || [])];
-                                arr[idx] = { ...(arr[idx] || {}), user: e.target.value };
-                                setAdvancedState(prev => ({ ...prev, examples: arr }));
-                              }}
-                            className={classes.inputDense}
-                            minRows={3}
-                            maxRows={16}
-                          />
-                          </Grid>
-                          <Grid item xs={12}>
-                          <ExpandableField
-                            placeholder="Resposta do assistente"
-                            label={null}
-                            value={ex.assistant}
-                            onChange={(e) => {
-                                const arr = [...(advancedState.examples || [])];
-                                arr[idx] = { ...(arr[idx] || {}), assistant: e.target.value };
-                                setAdvancedState(prev => ({ ...prev, examples: arr }));
-                              }}
-                            className={classes.inputDense}
-                            minRows={3}
-                            maxRows={16}
-                          />
-                          </Grid>
-                        </>
-                      ))}
-                      <Grid item xs={12}>
-                        <Button variant="outlined" onClick={() => setAdvancedState(prev => ({ ...prev, examples: [...(prev.examples || []), { user: "", assistant: "" }] }))}>+ Adicionar Exemplo</Button>
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <div className={classes.cardTitle}>Configurações</div>
-                    <div className={classes.tipBox}>Ajuste tempo de inatividade, mensagens padrões e voz de leitura, sem alterar os campos existentes.</div>
-                    <Grid container spacing={1}>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Timeout de Inatividade (minutos)"
-                          value={advancedState.timeoutMinutes || ""}
-                          onChange={(e) => setAdvancedState(prev => ({ ...prev, timeoutMinutes: Number(e.target.value) }))}
-                          fullWidth
-                          variant="outlined"
-                          type="number"
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <ExpandableField
-                          label="Mensagem de boas-vindas"
-                          value={advancedState.welcomeMessage}
-                          onChange={(e) => setAdvancedState(prev => ({ ...prev, welcomeMessage: e.target.value }))}
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                          minRows={3}
-                          maxRows={16}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <ExpandableField
-                          label="Mensagem de despedida"
-                          value={advancedState.farewellMessage}
-                          onChange={(e) => setAdvancedState(prev => ({ ...prev, farewellMessage: e.target.value }))}
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                          minRows={3}
-                          maxRows={16}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <ExpandableField
-                          label="Mensagem de transferência"
-                          value={advancedState.transferMessage}
-                          onChange={(e) => setAdvancedState(prev => ({ ...prev, transferMessage: e.target.value }))}
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                          minRows={3}
-                          maxRows={16}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Select
-                          value={advancedState.voice}
-                          onChange={(e) => setAdvancedState(prev => ({ ...prev, voice: e.target.value }))}
-                          fullWidth
-                          variant="outlined"
-                          className={`${classes.inputDense} ${classes.selectWhite}`}
-                        >
-                          <MenuItem value="texto">Texto</MenuItem>
-                          <MenuItem value="pt-BR-FranciscaNeural">pt-BR-FranciscaNeural</MenuItem>
-                          <MenuItem value="pt-BR-AntonioNeural">pt-BR-AntonioNeural</MenuItem>
-                          <MenuItem value="pt-BR-BrendaNeural">pt-BR-BrendaNeural</MenuItem>
-                        </Select>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Voice Key"
-                          value={advancedState.voiceKey}
-                          onChange={(e) => setAdvancedState(prev => ({ ...prev, voiceKey: e.target.value }))}
-                          fullWidth
-                          variant="outlined"
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Voice Region"
-                          value={advancedState.voiceRegion}
-                          onChange={(e) => setAdvancedState(prev => ({ ...prev, voiceRegion: e.target.value }))}
-                          fullWidth
-                          variant="outlined"
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                        />
-                      </Grid>
-                    </Grid>
-                    <div style={{ marginTop: 8 }}>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        onClick={handleSaveAdvanced}
-                      >
-                        Salvar Avançado
-                      </Button>
-                    </div>
-                  </Grid>
-                </Grid>
-              </div>
+            {activeTab === "proatividade" && (
+              <ProactivityTab
+                classes={classes}
+                proactiveState={proactiveState}
+                setProactiveState={setProactiveState}
+                ExpandableField={ExpandableField}
+                onSaveProactivity={handleSaveProactive}
+                tags={tags}
+                contactLists={contactLists}
+              />
+            )}
+
+            {activeTab === "midias" && (
+              <MediaTab
+                classes={classes}
+                proactiveState={proactiveState}
+                setProactiveState={setProactiveState}
+                onSaveMedia={handleSaveMedia}
+              />
             )}
 
             {activeTab === "teste" && (
               <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
+                <SectionCard>
                 {!integrationState.apiKey ? (
-                  <Typography variant="body2" color="textSecondary">Informe sua API Key em Integração para testar o chat.</Typography>
+                  <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                    Informe sua API Key em Integração para testar o chat.
+                  </Typography>
                 ) : null}
                 <ChatTester
+                  classes={classes}
                   apiKey={integrationState.apiKey}
                   model={integrationState.model}
                 />
+                </SectionCard>
               </div>
             )}
+            </Box>
           </ActivitiesStyleLayout>
         </>}
     </>
@@ -1623,7 +1753,7 @@ const Prompts = () => {
 };
 
 // Componente interno: Chat de Teste com OpenAI
-const ChatTester = ({ apiKey, model }) => {
+const ChatTester = ({ classes, apiKey, model }) => {
   const [messages, setMessages] = React.useState([]);
   const [input, setInput] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -1659,17 +1789,17 @@ const ChatTester = ({ apiKey, model }) => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: 480, maxHeight: "60vh" }}>
-      <div style={{ flex: 1, overflowY: "auto", padding: 8, border: "1px solid #e5e7eb", borderRadius: 8, marginBottom: 8, background: "#fafafa" }}>
+    <div className={classes.chatTesterShell}>
+      <div className={classes.chatTesterMessages}>
         {messages.map((m, idx) => (
-          <div key={idx} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 6 }}>
-            <div style={{ maxWidth: "80%", padding: "8px 12px", borderRadius: 14, background: m.role === "user" ? "#131B2D" : "#e5e7eb", color: m.role === "user" ? "#fff" : "#111" }}>
+          <div key={idx} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
+            <div className={m.role === "user" ? classes.chatBubbleUser : classes.chatBubbleAssistant}>
               {m.content}
             </div>
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
         <TextField
           placeholder="Escreva uma mensagem para o agente..."
           value={input}

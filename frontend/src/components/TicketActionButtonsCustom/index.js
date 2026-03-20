@@ -224,16 +224,18 @@ const TicketActionButtonsCustom = ({
 
   const fetchData = async () => {
     const companyId = user.companyId;
-    const planConfigs = await getPlanCompany(undefined, companyId);
-
-    console.log("DEBUG planConfigs:", planConfigs);
-    
-    if (isMounted.current) {
-      setShowSchedules(planConfigs.plan.useSchedules);
-      setShowWavoipCall(planConfigs.plan.wavoip);
-      setOpenTicketMessageDialog(false);
-      setDisableBot(ticket.contact.disableBot);
-      setShowTicketLogOpen(false);
+    try {
+      const planConfigs = await getPlanCompany(undefined, companyId);
+      const plan = planConfigs?.plan;
+      if (isMounted.current) {
+        setShowSchedules(!!plan?.useSchedules);
+        setShowWavoipCall(!!plan?.wavoip);
+        setOpenTicketMessageDialog(false);
+        setDisableBot(ticket.contact.disableBot);
+        setShowTicketLogOpen(false);
+      }
+    } catch (err) {
+      toastError(err);
     }
   };
 

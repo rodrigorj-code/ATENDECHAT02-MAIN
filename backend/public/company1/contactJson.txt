@@ -1,9 +1,6 @@
 [
   {
-    "id": "5511939308282@s.whatsapp.net",
-    "name": "Romeu"
+    "id": "554188347178@s.whatsapp.net",
+    "name": "VIS√ÉO BUSINESS"
   }
-]]µes"
-  }
-]
 ]

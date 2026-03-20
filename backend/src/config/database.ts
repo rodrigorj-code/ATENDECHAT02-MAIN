@@ -30,10 +30,10 @@ module.exports = {
     max: 100
   },
   pool: {
-    max: parseInt(process.env.DB_POOL_MAX) || 10,
-    min: parseInt(process.env.DB_POOL_MIN) || 2,
-    acquire: parseInt(process.env.DB_POOL_ACQUIRE) || 60000,
-    idle: parseInt(process.env.DB_POOL_IDLE) || 10000
+    max: Math.min(Math.max(parseInt(String(process.env.DB_POOL_MAX), 10) || 10, 1), 50),
+    min: Math.min(Math.max(parseInt(String(process.env.DB_POOL_MIN), 10) || 0, 0), 20),
+    acquire: parseInt(String(process.env.DB_POOL_ACQUIRE), 10) || 60000,
+    idle: parseInt(String(process.env.DB_POOL_IDLE), 10) || 10000
   },
   dialect: process.env.DB_DIALECT || "postgres",
   timezone: process.env.DB_DIALECT === 'sqlite' ? '+00:00' : 'America/Sao_Paulo',

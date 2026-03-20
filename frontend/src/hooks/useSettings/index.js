@@ -1,13 +1,19 @@
 import api, { openApi } from "../../services/api";
+import toastError from "../../errors/toastError";
 
 const useSettings = () => {
   const getAll = async (params) => {
-    const { data } = await api.request({
-      url: "/settings",
-      method: "GET",
-      params,
-    });
-    return data;
+    try {
+      const { data } = await api.request({
+        url: "/settings",
+        method: "GET",
+        params,
+      });
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      toastError(err);
+      return [];
+    }
   };
 
   const update = async (data) => {
@@ -21,11 +27,16 @@ const useSettings = () => {
   };
 
   const get = async (param) => {
-    const { data } = await api.request({
-      url: `/setting/${param}`,
-      method: "GET",
-    });
-    return data;
+    try {
+      const { data } = await api.request({
+        url: `/setting/${param}`,
+        method: "GET",
+      });
+      return data;
+    } catch (err) {
+      toastError(err);
+      return null;
+    }
   };
 
   const getPublicSetting = async (key, companyId = null) => {

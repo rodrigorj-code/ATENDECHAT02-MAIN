@@ -86,6 +86,7 @@ import ShowContactService from "../ContactServices/ShowContactService";
 import { ENABLE_LID_DEBUG } from "../../config/debug";
 import { normalizeJid } from "../../utils";
 import { handleOpenAiFlow } from "../IntegrationsServices/OpenAiService";
+import { onAgentUserInboundText } from "../AgentProactiveServices/onUserInboundAgent";
 import { getJidOf } from "./getJidOf";
 import { verifyContact } from "./verifyContact";
 // import { verifyContact } from "./verifyContact";
@@ -2438,10 +2439,15 @@ export const keepOnlySpecifiedChars = (str: string) => {
 export const transferQueue = async (
   queueId: number,
   ticket: Ticket,
-  contact: Contact
+  contact: Contact,
+  userId?: number | null
 ): Promise<void> => {
+  const ticketData: { queueId: number; userId?: number } = { queueId };
+  if (userId != null && Number(userId) > 0) {
+    ticketData.userId = Number(userId);
+  }
   await UpdateTicketService({
-    ticketData: { queueId: queueId },
+    ticketData,
     ticketId: ticket.id,
     companyId: ticket.companyId
   });
@@ -3545,8 +3551,20 @@ const handleOpenAi = async (
   if (contact.disableBot) {
     return;
   }
-  const bodyMessage = getBodyMessage(msg);
-  if (!bodyMessage) return;
+  const bodyMessage = getBodyMessage(msg) || "";
+  const hasInboundMedia = !!(
+    msg.message?.audioMessage ||
+    msg.message?.imageMessage ||
+    msg.message?.videoMessage ||
+    msg.message?.documentMessage ||
+    msg.message?.stickerMessage
+  );
+  if (!bodyMessage.trim() && !hasInboundMedia) return;
+  if (bodyMessage.trim()) {
+    try {
+      await onAgentUserInboundText(ticket, bodyMessage);
+    } catch {}
+  }
   const parseDateTimeFromText = (text: string): { date: Date | null; matched: boolean } => {
     const t = (text || "").toLowerCase();
     const hasIntent = /(agendar|agenda|marcar|marque|remarcar|remarque).*(reuni|reunião|reuniao)|\b(reuni|reunião|reuniao)\b/.test(t);
@@ -3571,7 +3589,7 @@ const handleOpenAi = async (
     const dt = new Date(year, month - 1, day, hours, minutes, 0);
     return { date: isNaN(dt.getTime()) ? null : dt, matched: true };
   };
-  const parsed = parseDateTimeFromText(bodyMessage);
+  const parsed = bodyMessage.trim() ? parseDateTimeFromText(bodyMessage) : { date: null, matched: false };
   if (parsed.matched && parsed.date) {
     const when = parsed.date;
     const schedule = await CreateScheduleService({
@@ -3703,7 +3721,14 @@ const handleOpenAi = async (
 
   let messagesOpenAi = [];
 
-  if (msg.message?.conversation || msg.message?.extendedTextMessage?.text) {
+  if (
+    bodyMessage.trim() &&
+    (msg.message?.conversation ||
+      msg.message?.extendedTextMessage?.text ||
+      msg.message?.imageMessage ||
+      msg.message?.videoMessage ||
+      msg.message?.documentMessage)
+  ) {
     messagesOpenAi = [];
     messagesOpenAi.push({ role: "system", content: promptSystem });
     for (
@@ -3712,15 +3737,15 @@ const handleOpenAi = async (
       i++
     ) {
       const message = messages[i];
-      if (message.mediaType === "conversation" || message.mediaType === "extendedTextMessage") {
-        if (message.fromMe) {
-          messagesOpenAi.push({ role: "assistant", content: message.body });
-        } else {
-          messagesOpenAi.push({ role: "user", content: message.body });
-        }
+      const line = (message.body || "").trim();
+      if (!line) continue;
+      if (message.fromMe) {
+        messagesOpenAi.push({ role: "assistant", content: message.body });
+      } else {
+        messagesOpenAi.push({ role: "user", content: message.body });
       }
     }
-    messagesOpenAi.push({ role: "user", content: bodyMessage! });
+    messagesOpenAi.push({ role: "user", content: bodyMessage });
 
     const modelToUse = (prompt.model || integrationValue?.model || "gpt-4.1-mini");
     const payload: any = {
@@ -3925,6 +3950,32 @@ const handleOpenAi = async (
         }
       });
     }
+  } else if (hasInboundMedia && mediaSent) {
+    const aiSettings: any = {
+      name: prompt.name,
+      prompt: prompt.prompt,
+      voice: prompt.voice,
+      voiceKey: prompt.voiceKey || "",
+      voiceRegion: prompt.voiceRegion || "",
+      maxTokens: prompt.maxTokens,
+      temperature: prompt.temperature,
+      apiKey: prompt.apiKey,
+      queueId: prompt.queueId,
+      maxMessages: prompt.maxMessages,
+      model: prompt.model || "gpt-4.1-mini",
+      provider: "openai",
+      topP: typeof integrationValue?.topP === "number" ? integrationValue.topP : undefined,
+      presencePenalty:
+        typeof integrationValue?.presencePenalty === "number"
+          ? integrationValue.presencePenalty
+          : undefined,
+      frequencyPenalty:
+        typeof integrationValue?.frequencyPenalty === "number"
+          ? integrationValue.frequencyPenalty
+          : undefined,
+      stop: integrationValue?.stopSequences
+    };
+    await handleOpenAiFlow(aiSettings, msg, wbot, ticket, contact, mediaSent, ticketTraking);
   }
   messagesOpenAi = [];
 };
@@ -4813,9 +4864,11 @@ const handleMessage = async (
     }
 
 
-    // ✅ PRIORIDADE 1: Verificar se ticket está em modo IA (permanente ou temporário)
-    // ✅ CORRIGIDO: IA deve parar quando ticket é aceito (status = "open" ou isBot = false)
-    if (!msg.key.fromMe && ticket.useIntegration && ticket.status !== "open" && ticket.isBot !== false) {
+    // ✅ PRIORIDADE 1: Modo IA via dataWebhook (fila/integração OpenAI ou Gemini)
+    // NÃO exigir status !== "open": após a 1ª resposta processResponse define status "open" + isBot true;
+    // a condição antiga bloqueava todas as mensagens seguintes do cliente (sem IA e possível inconsistência na UI).
+    // Parar IA só quando humano assume: isBot === false ou useIntegration desligado.
+    if (!msg.key.fromMe && ticket.useIntegration && ticket.isBot !== false) {
       const dataWebhook = ticket.dataWebhook as any;
       const isAIMode = dataWebhook?.type === "openai" || dataWebhook?.type === "gemini";
 
@@ -4957,16 +5010,28 @@ const handleMessage = async (
     }
 
     if (ticket.flowStopped && ticket.lastFlowId) {
-      // ✅ CRÍTICO: Não processar mensagens do próprio bot
-      if (msg && msg.key.fromMe) {
-        logger.info(`[FLOW STOPPED] ⚠️ Mensagem do bot (fromMe=true) - IGNORANDO para ticket ${ticket.id}`);
+      const dwFlow = ticket.dataWebhook as any;
+      const isTicketOpenAiGemini =
+        ticket.useIntegration === true &&
+        (dwFlow?.type === "openai" || dwFlow?.type === "gemini");
+      // Ticket em modo IA (fila/integração): não desviar mensagens para FlowBuilder — senão a 2ª msg
+      // do cliente some do pipeline da IA e pode falhar sync/UI mesmo com verifyMessage já executado.
+      if (isTicketOpenAiGemini) {
+        logger.info(
+          `[FLOW STOPPED] Ticket ${ticket.id}: flowStopped presente, mas modo IA (dataWebhook ${dwFlow?.type}) ativo — pulando retomada FlowBuilder`
+        );
+      } else {
+        // ✅ CRÍTICO: Não processar mensagens do próprio bot
+        if (msg && msg.key.fromMe) {
+          logger.info(`[FLOW STOPPED] ⚠️ Mensagem do bot (fromMe=true) - IGNORANDO para ticket ${ticket.id}`);
+          return;
+        }
+
+        logger.info(`[FLOW STOPPED] ========== CONTINUANDO FLUXO (SEGUNDA VERIFICAÇÃO) ==========`);
+        logger.info(`[FLOW STOPPED] Ticket ${ticket.id}, Mensagem do usuário: "${getBodyMessage(msg)}"`);
+        await flowBuilderQueue(ticket, msg, wbot, whatsapp, companyId, contact, ticket);
         return;
       }
-
-      logger.info(`[FLOW STOPPED] ========== CONTINUANDO FLUXO (SEGUNDA VERIFICAÇÃO) ==========`);
-      logger.info(`[FLOW STOPPED] Ticket ${ticket.id}, Mensagem do usuário: "${getBodyMessage(msg)}"`);
-      await flowBuilderQueue(ticket, msg, wbot, whatsapp, companyId, contact, ticket);
-      return;
     }
 
     if (

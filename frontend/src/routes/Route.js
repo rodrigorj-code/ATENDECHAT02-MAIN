@@ -59,7 +59,7 @@ const Route = ({ component: Component, isPrivate = false, title, allowWhenAuth =
 		return (
 			<>
 				{loading && <BackdropLoading />}
-				<Redirect to={{ pathname: "/", state: { from: rest.location } }} />;
+				<Redirect to={{ pathname: "/", state: { from: rest.location } }} />
 			</>
 		);
 	}

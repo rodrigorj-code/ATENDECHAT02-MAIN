@@ -47,6 +47,8 @@ import ContactTag from "./models/ContactTag";
 import Plan from "./models/Plan";
 import { getWbot } from "./libs/wbot";
 import { initializeBirthdayJobs } from "./jobs/BirthdayJob";
+import { initializeAgentProactiveJobs } from "./jobs/AgentProactiveJobs";
+import { handleAgentProactiveSequenceJob } from "./services/AgentProactiveServices/proactiveSequenceQueue";
 import { getJidOf } from "./services/WbotServices/getJidOf";
 import RecurrenceService from "./services/CampaignService/RecurrenceService";
 import WhatsappLidMap from "./models/WhatsapplidMap";
@@ -3033,6 +3035,7 @@ export async function startQueueProcess() {
   campaignQueue.process("ProcessCampaign", 2, handleProcessCampaign);
   campaignQueue.process("PrepareContact", 4, handlePrepareContact);
   campaignQueue.process("DispatchCampaign", 6, handleDispatchCampaign);
+  campaignQueue.process("AgentProactiveSequenceTouch", 2, handleAgentProactiveSequenceJob);
 
   userMonitor.process("VerifyLoginStatus", handleLoginStatus);
 
@@ -3041,6 +3044,7 @@ export async function startQueueProcess() {
   lidRetryQueue.process("RetryLidLookup", handleLidRetry);
 
   initializeBirthdayJobs();
+  initializeAgentProactiveJobs();
   workerContinuo();
 
   scheduleMonitor.add(

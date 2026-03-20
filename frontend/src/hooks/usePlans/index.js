@@ -1,4 +1,7 @@
 import api, { openApi } from "../../services/api";
+import toastError from "../../errors/toastError";
+
+const emptyPlanPayload = { plan: {} };
 
 const usePlans = () => {
 
@@ -48,14 +51,19 @@ const usePlans = () => {
 
     const getPlanCompany = async (params, id) => {
         if (!id) {
-            throw new Error("Company ID is required");
+            return emptyPlanPayload;
         }
-        const { data } = await api.request({
-            url: `/companies/listPlan/${id}`,
-            method: 'GET',
-            params
-        });
-        return data;
+        try {
+            const { data } = await api.request({
+                url: `/companies/listPlan/${id}`,
+                method: 'GET',
+                params
+            });
+            return data && typeof data === "object" ? data : emptyPlanPayload;
+        } catch (err) {
+            toastError(err);
+            return emptyPlanPayload;
+        }
     }
 
     return {
