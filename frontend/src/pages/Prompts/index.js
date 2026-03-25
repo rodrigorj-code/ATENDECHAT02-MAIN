@@ -37,6 +37,7 @@ import SectionCard from "./components/shared/SectionCard";
 import ProactivityTab from "./components/ProactivityTab";
 import MediaTab from "./components/MediaTab";
 import IntegrationTab from "./components/IntegrationTab";
+import { mergeProactiveFromApi } from "./utils/mergeProactiveFromApi";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -526,7 +527,8 @@ const Prompts = () => {
       follow_up: "",
       hot_lead: "",
       reengagement: "",
-      cold_outreach: ""
+      cold_outreach: "",
+      inbound: ""
     },
     segments: {
       follow_up: emptySeg(),
@@ -553,7 +555,9 @@ const Prompts = () => {
       hot_lead: "",
       reengagement: "",
       cold_outreach: ""
-    }
+    },
+    inboundConversationBrief: "",
+    inboundMediaOnlyFirstResponse: false
   });
   const [actionsState, setActionsState] = useState({
     enabled: ["Agendamento"],
@@ -646,7 +650,7 @@ const Prompts = () => {
         setBrainState((prev) => ({ ...prev, ...parsed }));
       }
       if (key === "agent_proactive" && parsed) {
-        setProactiveState((prev) => ({ ...prev, ...parsed }));
+        setProactiveState((prev) => mergeProactiveFromApi(prev, parsed));
       }
       if (key === "agent_actions" && parsed) {
         setActionsState((prev) => ({
@@ -712,72 +716,7 @@ const Prompts = () => {
         const { data } = await api.get("/settings/agent_proactive");
         if (data && data.value) {
           const v = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
-          const kw = Array.isArray(v.hotLeadKeywords) ? v.hotLeadKeywords.join(", ") : (v.hotLeadKeywords || "");
-          const mergeSeg = (key) => ({
-            tagIds: v.segments?.[key]?.tagIds || [],
-            contactListId:
-              v.segments?.[key]?.contactListId != null && v.segments[key].contactListId !== ""
-                ? v.segments[key].contactListId
-                : ""
-          });
-          const seq = v.sequences?.cold_outreach;
-          setProactiveState(prev => ({
-            ...prev,
-            ...v,
-            hotLeadKeywords: kw || prev.hotLeadKeywords,
-            hintFollowUp: v.hints?.follow_up || v.hintFollowUp || "",
-            hintHotLead: v.hints?.hot_lead || v.hintHotLead || "",
-            hintReengagement: v.hints?.reengagement || v.hintReengagement || "",
-            hintColdOutreach: v.hints?.cold_outreach || v.hintColdOutreach || "",
-            objectives: {
-              follow_up: v.objectives?.follow_up || "",
-              hot_lead: v.objectives?.hot_lead || "",
-              reengagement: v.objectives?.reengagement || "",
-              cold_outreach: v.objectives?.cold_outreach || ""
-            },
-            segments: {
-              follow_up: mergeSeg("follow_up"),
-              hot_lead: mergeSeg("hot_lead"),
-              reengagement: mergeSeg("reengagement"),
-              cold_outreach: mergeSeg("cold_outreach")
-            },
-            businessHoursEnabled: !!v.businessHours?.enabled,
-            businessStartHour: v.businessHours?.startHour ?? 9,
-            businessEndHour: v.businessHours?.endHour ?? 18,
-            playbook: v.playbook || "",
-            mediaByContext: v.mediaByContext || {},
-            defaultOutbound: v.defaultOutbound || { allowAgentToSuggestUrls: false },
-            maxProactivePerContactPerDay:
-              v.maxProactivePerContactPerDay != null ? String(v.maxProactivePerContactPerDay) : "",
-            sequenceSteps:
-              Array.isArray(seq) && seq.length
-                ? seq.map(s => ({
-                    delayHours: s.delayHours || 24,
-                    hint: s.hint || ""
-                  }))
-                : [],
-            coldOutreachBlendMode: v.coldOutreachBlendMode || "merge",
-            applySegmentFilters: v.applySegmentFilters !== false,
-            proactiveMission: v.proactiveMission || "balanced",
-            maxFollowUpAttempts:
-              v.maxFollowUpAttempts != null && v.maxFollowUpAttempts !== ""
-                ? Number(v.maxFollowUpAttempts)
-                : 3,
-            minHoursBetweenFollowUps:
-              v.minHoursBetweenFollowUps != null && v.minHoursBetweenFollowUps !== ""
-                ? String(v.minHoursBetweenFollowUps)
-                : "",
-            maxReengagementAttempts:
-              v.maxReengagementAttempts != null && v.maxReengagementAttempts !== ""
-                ? String(v.maxReengagementAttempts)
-                : "",
-            customProactiveText: {
-              follow_up: v.customProactiveText?.follow_up || "",
-              hot_lead: v.customProactiveText?.hot_lead || "",
-              reengagement: v.customProactiveText?.reengagement || "",
-              cold_outreach: v.customProactiveText?.cold_outreach || ""
-            }
-          }));
+          setProactiveState((prev) => mergeProactiveFromApi(prev, v));
         }
       } catch {}
       try {
@@ -831,8 +770,27 @@ const Prompts = () => {
       toast.success(successMessage || "Configurações salvas");
       return data;
     } catch (err) {
-      toastError(err);
+      if (err?.response?.status === 403) {
+        toast.error("Apenas administradores podem salvar estas configurações.");
+      } else {
+        toastError(err);
+      }
       return null;
+    }
+  };
+
+  const canSaveAgentSettings =
+    user?.profile === "admin" || user?.super === true;
+
+  const refetchProactiveSettings = async () => {
+    try {
+      const { data } = await api.get("/settings/agent_proactive");
+      if (data && data.value) {
+        const v = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+        setProactiveState((prev) => mergeProactiveFromApi(prev, v));
+      }
+    } catch (e) {
+      toastError(e);
     }
   };
 
@@ -847,7 +805,7 @@ const Prompts = () => {
   const sanitizeMediaByContext = (raw) => {
     if (!raw || typeof raw !== "object") return undefined;
     const out = {};
-    ["follow_up", "hot_lead", "reengagement", "cold_outreach"].forEach((ctx) => {
+    ["follow_up", "hot_lead", "reengagement", "cold_outreach", "inbound"].forEach((ctx) => {
       const v = raw[ctx];
       if (!v || typeof v !== "object") return;
       const imageUrls = (v.imageUrls || []).map(String).map((s) => s.trim()).filter(Boolean);
@@ -886,7 +844,7 @@ const Prompts = () => {
       cold_outreach: proactiveState.hintColdOutreach || undefined
     };
     const objectives = {};
-    ["follow_up", "hot_lead", "reengagement", "cold_outreach"].forEach((k) => {
+    ["follow_up", "hot_lead", "reengagement", "cold_outreach", "inbound"].forEach((k) => {
       const t = (proactiveState.objectives && proactiveState.objectives[k]) || "";
       if (t.trim()) objectives[k] = t.trim();
     });
@@ -931,6 +889,8 @@ const Prompts = () => {
       hints,
       objectives: Object.keys(objectives).length ? objectives : undefined,
       playbook: proactiveState.playbook || undefined,
+      inboundConversationBrief: String(proactiveState.inboundConversationBrief || "").trim() || undefined,
+      inboundMediaOnlyFirstResponse: proactiveState.inboundMediaOnlyFirstResponse ? true : undefined,
       segments: Object.keys(segments).length ? segments : undefined,
       businessHours: proactiveState.businessHoursEnabled
         ? {
@@ -967,10 +927,28 @@ const Prompts = () => {
   };
 
   const handleSaveProactive = async () => {
-    await saveSetting("agent_proactive", buildProactivePayload(), "Proatividade salva");
+    if (!canSaveAgentSettings) {
+      toast.error("Apenas administradores podem salvar estas configurações.");
+      return;
+    }
+    const ok = await saveSetting(
+      "agent_proactive",
+      buildProactivePayload(),
+      "Proatividade salva"
+    );
+    if (ok) await refetchProactiveSettings();
   };
   const handleSaveMedia = async () => {
-    await saveSetting("agent_proactive", buildProactivePayload(), "Mídias salvas");
+    if (!canSaveAgentSettings) {
+      toast.error("Apenas administradores podem salvar estas configurações.");
+      return;
+    }
+    const ok = await saveSetting(
+      "agent_proactive",
+      buildProactivePayload(),
+      "Mídias salvas"
+    );
+    if (ok) await refetchProactiveSettings();
   };
   const handleSaveActions = async () => {
     if (actionsState.enabled?.includes("Transferir Chamado")) {
@@ -1717,6 +1695,7 @@ const Prompts = () => {
                 onSaveProactivity={handleSaveProactive}
                 tags={tags}
                 contactLists={contactLists}
+                canSaveSettings={canSaveAgentSettings}
               />
             )}
 
@@ -1726,6 +1705,7 @@ const Prompts = () => {
                 proactiveState={proactiveState}
                 setProactiveState={setProactiveState}
                 onSaveMedia={handleSaveMedia}
+                canSaveSettings={canSaveAgentSettings}
               />
             )}
 

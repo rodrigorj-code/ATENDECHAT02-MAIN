@@ -36,6 +36,24 @@ const PLAYBOOK_SNIPPETS: Record<
     hot_lead: "Destaque planos ou upgrades alinhados ao que o cliente já usa.",
     reengagement: "Relembre benefícios já obtidos e o que há de novo.",
     cold_outreach: "Conecte problema típico a solução de forma breve."
+  },
+  sdr_light: {
+    follow_up: "Uma pergunta objetiva de qualificação; evite texto longo.",
+    hot_lead: "Confirme interesse e proponha um próximo passo curto (ex.: 15 min).",
+    reengagement: "Reabra com gancho de segmento ou novidade, sem parecer robô.",
+    cold_outreach: "Primeira linha humana + pergunta aberta; sem pitch completo."
+  },
+  closer: {
+    follow_up: "Remova objeções comuns com empatia e ofereça caminho claro para decidir.",
+    hot_lead: "Seja direto: condições, próximo passo e prazo sugerido (sem pressão tóxica).",
+    reengagement: "Reative com oferta ou condição que faça sentido ao histórico.",
+    cold_outreach: "Curto e assertivo: valor + convite a responder com disponibilidade."
+  },
+  customer_success: {
+    follow_up: "Cheque se está tudo ok e ofereça ajuda proativa.",
+    hot_lead: "Se houver sinal de expansão, conecte valor adicional ao uso atual.",
+    reengagement: "Relembre conquistas e novidades do produto/serviço.",
+    cold_outreach: "Tom de parceria; foco em adoção e sucesso, não em venda fria."
   }
 };
 
@@ -47,7 +65,9 @@ const CONTEXT_INSTRUCTIONS: Record<ProactiveContextType, string> = {
   hot_lead:
     "Contexto: hot_lead. O lead demonstrou interesse real. Apresente proposta personalizada com base no histórico, tom profissional e um CTA claro no texto (ex.: convite para responder com uma palavra ou confirmar interesse).",
   reengagement:
-    "Contexto: reengagement. Lead inativo há tempo. Use um ângulo diferente (novo benefício, nova abordagem), sem repetir o que já foi dito antes. Curto."
+    "Contexto: reengagement. Lead inativo há tempo. Use um ângulo diferente (novo benefício, nova abordagem), sem repetir o que já foi dito antes. Curto.",
+  inbound:
+    "Contexto: conversa ativa (chat). O cliente enviou mensagem; responda de forma natural e alinhada ao roteiro comercial definido nas configurações."
 };
 
 const MISSION_SNIPPETS: Record<ProactiveMissionMode, string> = {
@@ -56,7 +76,11 @@ const MISSION_SNIPPETS: Record<ProactiveMissionMode, string> = {
   support:
     "Missão SUPORTE na proatividade: priorize diagnóstico, clareza e empatia. Pergunte o que falta para resolver. Se houver mídia após o texto, explique em uma linha o que será enviado (tutorial, print, vídeo). Evite empurrar venda.",
   balanced:
-    "Missão EQUILIBRADA: seja útil, mantenha tom humano e sugira um próximo passo quando fizer sentido no histórico. Se mídia seguir esta mensagem, contextualize brevemente."
+    "Missão EQUILIBRADA: seja útil, mantenha tom humano e sugira um próximo passo quando fizer sentido no histórico. Se mídia seguir esta mensagem, contextualize brevemente.",
+  nurture:
+    "Missão NUTRIÇÃO: eduque com micro-insights e perguntas leves; construa confiança antes de empurrar oferta. Evite spam e mensagens genéricas.",
+  appointment_focus:
+    "Missão AGENDAMENTO: conduza a conversa para marcar reunião, demo ou call — com duas opções de horário quando fizer sentido. Seja breve e respeite o tempo do lead."
 };
 
 function buildHistory(messages: Message[], max: number): string {

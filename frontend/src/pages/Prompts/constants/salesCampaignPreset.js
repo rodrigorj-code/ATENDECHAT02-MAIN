@@ -43,8 +43,13 @@ export function applySalesCampaignPreset(prev) {
       reengagement:
         "Novo ângulo de valor; retomar com leveza quem ficou inativo após follow-ups.",
       cold_outreach:
-        "Primeira abordagem pós-campanha: curiosidade genuína, curta, sem preço na primeira linha."
+        "Primeira abordagem pós-campanha: curiosidade genuína, curta, sem preço na primeira linha.",
+      inbound:
+        "No chat: qualificar necessidade, alinhar expectativa e conduzir para demo, link ou pagamento."
     },
+    inboundConversationBrief:
+      prev.inboundConversationBrief ||
+      "1) Contexto em uma frase 2) Pergunta de qualificação 3) CTA único (agendar / link / material)",
     hintFollowUp:
       "Retome com tom humano. Se já enviou material ou propôs reunião, cite isso em uma frase. Ofereça 2 opções de horário ou pergunte o melhor dia. Evite repetir o mesmo texto das tentativas anteriores.",
     hintHotLead:

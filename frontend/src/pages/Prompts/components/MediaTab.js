@@ -10,17 +10,26 @@ import {
   Grid,
   Switch,
   TextField,
+  Tooltip,
   Typography
 } from "@material-ui/core";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import CloudUploadIcon from "@material-ui/icons/CloudUpload";
 import InsertLinkIcon from "@material-ui/icons/InsertLink";
+import HelpOutlineIcon from "@material-ui/icons/HelpOutline";
 import SectionCard from "./shared/SectionCard";
 import api from "../../../services/api";
 import { toast } from "react-toastify";
 import toastError from "../../../errors/toastError";
 
 const CONTEXTS = [
+  {
+    id: "inbound",
+    label: "Resposta no chat",
+    cron: "Após texto da IA",
+    when:
+      "Quando o cliente envia mensagem e a IA responde com sucesso. Anexos seguem o texto (pausa, “não enviar se já mandei mídia” e “só na 1ª resposta” na aba Proatividade)."
+  },
   {
     id: "follow_up",
     label: "Follow-up",
@@ -78,7 +87,13 @@ function ensurePack(state, ctx) {
   );
 }
 
-export default function MediaTab({ classes, proactiveState, setProactiveState, onSaveMedia }) {
+export default function MediaTab({
+  classes,
+  proactiveState,
+  setProactiveState,
+  onSaveMedia,
+  canSaveSettings = true
+}) {
   const [busyKey, setBusyKey] = useState("");
   const [urlDraft, setUrlDraft] = useState({});
 
@@ -249,6 +264,9 @@ export default function MediaTab({ classes, proactiveState, setProactiveState, o
                   <Typography component="span" variant="body2" style={{ fontWeight: 600 }}>
                     {c.label}
                   </Typography>
+                  <Tooltip title={c.when}>
+                    <HelpOutlineIcon fontSize="small" color="action" style={{ cursor: "help" }} />
+                  </Tooltip>
                   <span className={classes.statusBadgeWarn}>{c.cron}</span>
                 </Box>
 
@@ -416,9 +434,21 @@ export default function MediaTab({ classes, proactiveState, setProactiveState, o
       </Grid>
 
       <Box mt={2}>
-        <Button variant="contained" color="primary" onClick={onSaveMedia}>
-          Salvar mídias e timing
-        </Button>
+        <Tooltip
+          disableHoverListener={canSaveSettings}
+          title="Apenas administradores podem salvar configurações do agente."
+        >
+          <span>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={onSaveMedia}
+              disabled={!canSaveSettings}
+            >
+              Salvar mídias e timing
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
     </div>
   );

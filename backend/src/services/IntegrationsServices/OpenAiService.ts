@@ -31,6 +31,12 @@ import Whatsapp from "../../models/Whatsapp";
 import axios from "axios";
 import { getMessageOptions } from "../WbotServices/SendWhatsAppMedia";
 import { onAgentUserInboundText } from "../AgentProactiveServices/onUserInboundAgent";
+import { sendProactiveContextMediaAfterText } from "../AgentProactiveServices/proactiveSendContextMedia";
+import {
+  parseAgentProactiveSettings,
+  AgentProactiveSettings,
+  ProactiveMissionMode
+} from "../../types/agentProactiveSettings";
 
 type Session = WASocket & {
   id?: number;
@@ -140,6 +146,97 @@ async function loadProactiveMediaFlags(
     };
   } catch {
     return { vision: false, ack: true };
+  }
+}
+
+async function loadAgentProactiveSettingsParsed(
+  companyId: number
+): Promise<AgentProactiveSettings> {
+  try {
+    const row = await ListSettingsServiceOne({ companyId, key: "agent_proactive" });
+    if (!row?.value) return {};
+    const raw =
+      typeof row.value === "string" ? JSON.parse(row.value as string) : row.value;
+    return parseAgentProactiveSettings(raw);
+  } catch {
+    return {};
+  }
+}
+
+const MISSION_LABELS: Record<ProactiveMissionMode, string> = {
+  balanced: "Equilibrado (útil, próximo passo quando couber)",
+  sales: "Vendas (perguntas curtas, avançar para demo/proposta/fechamento)",
+  support: "Suporte (diagnóstico, evitar empurrar venda)",
+  nurture: "Nutrição de lead (educar antes de vender)",
+  appointment_focus: "Foco em agenda (marcar reunião/demo)"
+};
+
+const PLAYBOOK_LABELS: Record<string, string> = {
+  "": "",
+  consultivo: "Consultivo",
+  prospeccao: "Prospecção",
+  suporte_upsell: "Suporte + upsell",
+  sdr_light: "SDR enxuto",
+  closer: "Fechamento",
+  customer_success: "Sucesso do cliente"
+};
+
+function buildReactiveProactivePromptBlock(settings: AgentProactiveSettings): string {
+  const parts: string[] = [];
+  const brief = settings.inboundConversationBrief?.trim();
+  if (brief) {
+    parts.push(
+      `Roteiro comercial na conversa (siga quando fizer sentido; adapte ao que o cliente já disse):\n${brief}`
+    );
+  }
+  const mission = (settings.proactiveMission || "balanced") as ProactiveMissionMode;
+  const missionLine =
+    (MISSION_LABELS as Record<string, string>)[mission] || MISSION_LABELS.balanced;
+  parts.push(`Tom/missão alinhada às automações: ${missionLine}`);
+  const pb = settings.playbook != null ? String(settings.playbook) : "";
+  if (pb && PLAYBOOK_LABELS[pb]) {
+    parts.push(`Estilo de playbook: ${PLAYBOOK_LABELS[pb]}`);
+  }
+  const objIn = settings.objectives?.inbound?.trim();
+  if (objIn) {
+    parts.push(`Objetivo específico no chat: ${objIn}`);
+  }
+  if (!parts.length) return "";
+  return `\n\n--- Configuração comercial (Proatividade / chat) ---\n${parts.join(
+    "\n\n"
+  )}\n--- Fim ---`;
+}
+
+async function maybeSendInboundReplyMedia(params: {
+  ticket: Ticket;
+  contact: Contact;
+  priorOutboundCount: number;
+  outcome: "sent" | "skipped";
+}): Promise<void> {
+  const { ticket, contact, priorOutboundCount, outcome } = params;
+  if (outcome !== "sent") return;
+  try {
+    const settings = await loadAgentProactiveSettingsParsed(ticket.companyId);
+    const pack = settings.mediaByContext?.inbound;
+    const n =
+      (pack?.imageUrls?.filter(Boolean).length || 0) +
+      (pack?.documentUrls?.filter(Boolean).length || 0) +
+      (pack?.videoUrls?.filter(Boolean).length || 0);
+    if (!pack || n === 0) return;
+    if (settings.inboundMediaOnlyFirstResponse && priorOutboundCount > 0) {
+      logger.info(
+        `[AI SERVICE] inbound mídia ignorada (só primeira resposta) ticket=${ticket.id}`
+      );
+      return;
+    }
+    await sendProactiveContextMediaAfterText(
+      contact.id,
+      "inbound",
+      settings,
+      ticket.id
+    );
+  } catch (e) {
+    logger.warn(`[AI SERVICE] Falha ao enviar mídia inbound ticket=${ticket.id}:`, e);
   }
 }
 
@@ -344,7 +441,7 @@ const processResponse = async (
   contact: Contact,
   aiSettings: IOpenAi,
   ticketTraking?: TicketTraking
-): Promise<void> => {
+): Promise<"sent" | "skipped"> => {
   let response = responseText;
 
   const raw = typeof response === "string" ? response.trim() : "";
@@ -387,7 +484,7 @@ const processResponse = async (
     }
 
     logger.info(`[AI SERVICE] Ticket ${ticket.id} transferido para atendimento humano`);
-    return;
+    return "skipped";
   }
 
   // Verificar ação de transferência da IA
@@ -411,7 +508,7 @@ const processResponse = async (
   }
 
   if (!response && !userRequestedTransfer) {
-    return;
+    return "skipped";
   }
 
   const publicFolder: string = path.resolve(__dirname, "..", "..", "..", "public", `company${ticket.companyId}`);
@@ -488,6 +585,7 @@ const processResponse = async (
       ticket,
       ticketId: ticket.id
     });
+    return "sent";
   } else {
     // Apenas OpenAI pode usar voz
     const fileNameWithOutExtension = `${ticket.id}_${Date.now()}`;
@@ -523,6 +621,7 @@ const processResponse = async (
       });
       deleteFileSync(`${publicFolder}/${fileNameWithOutExtension}.mp3`);
       deleteFileSync(`${publicFolder}/${fileNameWithOutExtension}.wav`);
+      return "sent";
     } catch (error) {
       console.error(`Erro para responder com audio: ${error}`);
       // Fallback para texto
@@ -545,8 +644,10 @@ const processResponse = async (
         ticket,
         ticketId: ticket.id
       });
+      return "sent";
     }
   }
+  return "skipped";
 };
 
 const parseDateTimeFromText = (text: string): { date: Date | null; matched: boolean } => {
@@ -846,6 +947,8 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
     const roleBye = roleValue?.despedida ? `Despedida padrão: ${roleValue.despedida}` : "";
     const roleEmoji = roleValue?.emojis ? `Uso de emojis: ${roleValue.emojis}` : "";
     const websites = Array.isArray(brainValue?.websites) && brainValue.websites.length > 0 ? `Referências:\n${brainValue.websites.map((u: string) => `- ${u}`).join("\n")}` : "";
+    const proactiveForChat = await loadAgentProactiveSettingsParsed(ticket.companyId);
+    const reactiveProactiveBlock = buildReactiveProactivePromptBlock(proactiveForChat);
     const promptSystem = `Instruções do Sistema:
 - Use o nome ${clientName} nas respostas.
 - Máximo de ${aiSettings.maxTokens} tokens.
@@ -854,7 +957,7 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
 - Se a solicitação for ambígua, peça esclarecimentos de forma breve.
 - Quando não entender a mensagem, responda de forma curta: "Desculpe, não consegui entender sua mensagem. Pode reformular?"
 ${roleLang ? `\n${roleLang}` : ""}${roleForm ? `\n${roleForm}` : ""}${roleFunc ? `\n${roleFunc}` : ""}${rolePers ? `\n${rolePers}` : ""}${roleEmoji ? `\n${roleEmoji}` : ""}${roleGreet ? `\n${roleGreet}` : ""}${roleBye ? `\n${roleBye}` : ""}${websites ? `\n${websites}` : ""}
-
+${reactiveProactiveBlock ? `${reactiveProactiveBlock}\n` : ""}
 ${aiSettings.prompt}`;
 
     // Processar mensagem de texto
@@ -887,7 +990,24 @@ ${aiSettings.prompt}`;
           return;
         }
 
-        await processResponse(responseText, wbot, msg, ticket, contact, aiSettings, ticketTraking);
+        const priorOutboundText = await Message.count({
+          where: { ticketId: ticket.id, fromMe: true }
+        });
+        const outcomeText = await processResponse(
+          responseText,
+          wbot,
+          msg,
+          ticket,
+          contact,
+          aiSettings,
+          ticketTraking
+        );
+        await maybeSendInboundReplyMedia({
+          ticket,
+          contact,
+          priorOutboundCount: priorOutboundText,
+          outcome: outcomeText
+        });
 
         logger.info(`[AI SERVICE] Resposta processada com sucesso para ticket ${ticket.id}`);
 
@@ -979,7 +1099,24 @@ ${aiSettings.prompt}`;
         }
 
         if (responseText) {
-          await processResponse(responseText, wbot, msg, ticket, contact, aiSettings, ticketTraking);
+          const priorOutboundAudio = await Message.count({
+            where: { ticketId: ticket.id, fromMe: true }
+          });
+          const outcomeAudio = await processResponse(
+            responseText,
+            wbot,
+            msg,
+            ticket,
+            contact,
+            aiSettings,
+            ticketTraking
+          );
+          await maybeSendInboundReplyMedia({
+            ticket,
+            contact,
+            priorOutboundCount: priorOutboundAudio,
+            outcome: outcomeAudio
+          });
         }
 
       } catch (error: any) {
@@ -1037,8 +1174,17 @@ ${aiSettings.prompt}`;
           const responseText = result.response.text();
 
           if (responseText) {
+            const priorImGem = await Message.count({
+              where: { ticketId: ticket.id, fromMe: true }
+            });
             const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, { text: `\u200e ${responseText}` });
             await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
+            await maybeSendInboundReplyMedia({
+              ticket,
+              contact,
+              priorOutboundCount: priorImGem,
+              outcome: "sent"
+            });
           }
         } else if (isOpenAIModel && openai && vision && filePath && fs.existsSync(filePath)) {
           const buf = fs.readFileSync(filePath);
@@ -1064,8 +1210,17 @@ ${aiSettings.prompt}`;
           });
           const responseText = (chat.choices[0]?.message?.content || "").trim();
           if (responseText) {
+            const priorImOai = await Message.count({
+              where: { ticketId: ticket.id, fromMe: true }
+            });
             const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, { text: `\u200e ${responseText}` });
             await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
+            await maybeSendInboundReplyMedia({
+              ticket,
+              contact,
+              priorOutboundCount: priorImOai,
+              outcome: "sent"
+            });
           }
         } else if (ack) {
           const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
@@ -1099,7 +1254,24 @@ ${aiSettings.prompt}`;
           responseText = await handleGeminiRequest(gemini, messagesAI, aiSettings, synthetic, promptSystem);
         }
         if (responseText) {
-          await processResponse(responseText, wbot, msg, ticket, contact, aiSettings, ticketTraking);
+          const priorOutboundVid = await Message.count({
+            where: { ticketId: ticket.id, fromMe: true }
+          });
+          const outcomeVid = await processResponse(
+            responseText,
+            wbot,
+            msg,
+            ticket,
+            contact,
+            aiSettings,
+            ticketTraking
+          );
+          await maybeSendInboundReplyMedia({
+            ticket,
+            contact,
+            priorOutboundCount: priorOutboundVid,
+            outcome: outcomeVid
+          });
         } else if (ack) {
           const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
             text: "\u200e Recebi seu vídeo! Se precisar de algo específico, conte em texto que eu te ajudo."
@@ -1123,7 +1295,24 @@ ${aiSettings.prompt}`;
           responseText = await handleGeminiRequest(gemini, messagesAI, aiSettings, synthetic, promptSystem);
         }
         if (responseText) {
-          await processResponse(responseText, wbot, msg, ticket, contact, aiSettings, ticketTraking);
+          const priorOutboundDoc = await Message.count({
+            where: { ticketId: ticket.id, fromMe: true }
+          });
+          const outcomeDoc = await processResponse(
+            responseText,
+            wbot,
+            msg,
+            ticket,
+            contact,
+            aiSettings,
+            ticketTraking
+          );
+          await maybeSendInboundReplyMedia({
+            ticket,
+            contact,
+            priorOutboundCount: priorOutboundDoc,
+            outcome: outcomeDoc
+          });
         } else if (ack) {
           const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
             text: "\u200e Recebi seu arquivo! Diga em poucas palavras o que você precisa que eu faça com ele."

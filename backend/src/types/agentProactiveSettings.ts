@@ -2,16 +2,26 @@ export type ProactiveContextType =
   | "follow_up"
   | "hot_lead"
   | "reengagement"
-  | "cold_outreach";
+  | "cold_outreach"
+  /** Mídia após resposta da IA no chat (mensagem inbound do cliente) */
+  | "inbound";
 
 export type AgentProactivePlaybook =
   | "consultivo"
   | "prospeccao"
   | "suporte_upsell"
+  | "sdr_light"
+  | "closer"
+  | "customer_success"
   | "";
 
 /** Direção da conversa quando a proatividade está ligada */
-export type ProactiveMissionMode = "balanced" | "sales" | "support";
+export type ProactiveMissionMode =
+  | "balanced"
+  | "sales"
+  | "support"
+  | "nurture"
+  | "appointment_focus";
 
 export interface ProactiveSegmentRule {
   /** Contato deve ter pelo menos uma destas tags */
@@ -127,6 +137,14 @@ export interface AgentProactiveSettings {
   openAiVisionInbound?: boolean;
   /** Resposta curta ao receber mídia sem análise */
   acknowledgeMedia?: boolean;
+  /**
+   * Roteiro comercial injetado no prompt do chat reativo (qualificar, apresentar serviço, CTA).
+   */
+  inboundConversationBrief?: string;
+  /**
+   * Se true, anexos do contexto `inbound` só na primeira resposta da IA do ticket (antes não havia mensagem fromMe).
+   */
+  inboundMediaOnlyFirstResponse?: boolean;
 }
 
 export const defaultHotLeadKeywords = [

@@ -2034,6 +2034,27 @@ async function handleDispatchCampaign(job) {
           //     });
           // }
         }
+        try {
+          const [campTag] = await Tag.findOrCreate({
+            where: { name: `Campanha #${campaign.id}`, companyId: campaign.companyId },
+            defaults: { color: "#6366f1", kanban: 0 }
+          });
+          await ContactTag.findOrCreate({
+            where: { contactId: contact.id, tagId: campTag.id }
+          });
+          const prevDw = ticket.dataWebhook as Record<string, unknown> | null | undefined;
+          const dw =
+            prevDw && typeof prevDw === "object" && !Array.isArray(prevDw)
+              ? { ...prevDw }
+              : {};
+          (dw as Record<string, unknown>).sourceCampaignId = campaign.id;
+          await Ticket.update(
+            { dataWebhook: dw as any },
+            { where: { id: ticket.id, companyId: campaign.companyId } }
+          );
+        } catch (markErr) {
+          logger.warn(`[CAMPAIGN] Falha ao marcar contato/ticket com origem campanha: ${markErr}`);
+        }
         await campaignShipping.update({ deliveredAt: moment() });
         try {
           const io = getIO();
