@@ -3721,13 +3721,13 @@ const handleOpenAi = async (
 
   let messagesOpenAi = [];
 
+  // Texto: não exigir conversation/extended no nível raiz — mensagens efêmeras, wrappers e
+  // formatos novos do Baileys podem ter o texto só em getBodyMessage, o que fazia a 2ª+ mensagem
+  // cair fora deste bloco e o bot “parar de responder”. Áudio e figurinha têm ramos próprios.
   if (
     bodyMessage.trim() &&
-    (msg.message?.conversation ||
-      msg.message?.extendedTextMessage?.text ||
-      msg.message?.imageMessage ||
-      msg.message?.videoMessage ||
-      msg.message?.documentMessage)
+    !msg.message?.audioMessage &&
+    !msg.message?.stickerMessage
   ) {
     messagesOpenAi = [];
     messagesOpenAi.push({ role: "system", content: promptSystem });

@@ -1,3 +1,34 @@
+function normalizeInboundMediaFromApi(mediaByContext) {
+  if (!mediaByContext || typeof mediaByContext !== "object") return mediaByContext || {};
+  const inbound = mediaByContext.inbound;
+  if (!inbound || typeof inbound !== "object") return mediaByContext;
+  if (Array.isArray(inbound.inboundMediaSlots) && inbound.inboundMediaSlots.length > 0) {
+    return { ...mediaByContext, inbound: { ...inbound } };
+  }
+  const slots = [];
+  let i = 0;
+  const mkId = () => `mig-${Date.now()}-${i++}`;
+  (inbound.imageUrls || []).forEach((url) => {
+    const u = String(url || "").trim();
+    if (!u) return;
+    slots.push({ id: mkId(), title: "", whenToUse: "", imageUrl: u });
+  });
+  (inbound.documentUrls || []).forEach((url) => {
+    const u = String(url || "").trim();
+    if (!u) return;
+    slots.push({ id: mkId(), title: "", whenToUse: "", documentUrl: u });
+  });
+  (inbound.videoUrls || []).forEach((url) => {
+    const u = String(url || "").trim();
+    if (!u) return;
+    slots.push({ id: mkId(), title: "", whenToUse: "", videoUrl: u });
+  });
+  return {
+    ...mediaByContext,
+    inbound: { ...inbound, inboundMediaSlots: slots }
+  };
+}
+
 /**
  * Mescla resposta GET /settings/agent_proactive no estado da UI (hints planos, segmentos, etc.).
  * @param {object} prev — estado React anterior
@@ -41,7 +72,7 @@ export function mergeProactiveFromApi(prev, v) {
     businessStartHour: v.businessHours?.startHour ?? 9,
     businessEndHour: v.businessHours?.endHour ?? 18,
     playbook: v.playbook || "",
-    mediaByContext: v.mediaByContext || {},
+    mediaByContext: normalizeInboundMediaFromApi(v.mediaByContext || {}),
     defaultOutbound: v.defaultOutbound || { allowAgentToSuggestUrls: false },
     maxProactivePerContactPerDay:
       v.maxProactivePerContactPerDay != null ? String(v.maxProactivePerContactPerDay) : "",
@@ -74,6 +105,10 @@ export function mergeProactiveFromApi(prev, v) {
       cold_outreach: v.customProactiveText?.cold_outreach || ""
     },
     inboundConversationBrief: v.inboundConversationBrief || "",
-    inboundMediaOnlyFirstResponse: !!v.inboundMediaOnlyFirstResponse
+    inboundMediaOnlyFirstResponse: !!v.inboundMediaOnlyFirstResponse,
+    contextualLinks: Array.isArray(v.contextualLinks) ? v.contextualLinks : [],
+    fetchLinkContentForPrompt: !!v.fetchLinkContentForPrompt,
+    followUpToneVacuo: v.followUpToneVacuo || "",
+    followUpToneClienteSilencioso: v.followUpToneClienteSilencioso || ""
   };
 }

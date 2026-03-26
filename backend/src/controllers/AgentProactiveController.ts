@@ -4,6 +4,11 @@ import logger from "../utils/logger";
 import { sendColdOutreach } from "../services/AgentProactiveServices/ColdOutreachService";
 import { resolveContactIdsFromList } from "../services/AgentProactiveServices/coldOutreachResolveContacts";
 
+/**
+ * POST /agent-proactive/cold-outreach — mantido para integrações/API.
+ * A tela de Proatividade não expõe mais prospecção fria; salvar pela UI desativa hot/reeng/cold no payload.
+ */
+
 export const postColdOutreach = async (
   req: Request,
   res: Response

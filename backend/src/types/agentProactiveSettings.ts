@@ -37,17 +37,45 @@ export interface ProactiveBusinessHours {
   endHour?: number;
 }
 
+/** Links com rótulo e quando usar (injetados no prompt do chat reativo). */
+export interface ContextualLink {
+  id: string;
+  url: string;
+  label: string;
+  /** Ex.: pagamento, site, agenda */
+  whenToUse: string;
+  /** Se true, tenta buscar trecho de texto da página para o prompt */
+  fetchContent?: boolean;
+}
+
+/** Um anexo com rótulo e “quando usar”, espelhando ContextualLink na UI. */
+export interface InboundMediaSlot {
+  id: string;
+  /** Nome curto do anexo (ex.: catálogo, tabela de preços) */
+  title?: string;
+  /** Quando a IA deve preparar o cliente para este arquivo */
+  whenToUse?: string;
+  imageUrl?: string;
+  documentUrl?: string;
+  videoUrl?: string;
+}
+
 export interface ProactiveMediaPack {
   imageUrls?: string[];
   documentUrls?: string[];
   videoUrls?: string[];
+  /**
+   * Cartões na UI (inbound). Opcional; URLs planas legadas continuam válidas.
+   * Ordem dos slots define ordem dentro de cada tipo ao derivar image/document/video.
+   */
+  inboundMediaSlots?: InboundMediaSlot[];
   /** Pausa em segundos após o texto antes de enviar anexos (0–180) */
   delayAfterTextSec?: number;
   /** Não enviar anexos se já houve mídia sua neste ticket nas últimas 48h */
   skipIfRecentOutboundMedia?: boolean;
   /**
-   * O que o modelo deve deixar claro no texto antes dos anexos (tom, promessa, o que vem a seguir).
-   * Ex.: "mencionar que segue o PDF com valores" ou "avisar que enviará vídeo demo".
+   * Instrução geral opcional para o modelo (além do texto por cartão em inboundMediaSlots).
+   * Ex.: tom global ou observação que vale para todos os anexos.
    */
   beforeMediaContext?: string;
 }
@@ -145,6 +173,16 @@ export interface AgentProactiveSettings {
    * Se true, anexos do contexto `inbound` só na primeira resposta da IA do ticket (antes não havia mensagem fromMe).
    */
   inboundMediaOnlyFirstResponse?: boolean;
+  /** Links (site, pagamento, etc.) com contexto para o modelo no chat reativo */
+  contextualLinks?: ContextualLink[];
+  /**
+   * Se true, para cada link com fetchContent (ou todos se o link não define), tenta incluir trecho da página no prompt.
+   */
+  fetchLinkContentForPrompt?: boolean;
+  /** Tom guia quando o follow-up detecta que a última mensagem foi sua (cliente em vácuo) */
+  followUpToneVacuo?: string;
+  /** Tom guia quando a última mensagem foi do cliente (silêncio depois da fala dele) */
+  followUpToneClienteSilencioso?: string;
 }
 
 export const defaultHotLeadKeywords = [

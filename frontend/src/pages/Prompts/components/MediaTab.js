@@ -8,6 +8,7 @@ import {
   Chip,
   CircularProgress,
   Grid,
+  Paper,
   Switch,
   TextField,
   Tooltip,
@@ -16,46 +17,14 @@ import {
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import CloudUploadIcon from "@material-ui/icons/CloudUpload";
 import InsertLinkIcon from "@material-ui/icons/InsertLink";
-import HelpOutlineIcon from "@material-ui/icons/HelpOutline";
 import SectionCard from "./shared/SectionCard";
 import api from "../../../services/api";
 import { toast } from "react-toastify";
 import toastError from "../../../errors/toastError";
+import { MEDIA_WHEN_PRESETS } from "../constants/mediaWhenPresets";
 
-const CONTEXTS = [
-  {
-    id: "inbound",
-    label: "Resposta no chat",
-    cron: "Após texto da IA",
-    when:
-      "Quando o cliente envia mensagem e a IA responde com sucesso. Anexos seguem o texto (pausa, “não enviar se já mandei mídia” e “só na 1ª resposta” na aba Proatividade)."
-  },
-  {
-    id: "follow_up",
-    label: "Follow-up",
-    cron: "Diário 9h",
-    when:
-      "Após a tratativa (material, proposta de reunião) o cliente pode sumir: o job de follow-up manda o texto e, se houver arquivos aqui, envia na ordem imagens → documentos → vídeos. Use “Contexto antes dos anexos” para a IA anunciar o PDF/vídeo antes dos anexos subirem."
-  },
-  {
-    id: "hot_lead",
-    label: "Lead quente",
-    cron: "A cada 30 min",
-    when: "Útil para catálogo, PDF de proposta ou vídeo curto logo após a mensagem de interesse."
-  },
-  {
-    id: "reengagement",
-    label: "Reengajamento",
-    cron: "Segunda 10h",
-    when: "Boa hora para folder novo, case de sucesso ou vídeo institucional."
-  },
-  {
-    id: "cold_outreach",
-    label: "Prospecção fria",
-    cron: "Manual / API",
-    when: "Primeiro o texto de abertura; em seguida os anexos (se configurados)."
-  }
-];
+const MAX_SLOTS = 12;
+const INBOUND_CTX = "inbound";
 
 function parseUrlList(str) {
   return String(str || "")
@@ -64,28 +33,82 @@ function parseUrlList(str) {
     .filter(Boolean);
 }
 
-function joinUrls(arr) {
-  return (arr || []).join("\n");
-}
-
 function shortPath(p) {
   if (!p) return "";
   const s = String(p);
   return s.length > 48 ? `…${s.slice(-44)}` : s;
 }
 
-function ensurePack(state, ctx) {
-  return (
-    state.mediaByContext?.[ctx] || {
-      imageUrls: [],
-      documentUrls: [],
-      videoUrls: [],
-      delayAfterTextSec: 0,
-      skipIfRecentOutboundMedia: false,
-      beforeMediaContext: ""
-    }
-  );
+function emptySlot() {
+  return {
+    id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    title: "",
+    whenToUse: "",
+    imageUrl: "",
+    documentUrl: "",
+    videoUrl: ""
+  };
 }
+
+function deriveFlatUrlsFromSlots(slots) {
+  const imageUrls = [];
+  const documentUrls = [];
+  const videoUrls = [];
+  for (const s of slots) {
+    const iu = String(s.imageUrl || "").trim();
+    const du = String(s.documentUrl || "").trim();
+    const vu = String(s.videoUrl || "").trim();
+    if (iu) imageUrls.push(iu);
+    else if (du) documentUrls.push(du);
+    else if (vu) videoUrls.push(vu);
+  }
+  return { imageUrls, documentUrls, videoUrls };
+}
+
+function ensurePack(state, ctx) {
+  const raw = state.mediaByContext?.[ctx];
+  const defaults = {
+    imageUrls: [],
+    documentUrls: [],
+    videoUrls: [],
+    inboundMediaSlots: [],
+    delayAfterTextSec: 0,
+    skipIfRecentOutboundMedia: false,
+    beforeMediaContext: ""
+  };
+  if (!raw || typeof raw !== "object") return { ...defaults };
+  const slots = Array.isArray(raw.inboundMediaSlots) ? raw.inboundMediaSlots : [];
+  const derived = deriveFlatUrlsFromSlots(slots);
+  const hasSlots = slots.length > 0;
+  return {
+    ...defaults,
+    ...raw,
+    inboundMediaSlots: slots,
+    imageUrls: hasSlots
+      ? derived.imageUrls
+      : (raw.imageUrls || []).map(String).map((s) => s.trim()).filter(Boolean),
+    documentUrls: hasSlots
+      ? derived.documentUrls
+      : (raw.documentUrls || []).map(String).map((s) => s.trim()).filter(Boolean),
+    videoUrls: hasSlots
+      ? derived.videoUrls
+      : (raw.videoUrls || []).map(String).map((s) => s.trim()).filter(Boolean)
+  };
+}
+
+function slotKind(slot) {
+  if (String(slot.imageUrl || "").trim()) return "image";
+  if (String(slot.documentUrl || "").trim()) return "document";
+  if (String(slot.videoUrl || "").trim()) return "video";
+  return null;
+}
+
+const chipPreset = {
+  borderColor: "#1976d2",
+  color: "#1565c0",
+  textTransform: "none",
+  fontSize: 12
+};
 
 export default function MediaTab({
   classes,
@@ -96,17 +119,27 @@ export default function MediaTab({
 }) {
   const [busyKey, setBusyKey] = useState("");
   const [urlDraft, setUrlDraft] = useState({});
+  const [focusedSlotIdx, setFocusedSlotIdx] = useState(0);
 
   const updatePack = useCallback(
     (ctx, updater) => {
       setProactiveState((prev) => {
         const prevPack = ensurePack(prev, ctx);
         const nextPack = typeof updater === "function" ? updater(prevPack) : { ...prevPack, ...updater };
+        const slots = Array.isArray(nextPack.inboundMediaSlots) ? nextPack.inboundMediaSlots : [];
+        const { imageUrls, documentUrls, videoUrls } = deriveFlatUrlsFromSlots(slots);
+        const merged = {
+          ...nextPack,
+          inboundMediaSlots: slots,
+          imageUrls,
+          documentUrls,
+          videoUrls
+        };
         return {
           ...prev,
           mediaByContext: {
             ...(prev.mediaByContext || {}),
-            [ctx]: nextPack
+            [ctx]: merged
           }
         };
       });
@@ -114,9 +147,56 @@ export default function MediaTab({
     [setProactiveState]
   );
 
-  const uploadFile = async (ctx, field, file) => {
+  const addSlot = (ctx) => {
+    let newIdx = null;
+    updatePack(ctx, (pack) => {
+      const slots = [...(pack.inboundMediaSlots || [])];
+      if (slots.length >= MAX_SLOTS) return pack;
+      newIdx = slots.length;
+      slots.push(emptySlot());
+      return { ...pack, inboundMediaSlots: slots };
+    });
+    if (newIdx !== null) setFocusedSlotIdx(newIdx);
+  };
+
+  const removeSlot = (ctx, idx) => {
+    updatePack(ctx, (pack) => {
+      const slots = [...(pack.inboundMediaSlots || [])];
+      slots.splice(idx, 1);
+      return { ...pack, inboundMediaSlots: slots };
+    });
+    setFocusedSlotIdx((prev) => {
+      if (prev > idx) return prev - 1;
+      if (prev === idx) return Math.max(0, prev - 1);
+      return prev;
+    });
+  };
+
+  const updateSlot = (ctx, idx, patch) => {
+    updatePack(ctx, (pack) => {
+      const slots = [...(pack.inboundMediaSlots || [])];
+      if (!slots[idx]) return pack;
+      slots[idx] = { ...slots[idx], ...patch };
+      return { ...pack, inboundMediaSlots: slots };
+    });
+  };
+
+  const setSlotFile = (ctx, idx, kind, webPath) => {
+    updatePack(ctx, (pack) => {
+      const slots = [...(pack.inboundMediaSlots || [])];
+      if (!slots[idx]) return pack;
+      const base = { ...slots[idx], imageUrl: "", documentUrl: "", videoUrl: "" };
+      if (kind === "image") base.imageUrl = webPath;
+      else if (kind === "document") base.documentUrl = webPath;
+      else base.videoUrl = webPath;
+      slots[idx] = base;
+      return { ...pack, inboundMediaSlots: slots };
+    });
+  };
+
+  const uploadFileToSlot = async (ctx, slotIdx, kind, file) => {
     if (!file) return;
-    const key = `${ctx}:${field}`;
+    const key = `${ctx}:slot:${slotIdx}:${kind}`;
     setBusyKey(key);
     try {
       const fd = new FormData();
@@ -124,12 +204,8 @@ export default function MediaTab({
       const { data } = await api.post("/agent-proactive/upload-media", fd);
       const webPath = data.path;
       if (!webPath) throw new Error("Resposta sem path");
-      updatePack(ctx, (pack) => {
-        const arr = [...(pack[field] || [])];
-        if (!arr.includes(webPath)) arr.push(webPath);
-        return { ...pack, [field]: arr };
-      });
-      toast.success("Arquivo anexado ao fluxo");
+      setSlotFile(ctx, slotIdx, kind, webPath);
+      toast.success("Arquivo vinculado ao cartão");
     } catch (e) {
       toastError(e);
     } finally {
@@ -137,12 +213,31 @@ export default function MediaTab({
     }
   };
 
-  const removeAt = (ctx, field, idx) => {
+  const appendWhenPreset = (ctx, slotIdx, text) => {
     updatePack(ctx, (pack) => {
-      const arr = [...(pack[field] || [])];
-      arr.splice(idx, 1);
-      return { ...pack, [field]: arr };
+      const slots = [...(pack.inboundMediaSlots || [])];
+      if (!slots[slotIdx]) return pack;
+      const cur = String(slots[slotIdx].whenToUse || "").trim();
+      const next = cur ? `${cur}; ${text}` : text;
+      slots[slotIdx] = { ...slots[slotIdx], whenToUse: next };
+      return { ...pack, inboundMediaSlots: slots };
     });
+  };
+
+  const mergeUrlsIntoSlots = (ctx, field, urls) => {
+    const kind = field === "imageUrls" ? "image" : field === "documentUrls" ? "document" : "video";
+    const urlField = kind === "image" ? "imageUrl" : kind === "document" ? "documentUrl" : "videoUrl";
+    updatePack(ctx, (pack) => {
+      let slots = [...(pack.inboundMediaSlots || [])];
+      for (const u of urls) {
+        if (slots.length >= MAX_SLOTS) break;
+        const slot = emptySlot();
+        slot[urlField] = u;
+        slots.push(slot);
+      }
+      return { ...pack, inboundMediaSlots: slots };
+    });
+    toast.success("URLs adicionadas como cartões");
   };
 
   const mergeUrlsFromDraft = (ctx, field) => {
@@ -153,38 +248,15 @@ export default function MediaTab({
       toast.error("Cole pelo menos uma URL válida.");
       return;
     }
-    updatePack(ctx, (pack) => {
-      const arr = [...new Set([...(pack[field] || []), ...urls])];
-      return { ...pack, [field]: arr };
-    });
+    mergeUrlsIntoSlots(ctx, field, urls);
     setUrlDraft((d) => ({ ...d, [key]: "" }));
-    toast.success("Links adicionados");
   };
 
-  const renderChips = (ctx, field) => {
-    const p = ensurePack(proactiveState, ctx);
-    const arr = p[field] || [];
-    if (!arr.length) return null;
-    return (
-      <Box display="flex" flexWrap="wrap" style={{ gap: 6, marginTop: 8 }}>
-        {arr.map((path, idx) => (
-          <Chip
-            key={`${path}-${idx}`}
-            size="small"
-            label={shortPath(path)}
-            onDelete={() => removeAt(ctx, field, idx)}
-            title={path}
-          />
-        ))}
-      </Box>
-    );
-  };
-
-  const uploadSlot = (ctx, field, accept, label) => {
-    const key = `${ctx}:${field}`;
+  const uploadInput = (ctx, slotIdx, kind, accept, label) => {
+    const key = `${ctx}:${slotIdx}:${kind}`;
     const busy = busyKey === key;
     return (
-      <Box display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 8, marginTop: 6 }}>
+      <Box display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 8, marginTop: 4 }}>
         <input
           type="file"
           accept={accept}
@@ -193,7 +265,7 @@ export default function MediaTab({
           onChange={(e) => {
             const f = e.target.files?.[0];
             e.target.value = "";
-            if (f) uploadFile(ctx, field, f);
+            if (f) uploadFileToSlot(ctx, slotIdx, kind, f);
           }}
         />
         <label htmlFor={`up-${key}`}>
@@ -210,6 +282,9 @@ export default function MediaTab({
       </Box>
     );
   };
+
+  const inboundPack = ensurePack(proactiveState, INBOUND_CTX);
+  const inboundSlots = inboundPack.inboundMediaSlots || [];
 
   return (
     <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
@@ -254,135 +329,175 @@ export default function MediaTab({
         </div>
       </SectionCard>
 
+      <Paper
+        elevation={0}
+        style={{
+          padding: 12,
+          marginBottom: 12,
+          backgroundColor: "#e8f5e9",
+          borderLeft: "4px solid #2e7d32",
+          borderRadius: 8
+        }}
+      >
+        <Typography variant="body2" style={{ color: "#1b5e20", fontWeight: 600 }}>
+          Mídias após a resposta da IA
+        </Typography>
+        <Typography variant="caption" style={{ display: "block", marginTop: 4, color: "#33691e" }}>
+          Cada cartão é um anexo com nome e situação — no mesmo estilo dos links na aba Proatividade. A IA usa isso para
+          preparar o cliente antes do envio automático.
+        </Typography>
+      </Paper>
+
       <Grid container spacing={1}>
-        {CONTEXTS.map((c) => {
-          const p = ensurePack(proactiveState, c.id);
-          return (
-            <Grid item xs={12} key={c.id}>
-              <SectionCard className={classes.sectionCardSpacing}>
-                <Box display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 8, marginBottom: 6 }}>
-                  <Typography component="span" variant="body2" style={{ fontWeight: 600 }}>
-                    {c.label}
-                  </Typography>
-                  <Tooltip title={c.when}>
-                    <HelpOutlineIcon fontSize="small" color="action" style={{ cursor: "help" }} />
-                  </Tooltip>
-                  <span className={classes.statusBadgeWarn}>{c.cron}</span>
-                </Box>
-
-                <Grid container spacing={1} style={{ marginTop: 2 }}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Pausa após o texto (segundos)"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      size="small"
-                      className={classes.inputDense}
-                      helperText="0 = envio imediato; 5–30 s parece mais humano."
-                      value={p.delayAfterTextSec ?? 0}
-                      onChange={(e) =>
-                        updatePack(c.id, (pack) => ({
-                          ...pack,
-                          delayAfterTextSec: Math.min(180, Math.max(0, Number(e.target.value) || 0))
-                        }))
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      inputProps={{ min: 0, max: 180 }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <div className={classes.switchRow} style={{ height: "100%", alignItems: "center" }}>
-                      <span className={classes.labelSmall}>
-                        Não anexar se já enviei mídia neste ticket (48h)
-                      </span>
-                      <Switch
-                        checked={!!p.skipIfRecentOutboundMedia}
-                        onChange={(e) =>
-                          updatePack(c.id, (pack) => ({
-                            ...pack,
-                            skipIfRecentOutboundMedia: e.target.checked
-                          }))
-                        }
-                        color="primary"
-                      />
-                    </div>
-                  </Grid>
-                </Grid>
-
-                <TextField
-                  label="Contexto antes dos anexos (para a IA)"
-                  fullWidth
-                  variant="outlined"
+        <Grid item xs={12}>
+          <SectionCard className={classes.sectionCardSpacing}>
+            <Typography variant="caption" style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
+              Atalhos para “Quando usar” (aplicam no cartão selecionado)
+            </Typography>
+            <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 6 }}>
+              Clique num cartão abaixo para selecioná-lo; depois use os atalhos.
+            </Typography>
+            <Box display="flex" flexWrap="wrap" style={{ gap: 6, marginBottom: 8 }}>
+              {MEDIA_WHEN_PRESETS.map((preset) => (
+                <Button
+                  key={preset.label}
                   size="small"
-                  multiline
-                  minRows={2}
-                  className={classes.inputDense}
-                  style={{ marginTop: 12 }}
-                  value={p.beforeMediaContext || ""}
-                  onChange={(e) =>
-                    updatePack(c.id, (pack) => ({
-                      ...pack,
-                      beforeMediaContext: e.target.value
-                    }))
-                  }
-                  placeholder="Ex.: avisar que segue o PDF com valores; ou que enviará um vídeo curto da demo."
-                  helperText="Instrução extra ao modelo: o texto da mensagem deve preparar o cliente para as mídias que vêm em seguida."
-                  InputLabelProps={{ shrink: true }}
-                />
-
-                <Typography
-                  variant="subtitle2"
-                  style={{ marginTop: 16, marginBottom: 6, fontWeight: 600, color: "#374151" }}
+                  variant="outlined"
+                  style={chipPreset}
+                  onClick={() => {
+                    const idx = Math.min(focusedSlotIdx, Math.max(0, inboundSlots.length - 1));
+                    if (inboundSlots.length === 0) {
+                      toast.info("Adicione um cartão antes.");
+                      return;
+                    }
+                    appendWhenPreset(INBOUND_CTX, idx, preset.text);
+                  }}
                 >
-                  Anexos (upload — sem colar URL)
-                </Typography>
-                <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
-                  Imagens, PDFs/planilhas e vídeos. Tamanho máx. ~30 MB por arquivo.
-                </Typography>
+                  {preset.label}
+                </Button>
+              ))}
+            </Box>
 
-                <Box style={{ border: "1px dashed #cbd5e1", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                  <Typography variant="caption" style={{ fontWeight: 600 }}>
-                    Imagens
-                  </Typography>
-                  {uploadSlot(c.id, "imageUrls", "image/*", "Enviar imagem")}
-                  {renderChips(c.id, "imageUrls")}
-                </Box>
-                <Box style={{ border: "1px dashed #cbd5e1", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                  <Typography variant="caption" style={{ fontWeight: 600 }}>
-                    Documentos
-                  </Typography>
-                  {uploadSlot(
-                    c.id,
-                    "documentUrls",
-                    ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/*",
-                    "Enviar documento"
-                  )}
-                  {renderChips(c.id, "documentUrls")}
-                </Box>
-                <Box style={{ border: "1px dashed #cbd5e1", borderRadius: 10, padding: 12, marginBottom: 8 }}>
-                  <Typography variant="caption" style={{ fontWeight: 600 }}>
-                    Vídeos
-                  </Typography>
-                  {uploadSlot(c.id, "videoUrls", "video/*", "Enviar vídeo")}
-                  {renderChips(c.id, "videoUrls")}
-                </Box>
+            {(inboundSlots.length ? inboundSlots : []).map((slot, idx) => (
+                  <Paper
+                    key={slot.id || idx}
+                    onClick={() => {
+                      setFocusedSlotIdx(idx);
+                    }}
+                    style={{
+                      padding: 10,
+                      marginBottom: 8,
+                      borderLeft: "4px solid #1976d2",
+                      background: focusedSlotIdx === idx ? "#f0f7ff" : "#fafafa",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 6 }}>
+                      Cartão {idx + 1}
+                      {focusedSlotIdx === idx ? " (selecionado para atalhos)" : ""}
+                    </Typography>
+                    <Grid container spacing={1}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Nome do anexo"
+                          fullWidth
+                          variant="outlined"
+                          size="small"
+                          className={classes.inputDense}
+                          value={slot.title || ""}
+                          onChange={(e) => updateSlot(INBOUND_CTX, idx, { title: e.target.value })}
+                          onFocus={() => setFocusedSlotIdx(idx)}
+                          placeholder="Ex.: Tabela de preços"
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Quando usar"
+                          fullWidth
+                          variant="outlined"
+                          size="small"
+                          className={classes.inputDense}
+                          value={slot.whenToUse || ""}
+                          onChange={(e) => updateSlot(INBOUND_CTX, idx, { whenToUse: e.target.value })}
+                          onFocus={() => setFocusedSlotIdx(idx)}
+                          placeholder="Ex.: cliente pediu valores"
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                    </Grid>
 
-                <Accordion square className={classes.promptsAccordion} style={{ marginTop: 8 }}>
+                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 8 }}>
+                      Um arquivo por cartão: escolha o tipo e envie.
+                    </Typography>
+                    <Box display="flex" flexWrap="wrap" style={{ gap: 8, marginTop: 4 }}>
+                      {uploadInput(INBOUND_CTX, idx, "image", "image/*", "Imagem")}
+                      {uploadInput(
+                        INBOUND_CTX,
+                        idx,
+                        "document",
+                        ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/*",
+                        "Documento"
+                      )}
+                      {uploadInput(INBOUND_CTX, idx, "video", "video/*", "Vídeo")}
+                    </Box>
+                    {slotKind(slot) ? (
+                      <Box display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 8, marginTop: 8 }}>
+                        <Chip
+                          size="small"
+                          label={`${
+                            slotKind(slot) === "image"
+                              ? "Imagem"
+                              : slotKind(slot) === "document"
+                                ? "Documento"
+                                : "Vídeo"
+                          }: ${shortPath(
+                            slot.imageUrl || slot.documentUrl || slot.videoUrl
+                          )}`}
+                          onDelete={() =>
+                            updateSlot(INBOUND_CTX, idx, { imageUrl: "", documentUrl: "", videoUrl: "" })
+                          }
+                          title={slot.imageUrl || slot.documentUrl || slot.videoUrl}
+                        />
+                      </Box>
+                    ) : null}
+
+                    <Button size="small" onClick={() => removeSlot(INBOUND_CTX, idx)} style={{ marginTop: 8 }}>
+                      Remover cartão
+                    </Button>
+                  </Paper>
+                ))}
+
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => addSlot(INBOUND_CTX)}
+                  disabled={inboundSlots.length >= MAX_SLOTS}
+                  style={{ marginTop: 4 }}
+                >
+                  + Adicionar cartão de anexo (máx. {MAX_SLOTS})
+                </Button>
+
+                <Accordion square className={classes.promptsAccordion} style={{ marginTop: 12 }}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box display="flex" alignItems="center" style={{ gap: 8 }}>
                       <InsertLinkIcon fontSize="small" color="action" />
-                      <Typography variant="body2">Opcional: adicionar por URL pública</Typography>
+                      <Typography variant="body2">Avançado: adicionar por URL pública</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails style={{ display: "block" }}>
                     <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
-                      Uma URL por linha. Útil para CDN ou arquivos já hospedados.
+                      Cada linha vira um novo cartão com o arquivo. Limite {MAX_SLOTS} cartões no total.
                     </Typography>
                     {["imageUrls", "documentUrls", "videoUrls"].map((field) => {
-                      const key = `${c.id}:${field}`;
+                      const key = `${INBOUND_CTX}:${field}`;
                       const lab =
-                        field === "imageUrls" ? "URLs de imagem" : field === "documentUrls" ? "URLs de documento" : "URLs de vídeo";
+                        field === "imageUrls"
+                          ? "URLs de imagem"
+                          : field === "documentUrls"
+                            ? "URLs de documento"
+                            : "URLs de vídeo";
                       return (
                         <Box key={field} style={{ marginBottom: 10 }}>
                           <TextField
@@ -397,31 +512,9 @@ export default function MediaTab({
                             onChange={(e) => setUrlDraft((d) => ({ ...d, [key]: e.target.value }))}
                             InputLabelProps={{ shrink: true }}
                           />
-                          <Button
-                            size="small"
-                            style={{ marginTop: 4 }}
-                            onClick={() => mergeUrlsFromDraft(c.id, field)}
-                          >
-                            Adicionar links
+                          <Button size="small" style={{ marginTop: 4 }} onClick={() => mergeUrlsFromDraft(INBOUND_CTX, field)}>
+                            Adicionar como cartões
                           </Button>
-                          <TextField
-                            style={{ marginTop: 8 }}
-                            fullWidth
-                            variant="outlined"
-                            size="small"
-                            className={classes.inputDense}
-                            label={`Editar lista (${lab})`}
-                            multiline
-                            minRows={2}
-                            value={joinUrls(p[field])}
-                            onChange={(e) =>
-                              updatePack(c.id, (pack) => ({
-                                ...pack,
-                                [field]: parseUrlList(e.target.value)
-                              }))
-                            }
-                            InputLabelProps={{ shrink: true }}
-                          />
                         </Box>
                       );
                     })}
@@ -429,8 +522,6 @@ export default function MediaTab({
                 </Accordion>
               </SectionCard>
             </Grid>
-          );
-        })}
       </Grid>
 
       <Box mt={2}>
@@ -441,11 +532,11 @@ export default function MediaTab({
           <span>
             <Button
               variant="contained"
-              color="primary"
+              style={{ backgroundColor: "#1565c0", color: "#fff" }}
               onClick={onSaveMedia}
               disabled={!canSaveSettings}
             >
-              Salvar mídias e timing
+              Salvar mídias
             </Button>
           </span>
         </Tooltip>

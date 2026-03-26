@@ -32,11 +32,14 @@ import axios from "axios";
 import { getMessageOptions } from "../WbotServices/SendWhatsAppMedia";
 import { onAgentUserInboundText } from "../AgentProactiveServices/onUserInboundAgent";
 import { sendProactiveContextMediaAfterText } from "../AgentProactiveServices/proactiveSendContextMedia";
+import { buildBeforeMediaHintForPrompt } from "../AgentProactiveServices/proactiveOpenAi";
 import {
   parseAgentProactiveSettings,
   AgentProactiveSettings,
-  ProactiveMissionMode
+  ProactiveMissionMode,
+  ContextualLink
 } from "../../types/agentProactiveSettings";
+import { fetchPageTextSnippet } from "../../utils/fetchPageTextSnippet";
 
 type Session = WASocket & {
   id?: number;
@@ -181,7 +184,9 @@ const PLAYBOOK_LABELS: Record<string, string> = {
   customer_success: "Sucesso do cliente"
 };
 
-function buildReactiveProactivePromptBlock(settings: AgentProactiveSettings): string {
+async function buildReactiveProactivePromptBlock(
+  settings: AgentProactiveSettings
+): Promise<string> {
   const parts: string[] = [];
   const brief = settings.inboundConversationBrief?.trim();
   if (brief) {
@@ -201,6 +206,52 @@ function buildReactiveProactivePromptBlock(settings: AgentProactiveSettings): st
   if (objIn) {
     parts.push(`Objetivo específico no chat: ${objIn}`);
   }
+
+  const links = (settings.contextualLinks || []).filter(
+    (l): l is ContextualLink =>
+      !!l && typeof l.url === "string" && /^https?:\/\//i.test(l.url.trim())
+  );
+  if (links.length) {
+    const globalFetch = !!settings.fetchLinkContentForPrompt;
+    const linkLines: string[] = [];
+    for (let i = 0; i < links.length; i++) {
+      const L = links[i];
+      const u = L.url.trim();
+      const label = (L.label || `Link ${i + 1}`).trim();
+      const when = (L.whenToUse || "").trim();
+      let line = `${i + 1}) ${label}: ${u}${when ? ` — usar quando: ${when}` : ""}`;
+      const doFetch = globalFetch || !!L.fetchContent;
+      if (doFetch) {
+        const snippet = await fetchPageTextSnippet(u);
+        if (snippet) {
+          line += `\n   (Trecho público da página, use só como referência; não invente dados além disto:)\n   ${snippet.slice(0, 1200)}${snippet.length > 1200 ? "…" : ""}`;
+        }
+      }
+      linkLines.push(line);
+    }
+    parts.push(
+      `Links configurados pelo operador — cite só quando fizer sentido; não invente preços ou condições que não apareçam abaixo:\n${linkLines.join("\n\n")}`
+    );
+  }
+
+  const packIn = settings.mediaByContext?.inbound;
+  const nInboundMedia =
+    (packIn?.imageUrls?.filter(Boolean).length || 0) +
+    (packIn?.documentUrls?.filter(Boolean).length || 0) +
+    (packIn?.videoUrls?.filter(Boolean).length || 0);
+  if (nInboundMedia > 0) {
+    const mediaHint = buildBeforeMediaHintForPrompt(packIn);
+    if (mediaHint) {
+      parts.push(
+        `Anexos após sua resposta (envio automático na sequência; alinhe o texto quando fizer sentido):\n${mediaHint}`
+      );
+    } else {
+      parts.push(
+        "Anexos após sua resposta: o sistema pode enviar imagens, PDF ou vídeo na sequência. Avise em uma frase curta quando fizer sentido, sem prometer o que não está configurado."
+      );
+    }
+  }
+
   if (!parts.length) return "";
   return `\n\n--- Configuração comercial (Proatividade / chat) ---\n${parts.join(
     "\n\n"
@@ -948,7 +999,7 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
     const roleEmoji = roleValue?.emojis ? `Uso de emojis: ${roleValue.emojis}` : "";
     const websites = Array.isArray(brainValue?.websites) && brainValue.websites.length > 0 ? `Referências:\n${brainValue.websites.map((u: string) => `- ${u}`).join("\n")}` : "";
     const proactiveForChat = await loadAgentProactiveSettingsParsed(ticket.companyId);
-    const reactiveProactiveBlock = buildReactiveProactivePromptBlock(proactiveForChat);
+    const reactiveProactiveBlock = await buildReactiveProactivePromptBlock(proactiveForChat);
     const promptSystem = `Instruções do Sistema:
 - Use o nome ${clientName} nas respostas.
 - Máximo de ${aiSettings.maxTokens} tokens.

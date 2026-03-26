@@ -7,6 +7,7 @@ import ListSettingsServiceOne from "../SettingServices/ListSettingsServiceOne";
 import {
   AgentProactiveSettings,
   ProactiveContextType,
+  ProactiveMediaPack,
   ProactiveMissionMode
 } from "../../types/agentProactiveSettings";
 import logger from "../../utils/logger";
@@ -94,12 +95,53 @@ function buildHistory(messages: Message[], max: number): string {
     .join("\n");
 }
 
+/** Última mensagem com texto ou mídia: se fromMe = vácuo (cliente não respondeu depois da sua msg). */
+function detectFollowUpSituation(messages: Message[]): "vacuo" | "cliente_falou_por_ultimo" {
+  const sorted = [...messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+  let last: Message | undefined;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const m = sorted[i];
+    if ((m.body || "").trim() || m.mediaType) {
+      last = m;
+      break;
+    }
+  }
+  if (!last) return "cliente_falou_por_ultimo";
+  return last.fromMe ? "vacuo" : "cliente_falou_por_ultimo";
+}
+
 function contextHasMedia(settings: AgentProactiveSettings, context: ProactiveContextType): boolean {
   const p = settings.mediaByContext?.[context];
   if (!p) return false;
   const n =
     (p.imageUrls?.length || 0) + (p.documentUrls?.length || 0) + (p.videoUrls?.length || 0);
   return n > 0;
+}
+
+/** Texto para o prompt: cartões (inboundMediaSlots) + instrução global opcional (beforeMediaContext). */
+export function buildBeforeMediaHintForPrompt(pack: ProactiveMediaPack | undefined): string | null {
+  if (!pack) return null;
+  const global = pack.beforeMediaContext?.trim();
+  const slots = pack.inboundMediaSlots;
+  if (slots && slots.length > 0) {
+    const lines: string[] = [];
+    for (const s of slots) {
+      const title = (s.title || "").trim();
+      const w = (s.whenToUse || "").trim();
+      const label = title || "Anexo";
+      if (w) lines.push(`${label}: ${w}`);
+      else if (title) lines.push(title);
+    }
+    const slotBlock = lines.filter(Boolean).join("\n\n");
+    if (slotBlock && global) return `${slotBlock}\n\n${global}`;
+    if (slotBlock) return slotBlock;
+    if (global) return global;
+    return null;
+  }
+  if (global) return global;
+  return null;
 }
 
 function renderCustomTemplate(
@@ -193,6 +235,23 @@ export async function generateProactiveMessage(params: {
       playbookLine ? `Estratégia (${playbookKey}): ${playbookLine}` : ""
     ].filter(Boolean);
 
+    if (context === "follow_up") {
+      const situation = detectFollowUpSituation(messages);
+      if (situation === "vacuo") {
+        hintParts.push(
+          "Situação detectada: a última mensagem relevante foi SUA (ou do bot). O cliente ainda não respondeu — recontato leve, humano, sem cobrar; pode assumir que não viu ou ficou pendente."
+        );
+        const tv = settings.followUpToneVacuo?.trim();
+        if (tv) hintParts.push(`Tom sugerido para este caso: ${tv}`);
+      } else {
+        hintParts.push(
+          "Situação detectada: a última mensagem relevante foi do CLIENTE. Ele falou e depois houve silêncio — retome com utilidade, uma pergunta clara, sem culpar o silêncio."
+        );
+        const tc = settings.followUpToneClienteSilencioso?.trim();
+        if (tc) hintParts.push(`Tom sugerido para este caso: ${tc}`);
+      }
+    }
+
     const mission: ProactiveMissionMode = settings.proactiveMission || "balanced";
     const missionLine = MISSION_SNIPPETS[mission] || MISSION_SNIPPETS.balanced;
     hintParts.push(missionLine);
@@ -204,10 +263,10 @@ export async function generateProactiveMessage(params: {
 
     if (contextHasMedia(settings, context)) {
       const pack = settings.mediaByContext?.[context];
-      const bmc = pack?.beforeMediaContext?.trim();
+      const bmc = buildBeforeMediaHintForPrompt(pack);
       if (bmc) {
         hintParts.push(
-          `Contexto antes dos anexos (definido pelo operador): ${bmc}\nO sistema enviará arquivos logo após esta mensagem — alinhe o texto a isso.`
+          `Contexto antes dos anexos (definido pelo operador):\n${bmc}\nO sistema enviará arquivos logo após esta mensagem — alinhe o texto a isso.`
         );
       } else {
         hintParts.push(

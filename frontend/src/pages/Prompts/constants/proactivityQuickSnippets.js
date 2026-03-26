@@ -62,6 +62,26 @@ export const QUICK_TONES = {
   ]
 };
 
+/** Tom sugerido quando a última msg foi sua (cliente em vácuo) — follow-up automático */
+export const FOLLOWUP_VACUO_CHIPS = [
+  { label: "Lembrete suave", text: "Tom de lembrete curto, sem cobrar." },
+  { label: "Perguntar se viu", text: "Pergunte se chegou a ver a última mensagem." },
+  { label: "Uma pergunta", text: "Uma pergunta objetiva para retomar o diálogo." }
+];
+
+/** Tom quando o cliente falou por último e sumiu depois */
+export const FOLLOWUP_CLIENTE_CHIPS = [
+  { label: "Utilidade", text: "Ofereça algo útil (link, resposta, próximo passo) em uma linha." },
+  { label: "Sem culpa", text: "Não diga que a pessoa sumiu ou demorou." },
+  { label: "CTA único", text: "Um único próximo passo claro (horário, link ou confirmação)." }
+];
+
+export const INBOUND_SALES_PRESETS = [
+  { label: "Vender", text: "Qualificar necessidade e conduzir para compra ou proposta." },
+  { label: "Agendar", text: "Marcar reunião ou demo com duas opções de horário quando couber." },
+  { label: "Link de pagamento", text: "Quando fizer sentido, enviar link oficial de pagamento com clareza." }
+];
+
 export function appendToField(prevText, snippetText, sep = "\n") {
   const p = String(prevText || "").trim();
   const s = String(snippetText || "").trim();
