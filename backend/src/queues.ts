@@ -1950,7 +1950,7 @@ async function handleDispatchCampaign(job) {
             ticket,
             contact,
             null,
-            true,
+            false,
             false
           );
 
@@ -1971,7 +1971,7 @@ async function handleDispatchCampaign(job) {
               ticket,
               contact,
               null,
-              true,
+              false,
               false
             );
           }
@@ -2001,7 +2001,7 @@ async function handleDispatchCampaign(job) {
                   ticket,
                   contact,
                   null,
-                  true,
+                  false,
                   false
                 );
               }
@@ -2015,7 +2015,7 @@ async function handleDispatchCampaign(job) {
                 ticket.contact,
                 null,
                 false,
-                true,
+                false,
                 wbot
               );
             }

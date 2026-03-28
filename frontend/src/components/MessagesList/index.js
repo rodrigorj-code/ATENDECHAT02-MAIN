@@ -198,6 +198,37 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: theme.mode === 'light' ? "0 1px 1px #b3b3b3" : "0 1px 1px #000000"
   },
 
+  /** Saída “humana” no WhatsApp: bolha verde + barra lateral (campanha, atendente, etc.) */
+  messageRightWhatsapp: {
+    marginLeft: 20,
+    marginTop: 2,
+    minWidth: 100,
+    maxWidth: 600,
+    height: "auto",
+    display: "block",
+    position: "relative",
+    "&:hover #messageActionsButton": {
+      display: "flex",
+      position: "absolute",
+      top: 0,
+      right: 0,
+    },
+    whiteSpace: "pre-wrap",
+    backgroundColor: theme.mode === 'light' ? "#dcf8c6" : "#005c4b",
+    color: theme.mode === 'light' ? "#303030" : "#ffffff",
+    alignSelf: "flex-end",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 0,
+    paddingLeft: 8,
+    paddingRight: 5,
+    paddingTop: 5,
+    paddingBottom: 0,
+    boxShadow: theme.mode === 'light' ? "0 1px 1px #b3b3b3" : "0 1px 1px #000000",
+    borderLeft: theme.mode === "light" ? "4px solid #25d366" : "4px solid #20c997"
+  },
+
   messageRightPrivate: {
     marginLeft: 20,
     marginTop: 2,
@@ -463,7 +494,9 @@ const MessagesList = ({
   queueId,
   channel,
   ticketStatus,
-  ticketIdOverride
+  ticketIdOverride,
+  /** ID numérico do ticket (API); evita perder eventos de socket antes do fetch de mensagens */
+  ticketInternalId
 }) => {
   const classes = useStyles();
   const [messagesList, dispatch] = useReducer(reducer, []);
@@ -563,6 +596,12 @@ const MessagesList = ({
   }, [ticketId, selectedQueuesMessage]);
 
   useEffect(() => {
+    if (ticketInternalId != null && ticketInternalId !== "") {
+      currentTicketNumericId.current = Number(ticketInternalId);
+    }
+  }, [ticketInternalId]);
+
+  useEffect(() => {
     setLoading(true);
     const delayDebounceFn = setTimeout(() => {
       const fetchMessages = async () => {
@@ -612,6 +651,9 @@ const MessagesList = ({
 
     const connectEventMessagesList = () => {
       socket.emit("joinChatBox", `${ticketId}`);
+      if (ticketInternalId != null && String(ticketInternalId) !== String(ticketId)) {
+        socket.emit("joinChatBox", `${ticketInternalId}`);
+      }
     }
 
     const onAppMessageMessagesList = (data) => {
@@ -626,9 +668,19 @@ const MessagesList = ({
         (data && data.ticket && data.ticket.id) ||
         null;
 
+      const numericFromProp =
+        ticketInternalId != null && ticketInternalId !== ""
+          ? Number(ticketInternalId)
+          : null;
       const sameTicket =
         (eventTicketUuid && String(eventTicketUuid) === String(ticketId)) ||
-        (currentTicketNumericId.current != null && eventTicketId != null && Number(eventTicketId) === Number(currentTicketNumericId.current));
+        (currentTicketNumericId.current != null &&
+          eventTicketId != null &&
+          Number(eventTicketId) === Number(currentTicketNumericId.current)) ||
+        (numericFromProp != null &&
+          !Number.isNaN(numericFromProp) &&
+          eventTicketId != null &&
+          Number(eventTicketId) === numericFromProp);
 
       if (!sameTicket) return;
 
@@ -658,13 +710,16 @@ const MessagesList = ({
 
     return () => {
       if (socket) {
-        socket.emit("joinChatBoxLeave", `${ticketId}`)
+        socket.emit("joinChatBoxLeave", `${ticketId}`);
+        if (ticketInternalId != null && String(ticketInternalId) !== String(ticketId)) {
+          socket.emit("joinChatBoxLeave", `${ticketInternalId}`);
+        }
         socket.off("connect", connectEventMessagesList);
         socket.off(`company-${companyId}-appMessage`, onAppMessageMessagesList);
       }
     };
 
-  }, [ticketId, socket]);
+  }, [ticketId, ticketInternalId, socket]);
 
   useEffect(() => {
     return () => {
@@ -1467,7 +1522,13 @@ const MessagesList = ({
               {renderTicketsSeparator(message, index)}
               {renderMessageDivider(message, index)}
               <div
-                className={message.isPrivate ? classes.messageRightPrivate : classes.messageRight}
+                className={
+                  message.isPrivate
+                    ? classes.messageRightPrivate
+                    : channel === "whatsapp" || channel === "whatsapp_oficial"
+                      ? classes.messageRightWhatsapp
+                      : classes.messageRight
+                }
                 title={message.queueId && message.queue?.name}
                 onDoubleClick={(e) => hanldeReplyMessage(e, message)}
               >

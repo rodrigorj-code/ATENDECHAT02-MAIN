@@ -205,6 +205,7 @@ const Ticket = () => {
           queueId={ticket.queueId}
           channel={ticket.channel}
           ticketStatus={ticket.status}
+          ticketInternalId={ticket.id}
         >
         </MessagesList>
         <MessageInput

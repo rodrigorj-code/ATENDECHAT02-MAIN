@@ -21,7 +21,11 @@ export type ProactiveMissionMode =
   | "sales"
   | "support"
   | "nurture"
-  | "appointment_focus";
+  | "appointment_focus"
+  | "retention"
+  | "billing"
+  | "onboarding"
+  | "technical_depth";
 
 export interface ProactiveSegmentRule {
   /** Contato deve ter pelo menos uma destas tags */
@@ -173,6 +177,11 @@ export interface AgentProactiveSettings {
    * Se true, anexos do contexto `inbound` só na primeira resposta da IA do ticket (antes não havia mensagem fromMe).
    */
   inboundMediaOnlyFirstResponse?: boolean;
+  /**
+   * Se true, mantém o comportamento antigo: após cada resposta “sent”, envia todo o pack inbound (se houver).
+   * Omitido/false: só envia quando há intenção (pedido de material etc.), marcação [[SEND_INBOUND_MEDIA]] na resposta, ou texto da IA indicando envio.
+   */
+  inboundMediaAlwaysAfterReply?: boolean;
   /** Links (site, pagamento, etc.) com contexto para o modelo no chat reativo */
   contextualLinks?: ContextualLink[];
   /**

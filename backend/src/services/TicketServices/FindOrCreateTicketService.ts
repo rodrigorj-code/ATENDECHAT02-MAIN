@@ -12,6 +12,7 @@ import AppError from "../../errors/AppError";
 import ContactWallet from "../../models/ContactWallet";
 import ShowContactService from "../ContactServices/ShowContactService";
 import logger from "../../utils/logger";
+import { normalizeTicketDataWebhook } from "../AgentProactiveServices/agentProactiveTicketState";
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -82,16 +83,25 @@ const FindOrCreateTicketService = async (
       const newUnreadCount = ticket.unreadMessages + unreadMessages;
 
       const updateData: any = {
-        unreadMessages: newUnreadCount,
-        isBot: false
+        unreadMessages: newUnreadCount
       };
 
-      // ✅ CORRIGIDO: Preservar modo IA permanente
-      const dataWebhook = ticket.dataWebhook as any;
-      const isAIPermanentMode = dataWebhook?.type === "openai" || dataWebhook?.type === "gemini";
-      if (isAIPermanentMode && dataWebhook?.mode === "permanent") {
-        updateData.isBot = true; // Manter isBot = true para IA permanente
-        logger.info(`[AI PERMANENT] Preservando modo IA permanente para ticket ${ticket.id}`);
+      const dataWebhook = normalizeTicketDataWebhook(ticket.dataWebhook) as any;
+      const isAIWebhook =
+        dataWebhook?.type === "openai" || dataWebhook?.type === "gemini";
+      const aiIntegrationActive =
+        !!ticket.useIntegration && isAIWebhook && !ticket.userId;
+
+      // Não forçar isBot=false quando a conversa está com IA ativa (todas as mensagens seguintes).
+      // Antes só "permanent" mantinha o bot; em modo default/temporary a 2ª mensagem ficava isBot=false
+      // antes do verifyMessage e o bloco [AI MODE] não rodava (isBot !== false falha).
+      if (aiIntegrationActive || (isAIWebhook && dataWebhook?.mode === "permanent")) {
+        updateData.isBot = true;
+        if (dataWebhook?.mode === "permanent") {
+          logger.info(`[AI PERMANENT] Preservando modo IA permanente para ticket ${ticket.id}`);
+        }
+      } else {
+        updateData.isBot = false;
       }
 
       if (!["open", "pending", "chatbot", "nps"].includes(ticket.status)) {

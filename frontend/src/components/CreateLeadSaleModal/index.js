@@ -1118,6 +1118,7 @@ export default function CreateLeadSaleModal({ open, onClose, lead, onSave, pipel
                           channel={ticket.channel}
                           ticketStatus={ticket.status}
                           ticketIdOverride={ticket.uuid}
+                          ticketInternalId={ticket.id}
                         />
                         <MessageInput
                           ticketId={ticket.id}

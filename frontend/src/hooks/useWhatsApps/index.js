@@ -5,6 +5,8 @@ import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { i18n } from "../../translate/i18n";
 
+const sameWhatsappId = (a, b) => Number(a) === Number(b);
+
 const reducer = (state, action) => {
   if (action.type === "LOAD_WHATSAPPS") {
     const whatsApps = action.payload;
@@ -13,7 +15,7 @@ const reducer = (state, action) => {
 
   if (action.type === "UPDATE_WHATSAPPS") {
     const whatsApp = action.payload;
-    const whatsAppIndex = state.findIndex((s) => s.id === whatsApp.id);
+    const whatsAppIndex = state.findIndex((s) => sameWhatsappId(s.id, whatsApp.id));
 
     if (whatsAppIndex !== -1) {
       state[whatsAppIndex] = whatsApp;
@@ -25,7 +27,7 @@ const reducer = (state, action) => {
 
   if (action.type === "UPDATE_SESSION") {
     const whatsApp = action.payload;
-    const whatsAppIndex = state.findIndex((s) => s.id === whatsApp.id);
+    const whatsAppIndex = state.findIndex((s) => sameWhatsappId(s.id, whatsApp.id));
 
     if (whatsAppIndex !== -1) {
       state[whatsAppIndex].status = whatsApp.status;
@@ -40,7 +42,7 @@ const reducer = (state, action) => {
 
   if (action.type === "DELETE_WHATSAPPS") {
     const whatsAppId = action.payload;
-    const whatsAppIndex = state.findIndex((s) => s.id === whatsAppId);
+    const whatsAppIndex = state.findIndex((s) => sameWhatsappId(s.id, whatsAppId));
     if (whatsAppIndex !== -1) {
       state.splice(whatsAppIndex, 1);
     }

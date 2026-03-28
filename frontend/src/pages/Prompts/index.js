@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   FormControl,
+  FormControlLabel,
   Grid,
   InputAdornment,
   InputLabel,
@@ -26,7 +27,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
-import { WorkOutline as WorkOutlineIcon, Memory as MemoryIcon, FlashOn as FlashOnIcon, BugReport as BugReportIcon, Business, Flag, Gavel, Category as CategoryIcon, InfoOutlined, EventNote, PersonAdd, Assignment, DragHandle, NotificationsActive, PermMedia, Note, TrendingUp, Repeat, LocalOffer, SwapHoriz } from "@material-ui/icons";
+import { WorkOutline as WorkOutlineIcon, Memory as MemoryIcon, FlashOn as FlashOnIcon, BugReport as BugReportIcon, Business, Flag, Gavel, Category as CategoryIcon, InfoOutlined, DragHandle, NotificationsActive, PermMedia } from "@material-ui/icons";
 // Ícone oficial da OpenAI via react-icons (simple-icons)
 import { SiOpenai } from "react-icons/si";
 import { toast } from "react-toastify";
@@ -38,6 +39,7 @@ import ProactivityTab from "./components/ProactivityTab";
 import MediaTab from "./components/MediaTab";
 import IntegrationTab from "./components/IntegrationTab";
 import { mergeProactiveFromApi } from "./utils/mergeProactiveFromApi";
+import AgentActionsPanel from "./components/AgentActionsPanel";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -486,7 +488,10 @@ const Prompts = () => {
   const [brainState, setBrainState] = useState({
     fileListId: null,
     websites: [],
-    qna: []
+    qna: [],
+    includeKnowledgeInPrompt: true,
+    includeQnaInPrompt: true,
+    listUploadedFileNamesInPrompt: true
   });
   const [brainFiles, setBrainFiles] = useState([]);
   const [newWebsite, setNewWebsite] = useState("");
@@ -505,6 +510,7 @@ const Prompts = () => {
     maxMessages: 10
   });
   const [queues, setQueues] = useState([]);
+  const [queueIntegrations, setQueueIntegrations] = useState([]);
   const [tags, setTags] = useState([]);
   const [contactLists, setContactLists] = useState([]);
   const emptySeg = () => ({ tagIds: [], contactListId: "" });
@@ -565,8 +571,8 @@ const Prompts = () => {
   });
   const [actionsState, setActionsState] = useState({
     enabled: ["Agendamento"],
-    custom: [],
-    transferChamado: { queueId: "", userId: "" }
+    transferChamado: { queueId: "", userId: "", queueIntegrationId: "" },
+    perAction: {}
   });
   const [actionsUsers, setActionsUsers] = useState([]);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
@@ -660,7 +666,8 @@ const Prompts = () => {
         setActionsState((prev) => ({
           ...prev,
           ...parsed,
-          transferChamado: parsed.transferChamado
+          perAction: parsed.perAction && typeof parsed.perAction === "object" ? parsed.perAction : prev.perAction || {},
+            transferChamado: parsed.transferChamado
             ? {
                 queueId:
                   parsed.transferChamado.queueId != null && parsed.transferChamado.queueId !== ""
@@ -669,6 +676,11 @@ const Prompts = () => {
                 userId:
                   parsed.transferChamado.userId != null && parsed.transferChamado.userId !== ""
                     ? parsed.transferChamado.userId
+                    : "",
+                queueIntegrationId:
+                  parsed.transferChamado.queueIntegrationId != null &&
+                  parsed.transferChamado.queueIntegrationId !== ""
+                    ? parsed.transferChamado.queueIntegrationId
                     : ""
               }
             : prev.transferChamado
@@ -730,13 +742,19 @@ const Prompts = () => {
           setActionsState(prev => ({
             ...prev,
             ...v,
+            perAction: v?.perAction && typeof v.perAction === "object" ? v.perAction : prev.perAction || {},
             transferChamado: {
               queueId: v?.transferChamado?.queueId != null && v.transferChamado.queueId !== ""
                 ? v.transferChamado.queueId
                 : "",
               userId: v?.transferChamado?.userId != null && v.transferChamado.userId !== ""
                 ? v.transferChamado.userId
-                : ""
+                : "",
+              queueIntegrationId:
+                v?.transferChamado?.queueIntegrationId != null &&
+                v.transferChamado.queueIntegrationId !== ""
+                  ? v.transferChamado.queueIntegrationId
+                  : ""
             }
           }));
         }
@@ -744,6 +762,10 @@ const Prompts = () => {
       try {
         const { data } = await api.get("/queue");
         setQueues(data || []);
+      } catch {}
+      try {
+        const { data } = await api.get("/queueIntegration", { params: { pageNumber: "1" } });
+        setQueueIntegrations(Array.isArray(data?.queueIntegrations) ? data.queueIntegrations : []);
       } catch {}
       try {
         const { data: usersResp } = await api.get("/users", { params: { searchParam: "" } });
@@ -777,7 +799,7 @@ const Prompts = () => {
       if (err?.response?.status === 403) {
         toast.error("Apenas administradores podem salvar estas configurações.");
       } else {
-        toastError(err);
+      toastError(err);
       }
       return null;
     }
@@ -950,7 +972,7 @@ const Prompts = () => {
     const maxReRaw = parseInt(String(proactiveState.maxReengagementAttempts || ""), 10);
     return {
       enabled: proactiveState.enabled,
-      followUpEnabled: proactiveState.followUpEnabled,
+      followUpEnabled: proactiveState.followUpEnabled !== false,
       hotLeadEnabled: false,
       reengagementEnabled: false,
       followUpAfterDays: Number(proactiveState.followUpAfterDays) || 2,
@@ -977,7 +999,13 @@ const Prompts = () => {
             endHour: Math.min(24, Math.max(0, Number(proactiveState.businessEndHour) || 18))
           }
         : { enabled: false },
-      mediaByContext: sanitizeMediaByContext(proactiveState.mediaByContext),
+      mediaByContext: (() => {
+        const s = sanitizeMediaByContext(proactiveState.mediaByContext);
+        if (s && typeof s === "object" && Object.keys(s).length > 0) return s;
+        const raw = proactiveState.mediaByContext;
+        if (raw && typeof raw === "object" && Object.keys(raw).length > 0) return raw;
+        return {};
+      })(),
       coldOutreachBlendMode: undefined,
       defaultOutbound: proactiveState.defaultOutbound?.allowAgentToSuggestUrls
         ? { allowAgentToSuggestUrls: true }
@@ -1026,20 +1054,28 @@ const Prompts = () => {
     if (ok) await refetchProactiveSettings();
   };
   const handleSaveActions = async () => {
-    if (actionsState.enabled?.includes("Transferir Chamado")) {
-      const q = actionsState.transferChamado?.queueId;
-      const u = actionsState.transferChamado?.userId;
-      if (q === "" || q == null || Number(q) <= 0) {
-        toast.error("Com Transferir Chamado ativo, selecione a fila de atendimento.");
-        return;
-      }
-      if (u === "" || u == null || Number(u) <= 0) {
-        toast.error("Com Transferir Chamado ativo, selecione o usuário responsável.");
+      if (actionsState.enabled?.includes("Transferir Chamado")) {
+      const tc = actionsState.transferChamado || {};
+      const qOk =
+        tc.queueId !== "" &&
+        tc.queueId != null &&
+        Number.isFinite(Number(tc.queueId)) &&
+        Number(tc.queueId) > 0;
+      const uOk =
+        tc.userId !== "" &&
+        tc.userId != null &&
+        Number.isFinite(Number(tc.userId)) &&
+        Number(tc.userId) > 0;
+      if (!qOk && !uOk) {
+        toast.error(
+          "Com Transferir Chamado ativo, informe a fila de destino ou o usuário de destino (pelo menos um)."
+        );
         return;
       }
     }
     const payload = {
-      ...actionsState,
+      enabled: Array.isArray(actionsState.enabled) ? actionsState.enabled : [],
+      perAction: actionsState.perAction && typeof actionsState.perAction === "object" ? actionsState.perAction : {},
       transferChamado: {
         queueId:
           actionsState.transferChamado?.queueId === "" || actionsState.transferChamado?.queueId == null
@@ -1048,7 +1084,12 @@ const Prompts = () => {
         userId:
           actionsState.transferChamado?.userId === "" || actionsState.transferChamado?.userId == null
             ? null
-            : Number(actionsState.transferChamado.userId)
+            : Number(actionsState.transferChamado.userId),
+        queueIntegrationId:
+          actionsState.transferChamado?.queueIntegrationId === "" ||
+          actionsState.transferChamado?.queueIntegrationId == null
+            ? null
+            : Number(actionsState.transferChamado.queueIntegrationId)
       }
     };
     await saveSetting("agent_actions", payload, "Ações salvas");
@@ -1426,6 +1467,47 @@ const Prompts = () => {
                 <Grid container spacing={1} className={classes.formRow}>
                   <Grid item xs={12} md={12}>
                     <SectionCard className={classes.brainSectionCard}>
+                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
+                      Controle o que entra no prompt do chat ao vivo (integração ou prompt da conexão).
+                    </Typography>
+                    <Box display="flex" flexWrap="wrap" style={{ gap: 8, marginBottom: 12 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={brainState.includeKnowledgeInPrompt !== false}
+                            onChange={(e) =>
+                              setBrainState((prev) => ({ ...prev, includeKnowledgeInPrompt: e.target.checked }))
+                            }
+                            color="primary"
+                          />
+                        }
+                        label="Incluir cérebro no prompt"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={brainState.includeQnaInPrompt !== false}
+                            onChange={(e) =>
+                              setBrainState((prev) => ({ ...prev, includeQnaInPrompt: e.target.checked }))
+                            }
+                            color="primary"
+                          />
+                        }
+                        label="Incluir Q&A"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={brainState.listUploadedFileNamesInPrompt !== false}
+                            onChange={(e) =>
+                              setBrainState((prev) => ({ ...prev, listUploadedFileNamesInPrompt: e.target.checked }))
+                            }
+                            color="primary"
+                          />
+                        }
+                        label="Listar nomes dos arquivos enviados"
+                      />
+                    </Box>
                     <div className={`${classes.section} ${classes.brainWrapper}`}>
                       <div className={classes.uploadBox}>
                         <div className={classes.helperText}>Selecione um ou mais arquivos para treinar o agente.</div>
@@ -1527,238 +1609,18 @@ const Prompts = () => {
             {activeTab === "acoes" && (
               <div className={`${classes.mainPaper} ${classes.mainPaperTight}`}>
                 <SectionCard>
-                <Grid container spacing={1} className={classes.formRow} alignItems="flex-start">
-                  {[
-                    { name: "Agendamento", desc: "Cria compromissos e lembretes", icon: <EventNote style={{ opacity: 0.8 }} /> },
-                    { name: "Criar Lead", desc: "Gera leads na área de Vendas", icon: <PersonAdd style={{ opacity: 0.8 }} /> },
-                    { name: "Criar Empresa", desc: "Registra empresas no CRM", icon: <Business style={{ opacity: 0.8 }} /> },
-                    { name: "Consultar Pedidos", desc: "Busca pedidos no sistema", icon: <Assignment style={{ opacity: 0.8 }} /> },
-                    { name: "Transferir Chamado", desc: "Encaminha ao responsável e/ou fila de atendimento", icon: <SwapHoriz style={{ opacity: 0.8 }} /> },
-                    { name: "Resumo p/ handoff", desc: "Contexto curto ao transferir para humano", icon: <Note style={{ opacity: 0.8 }} /> },
-                    { name: "Qualificar interesse", desc: "Perguntas de fit antes de propor valor", icon: <TrendingUp style={{ opacity: 0.8 }} /> },
-                    { name: "Follow-up suave", desc: "Relembrar próximo passo sem pressionar", icon: <Repeat style={{ opacity: 0.8 }} /> },
-                    { name: "Oferta contextual", desc: "Sugerir pacote ou add-on alinhado ao que falou", icon: <LocalOffer style={{ opacity: 0.8 }} /> },
-                  ].map((a) => (
-                    <Grid key={a.name} item xs={12} sm={6}>
-                      <div className={classes.actionItem} onClick={() => setActionsState(prev => ({ ...prev, selected: a.name }))}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span>{a.icon}</span>
-                          <div>
-                            <Typography style={{ fontWeight: 600 }}>{a.name}</Typography>
-                            <Typography variant="caption" color="textSecondary">{a.desc}</Typography>
-                          </div>
-                        </div>
-                        <Switch
-                          checked={actionsState.enabled.includes(a.name)}
-                          onChange={(e) => {
-                            const set = new Set(actionsState.enabled);
-                            if (e.target.checked) set.add(a.name); else set.delete(a.name);
-                            setActionsState(prev => ({ ...prev, enabled: Array.from(set) }));
-                          }}
-                          color="primary"
-                          inputProps={{ "aria-label": `Ação ${a.name}` }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                    </Grid>
-                  ))}
-                  {actionsState.enabled.includes("Transferir Chamado") && (
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>
-                        Destino da transferência (chamado)
-                      </Typography>
-                      <Grid container spacing={1}>
-                        <Grid item xs={12} md={6}>
-                          <FormControl fullWidth variant="outlined" className={classes.inputDense}>
-                            <InputLabel shrink id="transfer-queue-label">
-                              Fila de atendimento
-                            </InputLabel>
-                            <Select
-                              labelId="transfer-queue-label"
-                              label="Fila de atendimento"
-                              displayEmpty
-                              value={actionsState.transferChamado?.queueId === "" || actionsState.transferChamado?.queueId == null ? "" : actionsState.transferChamado.queueId}
-                              onChange={(e) =>
-                                setActionsState(prev => ({
-                                  ...prev,
-                                  transferChamado: {
-                                    ...(prev.transferChamado || { queueId: "", userId: "" }),
-                                    queueId: e.target.value === "" ? "" : e.target.value
-                                  }
-                                }))
-                              }
-                              className={classes.selectWhite}
-                            >
-                              <MenuItem value="">
-                                <em>Selecione a fila</em>
-                              </MenuItem>
-                              {(queues || []).map(q => (
-                                <MenuItem key={q.id} value={q.id}>
-                                  {q.name}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
-                          <FormControl fullWidth variant="outlined" className={classes.inputDense}>
-                            <InputLabel shrink id="transfer-user-label">
-                              Usuário responsável
-                            </InputLabel>
-                            <Select
-                              labelId="transfer-user-label"
-                              label="Usuário responsável"
-                              displayEmpty
-                              value={actionsState.transferChamado?.userId === "" || actionsState.transferChamado?.userId == null ? "" : actionsState.transferChamado.userId}
-                              onChange={(e) =>
-                                setActionsState(prev => ({
-                                  ...prev,
-                                  transferChamado: {
-                                    ...(prev.transferChamado || { queueId: "", userId: "" }),
-                                    userId: e.target.value === "" ? "" : e.target.value
-                                  }
-                                }))
-                              }
-                              className={classes.selectWhite}
-                            >
-                              <MenuItem value="">
-                                <em>Selecione o usuário</em>
-                              </MenuItem>
-                              {(actionsUsers || []).map(u => (
-                                <MenuItem key={u.id} value={u.id}>
-                                  {u.name}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                      </Grid>
-                      <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 6 }}>
-                        Usado quando o cliente pede atendente ou a IA indica transferência para o setor. Salve as ações após alterar.
-                      </Typography>
-                      <Button
-                        color="primary"
-                        variant="outlined"
-                        size="small"
-                        style={{ marginTop: 8 }}
-                        onClick={() => handleSaveActions()}
-                      >
-                        Salvar destino da transferência
-                      </Button>
-                    </Grid>
-                  )}
-                  <Grid item xs={12}>
-                    <Grid container spacing={1}>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Nome da Ação"
-                          fullWidth
-                          variant="outlined"
-                          value={actionsState.draft?.name || actionsState.selected || ""}
-                          onChange={(e) => setActionsState(prev => ({ ...prev, draft: { ...(prev.draft || {}), name: e.target.value } }))}
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Objetivo"
-                          fullWidth
-                          variant="outlined"
-                          value={actionsState.draft?.objetivo || ""}
-                          onChange={(e) => setActionsState(prev => ({ ...prev, draft: { ...(prev.draft || {}), objetivo: e.target.value } }))}
-                          InputLabelProps={{ shrink: true }}
-                          className={classes.inputDense}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Select
-                          multiple
-                          fullWidth
-                          variant="outlined"
-                          displayEmpty
-                          value={(actionsState.draft?.tabelas || [])}
-                          onChange={(e) => setActionsState(prev => ({ ...prev, draft: { ...(prev.draft || {}), tabelas: e.target.value } }))}
-                          className={`${classes.inputDense} ${classes.selectWhite}`}
-                        >
-                          {[
-                            { v: "tickets", l: "Tickets" },
-                            { v: "contacts", l: "Contatos" },
-                            { v: "schedules", l: "Agendamentos" },
-                            { v: "companies", l: "Empresas" },
-                            { v: "leads", l: "Leads" },
-                            { v: "projects", l: "Projetos" },
-                            { v: "activities", l: "Atividades" },
-                          ].map(t => (
-                            <MenuItem key={t.v} value={t.v}>{t.l}</MenuItem>
-                          ))}
-                        </Select>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Select
-                          fullWidth
-                          variant="outlined"
-                          value={actionsState.draft?.hook || ""}
-                          onChange={(e) => setActionsState(prev => ({ ...prev, draft: { ...(prev.draft || {}), hook: e.target.value } }))}
-                          displayEmpty
-                          className={`${classes.inputDense} ${classes.selectWhite}`}
-                        >
-                          <MenuItem value="" disabled>Selecione um Hook</MenuItem>
-                          <MenuItem value="beforeCreate">Antes de criar (beforeCreate)</MenuItem>
-                          <MenuItem value="afterCreate">Depois de criar (afterCreate)</MenuItem>
-                          <MenuItem value="beforeSave">Antes de salvar (beforeSave)</MenuItem>
-                          <MenuItem value="afterSave">Depois de salvar (afterSave)</MenuItem>
-                        </Select>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <ExpandableField
-                          label="Regras (palavras-chave, formatos)"
-                          value={actionsState.draft?.regras || ""}
-                          onChange={(e) => setActionsState(prev => ({ ...prev, draft: { ...(prev.draft || {}), regras: e.target.value } }))}
-                          className={classes.inputDense}
-                          minRows={3}
-                          maxRows={14}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          size="small"
-                          onClick={() => {
-                            if (!actionsState.draft?.name) return;
-                            const next = { ...actionsState, custom: [...(actionsState.custom || []), actionsState.draft], draft: undefined };
-                            setActionsState(next);
-                            handleSaveActions();
-                          }}
-                        >
-                          Salvar Configuração
-                        </Button>
-                      </Grid>
-                      <Grid item xs={12}>
-                        {(actionsState.custom || []).map((a, idx) => (
-                          <div key={idx} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8, marginBottom: 8 }}>
-                            <Typography variant="subtitle2">{a.name}</Typography>
-                            <Typography variant="caption" color="textSecondary">{a.objetivo}</Typography>
-                            <div style={{ marginTop: 6 }}>
-                              <Typography variant="caption">Tabelas: {(a.tabelas || []).join(", ")}</Typography>
-                            </div>
-                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                              <Button size="small" onClick={() => {
-                                const arr = [...actionsState.custom];
-                                arr.splice(idx, 1);
-                                setActionsState(prev => ({ ...prev, custom: arr }));
-                                handleSaveActions();
-                              }}>Remover</Button>
-                            </div>
-                          </div>
-                        ))}
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                </Grid>
+                  <AgentActionsPanel
+                    classes={classes}
+                    actionsState={actionsState}
+                    setActionsState={setActionsState}
+                    queues={queues}
+                    queueIntegrations={queueIntegrations}
+                    actionsUsers={actionsUsers}
+                    onSaveActions={handleSaveActions}
+                    canSave={canSaveAgentSettings}
+                  />
                 </SectionCard>
-              </div>
+                          </div>
             )}
 
             {activeTab === "proatividade" && (

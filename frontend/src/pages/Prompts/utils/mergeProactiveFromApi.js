@@ -109,6 +109,7 @@ export function mergeProactiveFromApi(prev, v) {
     contextualLinks: Array.isArray(v.contextualLinks) ? v.contextualLinks : [],
     fetchLinkContentForPrompt: !!v.fetchLinkContentForPrompt,
     followUpToneVacuo: v.followUpToneVacuo || "",
-    followUpToneClienteSilencioso: v.followUpToneClienteSilencioso || ""
+    followUpToneClienteSilencioso: v.followUpToneClienteSilencioso || "",
+    followUpEnabled: v.followUpEnabled !== false
   };
 }

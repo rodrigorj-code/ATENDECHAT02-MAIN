@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -24,13 +25,16 @@ import {
   appendToField,
   FOLLOWUP_VACUO_CHIPS,
   FOLLOWUP_CLIENTE_CHIPS,
-  INBOUND_SALES_PRESETS
+  INBOUND_SALES_PRESETS,
+  INBOUND_ROTEIRO_CHIPS,
+  LINK_WHEN_CHIPS
 } from "../constants/proactivityQuickSnippets";
 import { toast } from "react-toastify";
 import { applySalesCampaignPreset } from "../constants/salesCampaignPreset";
 import {
   ProactiveMissionPicker,
-  ProactivePlaybookPicker
+  ProactivePlaybookPicker,
+  PROACTIVE_PLAYBOOK_OPTIONS
 } from "./personalization/ProactivityStylePickers";
 
 const chipInfo = { borderColor: "#1976d2", color: "#1565c0" };
@@ -134,6 +138,19 @@ export default function ProactivityTab({
     }));
   };
 
+  const appendWhenToLastLink = (text) => {
+    setProactiveState((prev) => {
+      const list = [...(prev.contextualLinks || [])];
+      if (!list.length) return prev;
+      const last = list.length - 1;
+      list[last] = {
+        ...list[last],
+        whenToUse: appendToField(list[last].whenToUse, text, "; ")
+      };
+      return { ...prev, contextualLinks: list };
+    });
+  };
+
   const toggleFollowUp = (checked) => {
     if (checked && !proactiveState.enabled) {
       setMasterDialog(true);
@@ -231,6 +248,27 @@ export default function ProactivityTab({
             value={proactiveState.playbook}
             onChange={(val) => setProactiveState((prev) => ({ ...prev, playbook: val }))}
           />
+          <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 6 }}>
+            Atalhos de playbook
+          </Typography>
+          <Box display="flex" flexWrap="wrap" style={{ gap: 6, marginTop: 4 }}>
+            {PROACTIVE_PLAYBOOK_OPTIONS.map((opt) => (
+              <Chip
+                key={opt.value === "" ? "__none__" : opt.value}
+                size="small"
+                label={opt.title}
+                clickable
+                style={
+                  (proactiveState.playbook || "") === opt.value
+                    ? chipInfo
+                    : { border: "1px solid #e5e7eb" }
+                }
+                onClick={() =>
+                  setProactiveState((prev) => ({ ...prev, playbook: opt.value }))
+                }
+              />
+            ))}
+          </Box>
         </Box>
         <Box display="flex" alignItems="center" style={{ gap: 6, marginTop: 12, marginBottom: 8 }}>
           <Typography variant="body2" style={{ fontWeight: 600, fontSize: 13 }}>
@@ -320,6 +358,26 @@ export default function ProactivityTab({
           maxRows={12}
           placeholder="Ex.: 1) Qualificar 2) Apresentar serviço 3) CTA: pagamento ou reunião"
         />
+
+        <Typography variant="caption" style={{ display: "block", marginTop: 10, marginBottom: 4, fontWeight: 600 }}>
+          Roteiro rápido (múltipla escolha)
+        </Typography>
+        <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 6 }}>
+          Cada chip adiciona uma linha ao roteiro acima.
+        </Typography>
+        <Box display="flex" flexWrap="wrap" style={{ gap: 6, marginBottom: 10 }}>
+          {INBOUND_ROTEIRO_CHIPS.map((s) => (
+            <Button
+              key={`rot-${s.label}`}
+              size="small"
+              variant="outlined"
+              style={chipInfo}
+              onClick={() => appendInboundBriefSnippet(s)}
+            >
+              {s.label}
+            </Button>
+          ))}
+        </Box>
 
         <Typography variant="caption" style={{ display: "block", marginTop: 10, marginBottom: 4, fontWeight: 600 }}>
           Objetivo rápido
@@ -439,6 +497,33 @@ export default function ProactivityTab({
         <Button size="small" variant="outlined" color="primary" onClick={addLink} disabled={(proactiveState.contextualLinks || []).length >= 8}>
           + Adicionar link (máx. 8)
         </Button>
+
+        <Typography variant="caption" style={{ display: "block", marginTop: 10, marginBottom: 4, fontWeight: 600 }}>
+          Atalhos “Quando usar” (último link da lista)
+        </Typography>
+        <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 6 }}>
+          Aplica ao último cartão de link. Adicione o link antes ou selecione editando o campo.
+        </Typography>
+        <Box display="flex" flexWrap="wrap" style={{ gap: 6, marginBottom: 8 }}>
+          {LINK_WHEN_CHIPS.map((s) => (
+            <Button
+              key={`when-${s.label}`}
+              size="small"
+              variant="outlined"
+              style={chipOk}
+              onClick={() => {
+                const n = (proactiveState.contextualLinks || []).length;
+                if (!n) {
+                  toast.info("Adicione um link antes.");
+                  return;
+                }
+                appendWhenToLastLink(s.text);
+              }}
+            >
+              {s.label}
+            </Button>
+          ))}
+        </Box>
 
         <div className={classes.switchRow} style={{ marginTop: 12 }}>
           <Box flex={1} pr={1}>
@@ -601,6 +686,7 @@ export default function ProactivityTab({
               key={`ofu-${s.label}`}
               size="small"
               variant="outlined"
+              style={chipInfo}
               onClick={() => appendObjectiveSnippet("follow_up", s)}
             >
               {s.label}

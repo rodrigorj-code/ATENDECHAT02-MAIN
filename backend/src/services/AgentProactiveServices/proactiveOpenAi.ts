@@ -81,7 +81,15 @@ const MISSION_SNIPPETS: Record<ProactiveMissionMode, string> = {
   nurture:
     "Missão NUTRIÇÃO: eduque com micro-insights e perguntas leves; construa confiança antes de empurrar oferta. Evite spam e mensagens genéricas.",
   appointment_focus:
-    "Missão AGENDAMENTO: conduza a conversa para marcar reunião, demo ou call — com duas opções de horário quando fizer sentido. Seja breve e respeite o tempo do lead."
+    "Missão AGENDAMENTO: conduza a conversa para marcar reunião, demo ou call — com duas opções de horário quando fizer sentido. Seja breve e respeite o tempo do lead.",
+  retention:
+    "Missão RETENÇÃO: valor já entregue, motivação e risco; proponha caminhos antes de encerrar. Tom acolhedor e objetivo.",
+  billing:
+    "Missão FINANCEIRO/COBRANÇA: clareza em valores e prazos; confirme entendimento e canal para regularização. Sem pressão desrespeitosa.",
+  onboarding:
+    "Missão ONBOARDING: uma etapa por vez; confirme progresso e próximo passo concreto. Mensagens curtas.",
+  technical_depth:
+    "Missão TÉCNICA: confirme requisitos e limitações; não invente especificações além do que a empresa documentou."
 };
 
 function buildHistory(messages: Message[], max: number): string {

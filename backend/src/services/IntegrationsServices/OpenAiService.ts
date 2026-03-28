@@ -23,14 +23,18 @@ import { getWbot } from "../../libs/wbot";
 import { getJidOf } from "../WbotServices/getJidOf";
 import ListSettingsServiceOne from "../SettingServices/ListSettingsServiceOne";
 import CreateScheduleService from "../ScheduleServices/CreateService";
+import ShowFileService from "../FileServices/ShowService";
 import { getIO } from "../../libs/socket";
 import { format } from "date-fns";
 import Queue from "../../models/Queue";
+import QueueIntegrations from "../../models/QueueIntegrations";
 import User from "../../models/User";
+import UserQueue from "../../models/UserQueue";
 import Whatsapp from "../../models/Whatsapp";
 import axios from "axios";
 import { getMessageOptions } from "../WbotServices/SendWhatsAppMedia";
 import { onAgentUserInboundText } from "../AgentProactiveServices/onUserInboundAgent";
+import { normalizeTicketDataWebhook } from "../AgentProactiveServices/agentProactiveTicketState";
 import { sendProactiveContextMediaAfterText } from "../AgentProactiveServices/proactiveSendContextMedia";
 import { buildBeforeMediaHintForPrompt } from "../AgentProactiveServices/proactiveOpenAi";
 import {
@@ -99,6 +103,81 @@ const sanitizeName = (name: string): string => {
   return sanitized.substring(0, 60);
 };
 
+/** Destino de transferência: mesma regra do fluxo de integração (Ações do agente > fila do prompt). */
+export async function getResolvedTransferTargetForCompany(
+  companyId: number,
+  fallbackQueueId: number
+): Promise<{ queueId: number | null; userId?: number }> {
+  const agentActions = await loadAgentActionsSetting(companyId);
+  return resolveAgentTransferTarget({ queueId: fallbackQueueId } as IOpenAi, agentActions);
+}
+
+/** Fila efetiva quando só o usuário foi configurado na ação: fila atual do ticket ou primeira fila do usuário na empresa. */
+async function resolveQueueIdWhenTransferringToUserOnly(
+  companyId: number,
+  ticket: Ticket,
+  userId: number
+): Promise<number | null> {
+  const tq = ticket.queueId != null ? Number(ticket.queueId) : NaN;
+  if (Number.isFinite(tq) && tq > 0) {
+    return tq;
+  }
+  const row = await UserQueue.findOne({
+    where: { userId },
+    include: [
+      {
+        model: Queue,
+        attributes: ["id"],
+        required: true,
+        where: { companyId }
+      }
+    ],
+    order: [["id", "ASC"]]
+  });
+  return row?.queueId != null && row.queueId > 0 ? row.queueId : null;
+}
+
+/**
+ * Aplica transferência conforme agent_actions (fila e/ou usuário) ou fila do prompt.
+ * Chamado pelo fluxo clássico de integração OpenAI no listener.
+ */
+export async function applyPromptIntegrationAgentTransfer(
+  ticket: Ticket,
+  contact: Contact,
+  fallbackQueueId: number
+): Promise<void> {
+  const agentActions = await loadAgentActionsSetting(ticket.companyId);
+  const { queueId, userId } = resolveAgentTransferTarget(
+    { queueId: fallbackQueueId } as IOpenAi,
+    agentActions
+  );
+  await applyResolvedAgentTransferToTicket(ticket, contact, queueId, userId);
+}
+
+async function applyResolvedAgentTransferToTicket(
+  ticket: Ticket,
+  contact: Contact,
+  queueId: number | null | undefined,
+  userId?: number
+): Promise<void> {
+  if (queueId != null && Number(queueId) > 0) {
+    await transferQueue(Number(queueId), ticket, contact, userId);
+    return;
+  }
+  const uid = userId != null ? Number(userId) : NaN;
+  if (Number.isFinite(uid) && uid > 0) {
+    const q = await resolveQueueIdWhenTransferringToUserOnly(ticket.companyId, ticket, uid);
+    if (q != null && q > 0) {
+      await transferQueue(q, ticket, contact, uid);
+    } else {
+      logger.warn(
+        `[AI SERVICE] Transferência: usuário ${uid} configurado mas sem fila resolvida (ticket ${ticket.id}, empresa ${ticket.companyId}).`
+      );
+    }
+  }
+}
+
+// Persistência: chaves agent_* em Settings (JSON por empresa). Alternativa futura: tabelas dedicadas.
 async function loadAgentActionsSetting(companyId: number): Promise<Record<string, any>> {
   try {
     const row = await ListSettingsServiceOne({ companyId, key: "agent_actions" });
@@ -109,7 +188,222 @@ async function loadAgentActionsSetting(companyId: number): Promise<Record<string
   }
 }
 
-/** Fila (e opcionalmente usuário) para transferência: prioriza Ações > fila do prompt de integração */
+/** Resumo linear do ticket para corpo de agendamento / contexto (não enviado ao modelo). */
+function buildTicketTranscriptSummary(messages: Message[], maxChars = 2800): string {
+  const lines: string[] = [];
+  let n = 0;
+  for (const m of messages || []) {
+    const body = String(m.body || "").trim();
+    if (!body) continue;
+    const who = m.fromMe ? "Atendente/IA" : "Cliente";
+    lines.push(`${who}: ${body}`);
+    n += lines[lines.length - 1].length + 1;
+    if (n >= maxChars) break;
+  }
+  const joined = lines.join("\n");
+  return joined.length <= maxChars ? joined : `${joined.slice(0, maxChars)}…`;
+}
+
+function buildScheduleMessageBody(params: {
+  ticket: Ticket;
+  contact: Contact;
+  bodyMessage: string;
+  pastMessages: Message[];
+}): string {
+  const { ticket, contact, bodyMessage, pastMessages } = params;
+  const name = (contact.name || "Contato").trim() || "Contato";
+  const summary = buildTicketTranscriptSummary(pastMessages, 2600);
+  const trigger = String(bodyMessage || "").trim().slice(0, 400);
+  const parts = [
+    `Reunião — ${name} (ticket #${ticket.id})`,
+    "",
+    "Resumo do histórico recente:",
+    summary || "(sem mensagens anteriores no ticket)",
+    "",
+    `Pedido/data detectados na última mensagem: ${trigger || "(vazio)"}`
+  ];
+  let body = parts.join("\n");
+  if (body.length < 5) body = `Reunião — ${name} (ticket #${ticket.id})`;
+  return body.slice(0, 12000);
+}
+
+const ACTION_TRIGGER_LABELS: Record<string, string> = {
+  meeting_intent: "Cliente fala em reunião, agenda, data ou horário",
+  price_intent: "Pergunta preço, valor, orçamento ou plano",
+  human_request: "Pedido explícito de atendente ou humano",
+  order_intent: "Pedido, status de compra ou entrega",
+  lead_intent: "Quer ser contato, cadastro ou proposta",
+  company_intent: "Dados de empresa, CNPJ ou razão social",
+  qualify_signal: "Sinais de interesse (fit, necessidade, prazo)",
+  silence_followup: "Cliente sumiu ou não respondeu",
+  objection: "Objeção ou dúvida bloqueando avanço",
+  upsell_signal: "Momento para add-on, upgrade ou pacote"
+};
+
+const ACTION_CONTEXT_LABELS: Record<string, string> = {
+  ctx_sales: "Contexto comercial / vendas",
+  ctx_support: "Suporte técnico ou dúvida de uso",
+  ctx_post_sale: "Pós-venda / relacionamento",
+  ctx_new_lead: "Lead novo / primeiro contato",
+  ctx_existing: "Cliente já ativo ou recorrente",
+  ctx_urgent: "Urgência ou prazo curto",
+  ctx_neutral: "Neutro / a definir na conversa"
+};
+
+function labelIds(ids: string[], map: Record<string, string>): string {
+  return (ids || [])
+    .map((id) => map[id] || id)
+    .filter(Boolean)
+    .join("; ");
+}
+
+type DestHintOpts = { userLabel?: "responsible" | "user" };
+
+async function resolveDestinationHints(
+  companyId: number,
+  cfg: Record<string, unknown> | null | undefined,
+  opts?: DestHintOpts
+): Promise<string | null> {
+  if (!cfg || typeof cfg !== "object") return null;
+  const parts: string[] = [];
+  const qid = Number((cfg as any).queueId);
+  if (Number.isFinite(qid) && qid > 0) {
+    const q = await Queue.findOne({ where: { id: qid, companyId } });
+    if (q) parts.push(`fila \"${q.name}\"`);
+  }
+  const iid = Number((cfg as any).queueIntegrationId);
+  if (Number.isFinite(iid) && iid > 0) {
+    const integ = await QueueIntegrations.findOne({ where: { id: iid, companyId } });
+    if (integ) {
+      const typ = String(integ.type || "").trim();
+      parts.push(
+        `integração/chatbot \"${integ.name}\"${typ ? ` (${typ})` : ""}`
+      );
+    }
+  }
+  const uid = Number((cfg as any).userId);
+  if (Number.isFinite(uid) && uid > 0) {
+    const u = await User.findOne({ where: { id: uid, companyId } });
+    if (u) {
+      const ul =
+        opts?.userLabel === "responsible"
+          ? "responsável preferencial"
+          : "usuário preferencial";
+      parts.push(`${ul} \"${u.name}\"`);
+    }
+  }
+  if (!parts.length) return null;
+  return parts.join("; ");
+}
+
+async function buildAgentActionsPromptBlock(
+  companyId: number,
+  agentActions: Record<string, any>
+): Promise<string> {
+  const enabled = Array.isArray(agentActions?.enabled) ? agentActions.enabled : [];
+  if (!enabled.length) return "";
+  const lines: string[] = [
+    `Ações habilitadas pelo operador (use quando fizer sentido; não simule execução fora do que o sistema já faz): ${enabled.join(", ")}.`
+  ];
+  const perAction = agentActions?.perAction && typeof agentActions.perAction === "object" ? agentActions.perAction : {};
+
+  for (const name of enabled) {
+    const cfg = perAction[name];
+    const triggers: string[] = Array.isArray(cfg?.triggers) ? cfg.triggers : [];
+    const contexts: string[] = Array.isArray(cfg?.contexts) ? cfg.contexts : [];
+    const tLine = triggers.length ? labelIds(triggers, ACTION_TRIGGER_LABELS) : "(gatilhos não especificados — use o bom senso da ação)";
+    const cLine = contexts.length ? labelIds(contexts, ACTION_CONTEXT_LABELS) : "";
+    let line = `• ${name}: priorize quando ${tLine}${cLine ? `. Enquadre o tom como: ${cLine}.` : "."}`;
+    const dest = await resolveDestinationHints(companyId, cfg as any, {
+      userLabel: "responsible"
+    });
+    if (dest) {
+      line += ` Referência no sistema (definida pelo operador): ${dest}.`;
+    }
+    lines.push(line);
+  }
+
+  if (enabled.includes("Agendamento")) {
+    lines.push(
+      "Agendamento (sistema): quando houver data/hora explícitas combinadas na mensagem, o compromisso pode ser registrado automaticamente — confirme o horário de forma clara."
+    );
+  }
+  if (enabled.includes("Transferir Chamado")) {
+    const tc = agentActions?.transferChamado;
+    const transferHints = await resolveDestinationHints(companyId, tc, {
+      userLabel: "user"
+    });
+    lines.push(
+      `Transferir chamado: o operador deve ter definido fila de destino e/ou usuário de destino (pelo menos um). Quando precisar encaminhar a um humano, use exatamente a frase indicada nas instruções do sistema para transferência.${
+        transferHints ? ` Destino preferido pelo operador: ${transferHints}.` : ""
+      }`
+    );
+  }
+  return `\n\n--- Ações do agente ---\n${lines.join("\n")}\n--- Fim ações ---`;
+}
+
+async function buildBrainKnowledgePromptBlock(
+  companyId: number,
+  brainValue: Record<string, any> | null
+): Promise<string> {
+  if (!brainValue || brainValue.includeKnowledgeInPrompt === false) return "";
+  const parts: string[] = [];
+  const websites = Array.isArray(brainValue.websites) ? brainValue.websites.filter(Boolean) : [];
+  if (websites.length) {
+    parts.push(`Referências (sites):\n${websites.map((u: string) => `- ${u}`).join("\n")}`);
+  }
+  const qna = Array.isArray(brainValue.qna) ? brainValue.qna : [];
+  if (qna.length && brainValue.includeQnaInPrompt !== false) {
+    const lines = qna.slice(0, 45).map((qa: any, i: number) => {
+      const q = String(qa?.pergunta || "").trim();
+      const a = String(qa?.resposta || "").trim().slice(0, 1400);
+      const cat = String(qa?.categoria || "").trim();
+      return `${i + 1}. ${cat ? `[${cat}] ` : ""}P: ${q}\n   R: ${a}`;
+    });
+    parts.push(`Base de conhecimento (Q&A):\n${lines.join("\n\n")}`);
+  }
+  const fid = brainValue.fileListId;
+  if (fid && brainValue.listUploadedFileNamesInPrompt !== false) {
+    try {
+      const fl = await ShowFileService(Number(fid), companyId);
+      const names = (fl.options || []).map((o: any) => String(o.name || "").trim()).filter(Boolean);
+      if (names.length) {
+        parts.push(
+          `Arquivos na base do agente (apenas nomes; não invente o conteúdo):\n${names.map((n) => `- ${n}`).join("\n")}`
+        );
+      }
+    } catch {
+      logger.warn(`[AI SERVICE] Não foi possível listar arquivos do cérebro (fileListId=${fid})`);
+    }
+  }
+  if (!parts.length) return "";
+  return `\n\n--- Cérebro (conhecimento) ---\n${parts.join("\n\n")}\n--- Fim cérebro ---`;
+}
+
+export async function getAgentPromptExtensionsForChat(companyId: number): Promise<{
+  brainBlock: string;
+  proactiveBlock: string;
+  actionsBlock: string;
+}> {
+  let brainValue: Record<string, any> | null = null;
+  try {
+    const brain = await ListSettingsServiceOne({ companyId, key: "agent_brain" });
+    brainValue = brain?.value ? JSON.parse(brain.value as any) : null;
+  } catch {
+    brainValue = null;
+  }
+  const proactive = await loadAgentProactiveSettingsParsed(companyId);
+  const proactiveBlock = await buildReactiveProactivePromptBlock(proactive);
+  const actions = await loadAgentActionsSetting(companyId);
+  const actionsBlock = await buildAgentActionsPromptBlock(companyId, actions);
+  const brainBlock = await buildBrainKnowledgePromptBlock(companyId, brainValue);
+  return { brainBlock, proactiveBlock, actionsBlock };
+}
+
+/**
+ * Destino da transferência quando a ação está ativa: fila configurada, ou só usuário (fila resolvida na execução),
+ * ou fallback na fila do prompt de integração. Exige pelo menos fila ou usuário na configuração da ação.
+ */
 function resolveAgentTransferTarget(
   aiSettings: IOpenAi,
   agentActions: Record<string, any>
@@ -119,12 +413,18 @@ function resolveAgentTransferTarget(
   const tc = agentActions?.transferChamado;
   const cfgQueue = tc != null ? Number(tc.queueId) : NaN;
   const cfgUser = tc != null ? Number(tc.userId) : NaN;
+  const hasQueue = Number.isFinite(cfgQueue) && cfgQueue > 0;
+  const hasUser = Number.isFinite(cfgUser) && cfgUser > 0;
 
-  if (transferActionOn && Number.isFinite(cfgQueue) && cfgQueue > 0) {
+  if (transferActionOn && hasQueue) {
     return {
       queueId: cfgQueue,
-      ...(Number.isFinite(cfgUser) && cfgUser > 0 ? { userId: cfgUser } : {})
+      ...(hasUser ? { userId: cfgUser } : {})
     };
+  }
+
+  if (transferActionOn && hasUser) {
+    return { queueId: null, userId: cfgUser };
   }
 
   if (aiSettings.queueId && aiSettings.queueId > 0) {
@@ -171,7 +471,11 @@ const MISSION_LABELS: Record<ProactiveMissionMode, string> = {
   sales: "Vendas (perguntas curtas, avançar para demo/proposta/fechamento)",
   support: "Suporte (diagnóstico, evitar empurrar venda)",
   nurture: "Nutrição de lead (educar antes de vender)",
-  appointment_focus: "Foco em agenda (marcar reunião/demo)"
+  appointment_focus: "Foco em agenda (marcar reunião/demo)",
+  retention: "Retenção (valor contínuo, risco de churn, win-back)",
+  billing: "Cobrança / financeiro (clareza, prazos, sem tom agressivo)",
+  onboarding: "Onboarding (primeiros passos, checklists, próximo marco)",
+  technical_depth: "Técnico aprofundado (especificação, requisitos, limitações)"
 };
 
 const PLAYBOOK_LABELS: Record<string, string> = {
@@ -198,6 +502,11 @@ async function buildReactiveProactivePromptBlock(
   const missionLine =
     (MISSION_LABELS as Record<string, string>)[mission] || MISSION_LABELS.balanced;
   parts.push(`Tom/missão alinhada às automações: ${missionLine}`);
+  if (mission === "balanced") {
+    parts.push(
+      "Com conversas comerciais leves, qualifique antes de propor demo com data/hora: uma pergunta sobre contexto ou necessidade costuma evitar agendamento prematuro."
+    );
+  }
   const pb = settings.playbook != null ? String(settings.playbook) : "";
   if (pb && PLAYBOOK_LABELS[pb]) {
     parts.push(`Estilo de playbook: ${PLAYBOOK_LABELS[pb]}`);
@@ -205,6 +514,42 @@ async function buildReactiveProactivePromptBlock(
   const objIn = settings.objectives?.inbound?.trim();
   if (objIn) {
     parts.push(`Objetivo específico no chat: ${objIn}`);
+  }
+
+  if (mission === "sales") {
+    parts.push(
+      "Prioridade no chat: conduzir vendas com qualificação. Antes de propor demonstração ao vivo com data/hora, faça 1–2 perguntas curtas de contexto (segmento, necessidade principal, tamanho da operação ou objetivo). Se o cliente só disser que quer 'ver como funciona', explique em 1–2 frases e qualifique; não pule direto para 'qual dia e horário'. Ofereça vídeo/material se existir nos anexos configurados quando ele pedir ou quando ajudar na qualificação."
+    );
+  }
+  if (mission === "appointment_focus") {
+    parts.push(
+      "Prioridade: marcar reunião/demo com data e horário quando houver fit claro; ainda assim faça uma pergunta de qualificação mínima se o contexto for vago. Evite agendar na primeira mensagem após um interesse genérico."
+    );
+  }
+  if (mission === "retention") {
+    parts.push(
+      "Prioridade: retenção — reforce valor já entregue, entenda motivação e ofereça caminhos antes de perder o cliente; evite discurso genérico."
+    );
+  }
+  if (mission === "billing") {
+    parts.push(
+      "Prioridade: cobrança/financeiro — seja claro em valores e prazos, confirme entendimento e ofereça canal adequado para regularização."
+    );
+  }
+  if (mission === "onboarding") {
+    parts.push(
+      "Prioridade: onboarding — uma etapa por vez, confirme o que já foi feito e indique o próximo passo concreto (sem listas enormes)."
+    );
+  }
+  if (mission === "technical_depth") {
+    parts.push(
+      "Prioridade: profundidade técnica — confirme requisitos, versões e limitações; não prometa o que não estiver nas referências ou no roteiro."
+    );
+  }
+  if (pb === "consultivo" && mission === "sales") {
+    parts.push(
+      "Combine estilos: ouça com tom consultivo, mas mantenha avanço comercial (objetivo e roteiro) — não fique só em perguntas abertas sem próximo passo claro."
+    );
   }
 
   const links = (settings.contextualLinks || []).filter(
@@ -243,11 +588,11 @@ async function buildReactiveProactivePromptBlock(
     const mediaHint = buildBeforeMediaHintForPrompt(packIn);
     if (mediaHint) {
       parts.push(
-        `Anexos após sua resposta (envio automático na sequência; alinhe o texto quando fizer sentido):\n${mediaHint}`
+        `Anexos configurados (catálogo, PDF, imagens, vídeos): se o cliente perguntar por vídeo, demo gravada, material ou arquivo, responda de forma natural (ex.: que vai enviar) e inclua [[SEND_INBOUND_MEDIA]] no final para o sistema disparar os anexos — a marcação não aparece para o cliente. Fora desses pedidos, só use a marcação quando fizer sentido. Não use em toda mensagem.\n${mediaHint}`
       );
     } else {
       parts.push(
-        "Anexos após sua resposta: o sistema pode enviar imagens, PDF ou vídeo na sequência. Avise em uma frase curta quando fizer sentido, sem prometer o que não está configurado."
+        "Anexos: imagens, PDF ou vídeo — em pedidos explícitos (ex.: 'tem vídeo?', 'manda material') inclua [[SEND_INBOUND_MEDIA]] no final da sua resposta para o sistema enviar; a marcação não aparece ao cliente. Caso contrário use só quando fizer sentido."
       );
     }
   }
@@ -258,13 +603,130 @@ async function buildReactiveProactivePromptBlock(
   )}\n--- Fim ---`;
 }
 
+/** Remove marcas internas de disparo de mídia (não exibidas ao cliente). */
+function stripInboundMediaMarkers(text: string): string {
+  return String(text || "")
+    .replace(/\[\[SEND_INBOUND_MEDIA\]\]/gi, "")
+    .replace(/\[\[ENVIAR_ANEXO\]\]/gi, "")
+    .replace(/\[\[ENVIAR_ANEXOS\]\]/gi, "")
+    .replace(/\s{3,}/g, " ")
+    .trim();
+}
+
+function hasInboundMediaMarker(text: string): boolean {
+  return /\[\[SEND_INBOUND_MEDIA\]\]|\[\[ENVIAR_ANEXO\]\]|\[\[ENVIAR_ANEXOS\]\]/i.test(
+    String(text || "")
+  );
+}
+
+/** Cliente pediu material / arquivo / vídeo / preço encaminhável, ou a IA declara envio. */
+function detectMaterialOrAttachmentIntent(text: string): boolean {
+  const raw = String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  if (!raw.trim()) return false;
+  const keywords = [
+    "catalogo",
+    "material",
+    "materiais",
+    "pdf",
+    "arquivo",
+    "anexo",
+    "envia",
+    "envie",
+    "manda",
+    "mande",
+    "me manda",
+    "me envia",
+    "me envie",
+    "folheto",
+    "folder",
+    "flyer",
+    "deck",
+    "apresentacao",
+    "slides",
+    "tabela",
+    "planilha",
+    "orcamento",
+    "proposta",
+    "amostra",
+    "quero ver",
+    "pode mandar",
+    "preciso de",
+    "gostaria de receber",
+    "tem como enviar",
+    "segue o",
+    "seguem os",
+    "link do",
+    "manda o",
+    "video",
+    "videos",
+    "clip",
+    "tutorial",
+    "gravacao",
+    "mostra",
+    "mostrar",
+    "assistir",
+    "demo gravada",
+    "tem como ver",
+    "pode ver",
+    "envia o video",
+    "manda o video",
+    "material em video",
+    "demo",
+    "demonstracao",
+    "ver a demo",
+    "ver demo",
+    "agendar demo"
+  ];
+  if (keywords.some(k => raw.includes(k))) return true;
+  if (
+    /\b(tem|tem um|ha|existe|voces?\s+tem|vc\s+tem)\b\s*(um\s+)?(video|clip|tutorial|material|pdf)\b/.test(raw)
+  ) {
+    return true;
+  }
+  if (
+    /\b(envio|enviando|mandando|seguem?|segue)\b.*\b(anexo|arquivo|material|pdf|catalogo|imagens?|fotos?|video|link)\b/.test(
+      raw
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function shouldSendInboundContextMedia(
+  settings: AgentProactiveSettings,
+  userInboundText: string,
+  assistantText: string,
+  hadExplicitMarker: boolean
+): boolean {
+  if (settings.inboundMediaAlwaysAfterReply === true) return true;
+  if (hadExplicitMarker) return true;
+  if (detectMaterialOrAttachmentIntent(userInboundText)) return true;
+  if (detectMaterialOrAttachmentIntent(assistantText)) return true;
+  return false;
+}
+
 async function maybeSendInboundReplyMedia(params: {
   ticket: Ticket;
   contact: Contact;
   priorOutboundCount: number;
   outcome: "sent" | "skipped";
+  userInboundText?: string;
+  assistantRawText?: string;
+  hadExplicitMediaMarker?: boolean;
 }): Promise<void> {
-  const { ticket, contact, priorOutboundCount, outcome } = params;
+  const {
+    ticket,
+    contact,
+    priorOutboundCount,
+    outcome,
+    userInboundText = "",
+    assistantRawText = "",
+    hadExplicitMediaMarker = false
+  } = params;
   if (outcome !== "sent") return;
   try {
     const settings = await loadAgentProactiveSettingsParsed(ticket.companyId);
@@ -274,9 +736,29 @@ async function maybeSendInboundReplyMedia(params: {
       (pack?.documentUrls?.filter(Boolean).length || 0) +
       (pack?.videoUrls?.filter(Boolean).length || 0);
     if (!pack || n === 0) return;
-    if (settings.inboundMediaOnlyFirstResponse && priorOutboundCount > 0) {
+    const explicitMaterialAsk = detectMaterialOrAttachmentIntent(userInboundText);
+    if (
+      settings.inboundMediaOnlyFirstResponse &&
+      priorOutboundCount > 0 &&
+      !explicitMaterialAsk
+    ) {
       logger.info(
         `[AI SERVICE] inbound mídia ignorada (só primeira resposta) ticket=${ticket.id}`
+      );
+      return;
+    }
+    const assistantForGate = stripInboundMediaMarkers(assistantRawText);
+    if (
+      !shouldSendInboundContextMedia(
+        settings,
+        userInboundText,
+        assistantForGate,
+        hadExplicitMediaMarker ||
+          hasInboundMediaMarker(assistantRawText)
+      )
+    ) {
+      logger.info(
+        `[AI SERVICE] inbound mídia não enviada (sem intenção/marcação) ticket=${ticket.id}`
       );
       return;
     }
@@ -499,7 +981,8 @@ const processResponse = async (
   const onlyPunctuation = raw.length > 0 && /^[\.\!\?\-\_\(\)\[\]\{\}"'`~…·•]+$/.test(raw);
   const hasAlphaNum = /[A-Za-zÀ-ÖØ-öø-ÿ0-9]/.test(raw);
   const cleaned = raw.replace(/[^\p{L}\p{N}]+/gu, "").trim();
-  if (!raw || raw.length < 3 || onlyPunctuation || !hasAlphaNum || cleaned.length < 2) {
+  // Evitar substituir respostas curtas válidas ("Sim", "Ok", "Segue o vídeo.") pelo fallback genérico.
+  if (!raw || raw.length < 2 || onlyPunctuation || !hasAlphaNum || cleaned.length < 1) {
     response = "Desculpe, não consegui entender sua mensagem. Pode reformular?";
   }
 
@@ -530,9 +1013,7 @@ const processResponse = async (
     });
     await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
 
-    if (transferQueueId && transferQueueId > 0) {
-      await transferQueue(transferQueueId, ticket, contact, transferUserId);
-    }
+    await applyResolvedAgentTransferToTicket(ticket, contact, transferQueueId, transferUserId);
 
     logger.info(`[AI SERVICE] Ticket ${ticket.id} transferido para atendimento humano`);
     return "skipped";
@@ -549,9 +1030,7 @@ const processResponse = async (
       status: "pending"
     });
 
-    if (transferQueueId && transferQueueId > 0) {
-      await transferQueue(transferQueueId, ticket, contact, transferUserId);
-    }
+    await applyResolvedAgentTransferToTicket(ticket, contact, transferQueueId, transferUserId);
 
     response = response.replace(/ação: transferir para o setor de atendimento/i, "").trim();
 
@@ -723,16 +1202,32 @@ const parseDateTimeFromText = (text: string): { date: Date | null; matched: bool
   return { date: isNaN(dt.getTime()) ? null : dt, matched: true };
 };
 
-const tryScheduleMeeting = async (
+export const tryScheduleMeeting = async (
   bodyMessage: string,
   ticket: Ticket,
-  contact: Contact
+  contact: Contact,
+  pastMessages: Message[] = []
 ): Promise<{ handled: boolean; when?: Date }> => {
+  const agentActions = await loadAgentActionsSetting(ticket.companyId);
+  // Se o operador já persistiu `enabled`, exige "Agendamento" na lista (lista vazia = desliga o auto-agendamento).
+  // Sem a chave `enabled` no JSON = legado: mantém comportamento anterior.
+  if (Object.prototype.hasOwnProperty.call(agentActions, "enabled")) {
+    const enabled = Array.isArray(agentActions.enabled) ? agentActions.enabled : [];
+    if (!enabled.includes("Agendamento")) {
+      return { handled: false };
+    }
+  }
   const parsed = parseDateTimeFromText(bodyMessage);
   if (!parsed.matched || !parsed.date) return { handled: false };
   const when = parsed.date;
+  const body = buildScheduleMessageBody({
+    ticket,
+    contact,
+    bodyMessage,
+    pastMessages
+  });
   const schedule = await CreateScheduleService({
-    body: "Reunião com " + (contact.name || "contato"),
+    body,
     sendAt: when.toISOString(),
     contactId: contact.id,
     companyId: ticket.companyId,
@@ -830,9 +1325,11 @@ export const handleOpenAiFlow = async (
 
     // Verificar modo temporário e continuação de fluxo
     const isTemporaryMode = aiSettings.flowMode === "temporary";
-    const flowContinuation = (ticket.dataWebhook && typeof ticket.dataWebhook === "object" && "flowContinuation" in ticket.dataWebhook)
-      ? (ticket.dataWebhook as any).flowContinuation
-      : undefined;
+    const dwNormalizedEarly = normalizeTicketDataWebhook(ticket.dataWebhook);
+    const flowContinuation =
+      "flowContinuation" in dwNormalizedEarly
+        ? (dwNormalizedEarly as any).flowContinuation
+        : undefined;
 
     // Verificações para voltar ao fluxo (apenas no modo temporário)
     if (isTemporaryMode && flowContinuation) {
@@ -862,10 +1359,11 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
         }
       }
 
-      // Incrementar contador de interações
+      // Incrementar contador de interações (base normalizada: nunca espalhar null/string cru)
+      const baseDw = normalizeTicketDataWebhook(ticket.dataWebhook);
       await ticket.update({
         dataWebhook: {
-          ...ticket.dataWebhook,
+          ...baseDw,
           flowContinuation: {
             ...flowContinuation,
             interactionCount: flowContinuation.interactionCount + 1
@@ -882,8 +1380,8 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
         bodyMessage = getBodyMessage(msg) || "";
       } else if (msg && msg.key) {
         const messageFromDB = await Message.findOne({
-          where: { wid: msg.key.id },
-          order: [['createdAt', 'DESC']]
+          where: { wid: msg.key.id, ticketId: ticket.id },
+          order: [["createdAt", "DESC"]]
         });
 
         if (messageFromDB) {
@@ -980,14 +1478,9 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
     // Formatar prompt do sistema
     const clientName = sanitizeName(contact.name || "Amigo(a)");
     let roleValue = null as any;
-    let brainValue = null as any;
     try {
       const role = await ListSettingsServiceOne({ companyId: ticket.companyId, key: "agent_role" });
       roleValue = role?.value ? JSON.parse(role.value as any) : null;
-    } catch {}
-    try {
-      const brain = await ListSettingsServiceOne({ companyId: ticket.companyId, key: "agent_brain" });
-      brainValue = brain?.value ? JSON.parse(brain.value as any) : null;
     } catch {}
     const roleFunc = roleValue?.funcao ? `Função: ${roleValue.funcao}` : "";
     const rolePers = roleValue?.personalidade ? `Personalidade: ${roleValue.personalidade}` : "";
@@ -997,24 +1490,26 @@ if (minutesElapsed >= aiSettings.completionTimeout) {
     const roleGreet = roleValue?.saudacao ? `Saudação padrão: ${roleValue.saudacao}` : "";
     const roleBye = roleValue?.despedida ? `Despedida padrão: ${roleValue.despedida}` : "";
     const roleEmoji = roleValue?.emojis ? `Uso de emojis: ${roleValue.emojis}` : "";
-    const websites = Array.isArray(brainValue?.websites) && brainValue.websites.length > 0 ? `Referências:\n${brainValue.websites.map((u: string) => `- ${u}`).join("\n")}` : "";
-    const proactiveForChat = await loadAgentProactiveSettingsParsed(ticket.companyId);
-    const reactiveProactiveBlock = await buildReactiveProactivePromptBlock(proactiveForChat);
+    const promptExt = await getAgentPromptExtensionsForChat(ticket.companyId);
     const promptSystem = `Instruções do Sistema:
 - Use o nome ${clientName} nas respostas.
 - Máximo de ${aiSettings.maxTokens} tokens.
 - Inicie com 'Ação: Transferir para o setor de atendimento' quando necessário.
 - Responda em blocos curtos (1 a 4), separados por uma linha em branco; cada bloco com até 3–4 frases; evite texto muito longo.
+- Funil inteligente: (1) entenda necessidade com 1–2 perguntas objetivas por vez; (2) ofereça vídeo/material quando pedirem ou quando ajudar a qualificar; (3) só convide para demo ou reunião com data/hora depois de interesse claro ou após qualificação — interesse genérico ("quero ver como funciona") não exige agendamento imediato; primeiro esclareça e qualifique.
+- Perguntas curtas e claras do cliente (ex.: "Tem vídeo?", "Tem PDF?", "Manda material") sempre têm intenção compreensível: responda de forma útil, nunca diga que não entendeu.
 - Se a solicitação for ambígua, peça esclarecimentos de forma breve.
-- Quando não entender a mensagem, responda de forma curta: "Desculpe, não consegui entender sua mensagem. Pode reformular?"
-${roleLang ? `\n${roleLang}` : ""}${roleForm ? `\n${roleForm}` : ""}${roleFunc ? `\n${roleFunc}` : ""}${rolePers ? `\n${rolePers}` : ""}${roleEmoji ? `\n${roleEmoji}` : ""}${roleGreet ? `\n${roleGreet}` : ""}${roleBye ? `\n${roleBye}` : ""}${websites ? `\n${websites}` : ""}
-${reactiveProactiveBlock ? `${reactiveProactiveBlock}\n` : ""}
+- Quando realmente não houver como interpretar o pedido, responda: "Desculpe, não consegui entender sua mensagem. Pode reformular?"
+${roleLang ? `\n${roleLang}` : ""}${roleForm ? `\n${roleForm}` : ""}${roleFunc ? `\n${roleFunc}` : ""}${rolePers ? `\n${rolePers}` : ""}${roleEmoji ? `\n${roleEmoji}` : ""}${roleGreet ? `\n${roleGreet}` : ""}${roleBye ? `\n${roleBye}` : ""}${roleInstr ? `\n${roleInstr}` : ""}
+${promptExt.brainBlock}
+${promptExt.proactiveBlock ? `${promptExt.proactiveBlock}\n` : ""}
+${promptExt.actionsBlock}
 ${aiSettings.prompt}`;
 
     // Processar mensagem de texto
     if (bodyMessage.trim()) {
       await onAgentUserInboundText(ticket, bodyMessage);
-      const scheduleAttempt = await tryScheduleMeeting(bodyMessage, ticket, contact);
+      const scheduleAttempt = await tryScheduleMeeting(bodyMessage, ticket, contact, messages);
       if (scheduleAttempt.handled) {
         const when = scheduleAttempt.when!;
         const text = `Reunião agendada com sucesso para ${format(when, "dd/MM/yyyy")} às ${format(when, "HH:mm")}.`;
@@ -1041,11 +1536,14 @@ ${aiSettings.prompt}`;
           return;
         }
 
+        const hadInboundMediaMarker = hasInboundMediaMarker(responseText);
+        const responseForClient = stripInboundMediaMarkers(responseText);
+
         const priorOutboundText = await Message.count({
           where: { ticketId: ticket.id, fromMe: true }
         });
         const outcomeText = await processResponse(
-          responseText,
+          responseForClient,
           wbot,
           msg,
           ticket,
@@ -1057,7 +1555,10 @@ ${aiSettings.prompt}`;
           ticket,
           contact,
           priorOutboundCount: priorOutboundText,
-          outcome: outcomeText
+          outcome: outcomeText,
+          userInboundText: bodyMessage,
+          assistantRawText: responseText,
+          hadExplicitMediaMarker: hadInboundMediaMarker
         });
 
         logger.info(`[AI SERVICE] Resposta processada com sucesso para ticket ${ticket.id}`);
@@ -1150,11 +1651,13 @@ ${aiSettings.prompt}`;
         }
 
         if (responseText) {
+          const hadInboundMediaMarker = hasInboundMediaMarker(responseText);
+          const responseForClient = stripInboundMediaMarkers(responseText);
           const priorOutboundAudio = await Message.count({
             where: { ticketId: ticket.id, fromMe: true }
           });
           const outcomeAudio = await processResponse(
-            responseText,
+            responseForClient,
             wbot,
             msg,
             ticket,
@@ -1166,7 +1669,10 @@ ${aiSettings.prompt}`;
             ticket,
             contact,
             priorOutboundCount: priorOutboundAudio,
-            outcome: outcomeAudio
+            outcome: outcomeAudio,
+            userInboundText: transcription,
+            assistantRawText: responseText,
+            hadExplicitMediaMarker: hadInboundMediaMarker
           });
         }
 
@@ -1225,16 +1731,23 @@ ${aiSettings.prompt}`;
           const responseText = result.response.text();
 
           if (responseText) {
+            const hadInboundMediaMarker = hasInboundMediaMarker(responseText);
+            const textOut = stripInboundMediaMarkers(responseText);
             const priorImGem = await Message.count({
               where: { ticketId: ticket.id, fromMe: true }
             });
-            const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, { text: `\u200e ${responseText}` });
+            const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
+              text: `\u200e ${textOut}`
+            });
             await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
             await maybeSendInboundReplyMedia({
               ticket,
               contact,
               priorOutboundCount: priorImGem,
-              outcome: "sent"
+              outcome: "sent",
+              userInboundText: bodyMessage || "",
+              assistantRawText: responseText,
+              hadExplicitMediaMarker: hadInboundMediaMarker
             });
           }
         } else if (isOpenAIModel && openai && vision && filePath && fs.existsSync(filePath)) {
@@ -1261,16 +1774,23 @@ ${aiSettings.prompt}`;
           });
           const responseText = (chat.choices[0]?.message?.content || "").trim();
           if (responseText) {
+            const hadInboundMediaMarker = hasInboundMediaMarker(responseText);
+            const textOut = stripInboundMediaMarkers(responseText);
             const priorImOai = await Message.count({
               where: { ticketId: ticket.id, fromMe: true }
             });
-            const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, { text: `\u200e ${responseText}` });
+            const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
+              text: `\u200e ${textOut}`
+            });
             await verifyMessage(sentMessage!, ticket, contact, ticketTraking, true);
             await maybeSendInboundReplyMedia({
               ticket,
               contact,
               priorOutboundCount: priorImOai,
-              outcome: "sent"
+              outcome: "sent",
+              userInboundText: bodyMessage || "",
+              assistantRawText: responseText,
+              hadExplicitMediaMarker: hadInboundMediaMarker
             });
           }
         } else if (ack) {
@@ -1305,11 +1825,13 @@ ${aiSettings.prompt}`;
           responseText = await handleGeminiRequest(gemini, messagesAI, aiSettings, synthetic, promptSystem);
         }
         if (responseText) {
+          const hadInboundMediaMarker = hasInboundMediaMarker(responseText);
+          const responseForClient = stripInboundMediaMarkers(responseText);
           const priorOutboundVid = await Message.count({
             where: { ticketId: ticket.id, fromMe: true }
           });
           const outcomeVid = await processResponse(
-            responseText,
+            responseForClient,
             wbot,
             msg,
             ticket,
@@ -1321,7 +1843,10 @@ ${aiSettings.prompt}`;
             ticket,
             contact,
             priorOutboundCount: priorOutboundVid,
-            outcome: outcomeVid
+            outcome: outcomeVid,
+            userInboundText: synthetic,
+            assistantRawText: responseText,
+            hadExplicitMediaMarker: hadInboundMediaMarker
           });
         } else if (ack) {
           const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
@@ -1346,11 +1871,13 @@ ${aiSettings.prompt}`;
           responseText = await handleGeminiRequest(gemini, messagesAI, aiSettings, synthetic, promptSystem);
         }
         if (responseText) {
+          const hadInboundMediaMarker = hasInboundMediaMarker(responseText);
+          const responseForClient = stripInboundMediaMarkers(responseText);
           const priorOutboundDoc = await Message.count({
             where: { ticketId: ticket.id, fromMe: true }
           });
           const outcomeDoc = await processResponse(
-            responseText,
+            responseForClient,
             wbot,
             msg,
             ticket,
@@ -1362,7 +1889,10 @@ ${aiSettings.prompt}`;
             ticket,
             contact,
             priorOutboundCount: priorOutboundDoc,
-            outcome: outcomeDoc
+            outcome: outcomeDoc,
+            userInboundText: synthetic,
+            assistantRawText: responseText,
+            hadExplicitMediaMarker: hadInboundMediaMarker
           });
         } else if (ack) {
           const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {

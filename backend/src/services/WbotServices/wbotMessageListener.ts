@@ -85,8 +85,14 @@ import ShowContactService from "../ContactServices/ShowContactService";
 
 import { ENABLE_LID_DEBUG } from "../../config/debug";
 import { normalizeJid } from "../../utils";
-import { handleOpenAiFlow } from "../IntegrationsServices/OpenAiService";
+import {
+  handleOpenAiFlow,
+  tryScheduleMeeting,
+  getAgentPromptExtensionsForChat,
+  applyPromptIntegrationAgentTransfer
+} from "../IntegrationsServices/OpenAiService";
 import { onAgentUserInboundText } from "../AgentProactiveServices/onUserInboundAgent";
+import { normalizeTicketDataWebhook } from "../AgentProactiveServices/agentProactiveTicketState";
 import { getJidOf } from "./getJidOf";
 import { verifyContact } from "./verifyContact";
 // import { verifyContact } from "./verifyContact";
@@ -95,7 +101,6 @@ import request from "request";
 import { Session } from "../../libs/wbot";
 import { getGroupMetadataCache, groupMetadataCache, updateGroupMetadataCache } from "../../utils/RedisGroupCache";
 import sgpListenerOficial from "../IntegrationsServices/Sgp/sgpListenerOficial";
-import CreateScheduleService from "../ScheduleServices/CreateService";
 import { format } from "date-fns";
 import ListSettingsServiceOne from "../SettingServices/ListSettingsServiceOne";
 
@@ -1006,7 +1011,7 @@ export const verifyMediaMessage = async (
       }
     }
 
-    io.of(String(companyId))
+    io.of("/" + String(companyId))
       .emit(`company-${companyId}-ticket`, {
         action: "update",
         ticket
@@ -1148,7 +1153,7 @@ export const verifyMessage = async (
   
   console.log(`[DEBUG 2026] Emitting socket for ticket ${ticket.id}: status=${ticketToEmit.status}, queueId=${ticketToEmit.queueId}, userId=${ticketToEmit.userId}`);
 
-  io.of(String(companyId))
+  io.of("/" + String(companyId))
     //.to(ticketToEmit.status)
     .emit(`company-${companyId}-ticket`, {
       action: "update",
@@ -1156,16 +1161,8 @@ export const verifyMessage = async (
       ticketId: ticket.id
     });
 
+  // CreateMessageService já emite company-*-appMessage com message + ticket (evitar 2º emit sem id, que o frontend ignorava).
   await CreateMessageService({ messageData, companyId: companyId });
-
-  // REFORÇO: Emitir appMessage com dados completos do ticket para garantir atualização no frontend
-  io.of(String(companyId))
-    .emit(`company-${companyId}-appMessage`, {
-      action: "create",
-      message: { ...messageData, body: body, ticketId: ticket.id }, // Simplificado pois o CreateMessageService já emite, mas sem ticket completo as vezes
-      ticket: ticketToEmit,
-      contact: ticketToEmit.contact
-    });
 
   // Rastreamento de segunda interação: cliente -> agente -> cliente
   if (!msg.key.fromMe) {
@@ -3483,7 +3480,7 @@ const checkTemporaryAI = async (
   msg: proto.IWebMessageInfo
 ) => {
   // Verificar se é modo temporário com flowContinuation
-  const dataWebhook = ticket.dataWebhook as any;
+  const dataWebhook = normalizeTicketDataWebhook(ticket.dataWebhook) as any;
   const flowContinuation = dataWebhook?.flowContinuation;
 
   // ✅ CORRIGIDO: IA temporária deve parar quando ticket é aceito (status = "open" ou isBot = false)
@@ -3565,56 +3562,22 @@ const handleOpenAi = async (
       await onAgentUserInboundText(ticket, bodyMessage);
     } catch {}
   }
-  const parseDateTimeFromText = (text: string): { date: Date | null; matched: boolean } => {
-    const t = (text || "").toLowerCase();
-    const hasIntent = /(agendar|agenda|marcar|marque|remarcar|remarque).*(reuni|reunião|reuniao)|\b(reuni|reunião|reuniao)\b/.test(t);
-    const dateMatch = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-    if (!hasIntent || !dateMatch) return { date: null, matched: false };
-    const day = parseInt(dateMatch[1], 10);
-    const month = parseInt(dateMatch[2], 10);
-    let year = dateMatch[3] ? parseInt(dateMatch[3], 10) : new Date().getFullYear();
-    if (year < 100) year += 2000;
-    let hours = 9;
-    let minutes = 0;
-    const timeMatch = t.match(/às\s*(\d{1,2})(?::|h)?(\d{2})?|(\d{1,2})\s*h/);
-    if (timeMatch) {
-      if (timeMatch[1]) {
-        hours = parseInt(timeMatch[1], 10);
-        minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-      } else if (timeMatch[3]) {
-        hours = parseInt(timeMatch[3], 10);
-        minutes = 0;
-      }
+  if (bodyMessage.trim()) {
+    const pastForSchedule = await Message.findAll({
+      where: { ticketId: ticket.id },
+      order: [["createdAt", "ASC"]],
+      limit: 80
+    });
+    const scheduleAttempt = await tryScheduleMeeting(bodyMessage, ticket, contact, pastForSchedule);
+    if (scheduleAttempt.handled && scheduleAttempt.when) {
+      const when = scheduleAttempt.when;
+      const text = `Reunião agendada com sucesso para ${format(when, "dd/MM/yyyy")} às ${format(when, "HH:mm")}.`;
+      const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
+        text
+      });
+      await verifyMessage(sentMessage!, ticket, contact);
+      return;
     }
-    const dt = new Date(year, month - 1, day, hours, minutes, 0);
-    return { date: isNaN(dt.getTime()) ? null : dt, matched: true };
-  };
-  const parsed = bodyMessage.trim() ? parseDateTimeFromText(bodyMessage) : { date: null, matched: false };
-  if (parsed.matched && parsed.date) {
-    const when = parsed.date;
-    const schedule = await CreateScheduleService({
-      body: "Reunião com " + (contact.name || "contato"),
-      sendAt: when.toISOString(),
-      contactId: contact.id,
-      companyId: ticket.companyId,
-      userId: ticket.userId || undefined,
-      ticketUserId: ticket.userId || undefined,
-      queueId: ticket.queueId || undefined,
-      openTicket: "disabled",
-      statusTicket: "closed",
-      whatsappId: ticket.whatsappId || undefined
-    });
-    const text = `Reunião agendada com sucesso para ${format(when, "dd/MM/yyyy")} às ${format(when, "HH:mm")}.`;
-    const sentMessage = await wbot.sendMessage(msg.key.remoteJid!, {
-      text
-    });
-    await verifyMessage(sentMessage!, ticket, contact);
-    const io = getIO();
-    io.of(String(ticket.companyId)).emit(`company${ticket.companyId}-schedule`, {
-      action: "create",
-      schedule
-    });
-    return;
   }
   // console.log("GETTING WHATSAPP HANDLE OPENAI", ticket.whatsappId, ticket.id)
   const { prompt } = await ShowWhatsAppService(wbot.id, ticket.companyId);
@@ -3713,10 +3676,15 @@ const handleOpenAi = async (
   const roleBye = roleValue?.despedida ? `Despedida padrão: ${roleValue.despedida}` : "";
   const roleEmoji = roleValue?.emojis ? `Uso de emojis: ${roleValue.emojis}` : "";
 
+  const promptExt = await getAgentPromptExtensionsForChat(ticket.companyId);
+
   const promptSystem = `Nas respostas utilize o nome ${sanitizeName(
     contact.name || "Amigo(a)"
   )} para identificar o cliente.\nSua resposta deve usar no máximo ${prompt.maxTokens
-    } tokens e cuide para não truncar o final.\nSempre que possível, mencione o nome dele para ser mais personalizado o atendimento e mais educado. Quando a resposta requer uma transferência para o setor de atendimento, comece sua resposta com 'Ação: Transferir para o setor de atendimento'.\nResponda em blocos curtos (1 a 4) separados por uma linha em branco; cada bloco com até 3–4 frases. Evite textões.\nSe a solicitação for ambígua, peça esclarecimentos de forma breve.\nQuando não entender, responda de forma curta: \"Desculpe, não consegui entender sua mensagem. Pode reformular?\".\n${roleLang ? `${roleLang}\n` : ""}${roleForm ? `${roleForm}\n` : ""}${roleFunc ? `${roleFunc}\n` : ""}${rolePers ? `${rolePers}\n` : ""}${roleEmoji ? `${roleEmoji}\n` : ""}${roleGreet ? `${roleGreet}\n` : ""}${roleBye ? `${roleBye}\n` : ""}
+    } tokens e cuide para não truncar o final.\nSempre que possível, mencione o nome dele para ser mais personalizado o atendimento e mais educado. Quando a resposta requer uma transferência para o setor de atendimento, comece sua resposta com 'Ação: Transferir para o setor de atendimento'.\nResponda em blocos curtos (1 a 4) separados por uma linha em branco; cada bloco com até 3–4 frases. Evite textões.\nSe a solicitação for ambígua, peça esclarecimentos de forma breve.\nQuando não entender, responda de forma curta: \"Desculpe, não consegui entender sua mensagem. Pode reformular?\".\n${roleLang ? `${roleLang}\n` : ""}${roleForm ? `${roleForm}\n` : ""}${roleFunc ? `${roleFunc}\n` : ""}${rolePers ? `${rolePers}\n` : ""}${roleEmoji ? `${roleEmoji}\n` : ""}${roleGreet ? `${roleGreet}\n` : ""}${roleBye ? `${roleBye}\n` : ""}${roleInstr ? `${roleInstr}\n` : ""}
+${promptExt.brainBlock}
+${promptExt.proactiveBlock ? `${promptExt.proactiveBlock}\n` : ""}
+${promptExt.actionsBlock}
   ${prompt.prompt}\n`;
 
   let messagesOpenAi = [];
@@ -3771,13 +3739,17 @@ const handleOpenAi = async (
     const onlyPunctuation = raw.length > 0 && /^[\.\!\?\-\_\(\)\[\]\{\}"'`~…·•]+$/.test(raw);
     const hasAlphaNum = /[A-Za-zÀ-ÖØ-öø-ÿ0-9]/.test(raw);
     const cleaned = raw.replace(/[^\p{L}\p{N}]+/gu, "").trim();
-    if (!raw || raw.length < 3 || onlyPunctuation || !hasAlphaNum || cleaned.length < 2) {
+    if (!raw || raw.length < 2 || onlyPunctuation || !hasAlphaNum || cleaned.length < 1) {
       response = "Desculpe, não consegui entender sua mensagem. Pode reformular?";
       try { logger.warn(`[AI SERVICE] Resposta vazia/irregular da IA para ticket ${ticket.id}; usando fallback.`); } catch {}
     }
 
     if (response?.includes("Ação: Transferir para o setor de atendimento")) {
-      await transferQueue(prompt.queueId, ticket, contact);
+      await applyPromptIntegrationAgentTransfer(
+        ticket,
+        contact,
+        Number(prompt.queueId) || 0
+      );
       response = response
         .replace("Ação: Transferir para o setor de atendimento", "")
         .trim();
@@ -3910,13 +3882,17 @@ const handleOpenAi = async (
     const onlyPunc2 = raw2.length > 0 && /^[\.\!\?\-\_\(\)\[\]\{\}"'`~…·•]+$/.test(raw2);
     const hasAlpha2 = /[A-Za-zÀ-ÖØ-öø-ÿ0-9]/.test(raw2);
     const cleaned2 = raw2.replace(/[^\p{L}\p{N}]+/gu, "").trim();
-    if (!raw2 || raw2.length < 3 || onlyPunc2 || !hasAlpha2 || cleaned2.length < 2) {
+    if (!raw2 || raw2.length < 2 || onlyPunc2 || !hasAlpha2 || cleaned2.length < 1) {
       response = "Desculpe, não consegui entender sua mensagem. Pode reformular?";
       try { logger.warn(`[AI SERVICE] Resposta vazia/irregular (áudio) da IA para ticket ${ticket.id}; usando fallback.`); } catch {}
     }
 
     if (response?.includes("Ação: Transferir para o setor de atendimento")) {
-      await transferQueue(prompt.queueId, ticket, contact);
+      await applyPromptIntegrationAgentTransfer(
+        ticket,
+        contact,
+        Number(prompt.queueId) || 0
+      );
       response = response
         .replace("Ação: Transferir para o setor de atendimento", "")
         .trim();
@@ -3992,14 +3968,20 @@ const handleMessage = async (
 
   let campaignExecuted = false;
 
-  console.log("[DEBUG RODRIGO] msg.key.id", JSON.stringify(msg.key))
-  const existingMessage = await Message.findOne({
-   where: { wid: msg.key.id }
-});
- if (existingMessage) {
-   console.log(`[DEBUG 2026] Mensagem já existe no banco (ID: ${msg.key.id}). Ignorando.`);
-   return;
-}
+  console.log("[DEBUG RODRIGO] msg.key.id", JSON.stringify(msg.key));
+  if (msg.key?.id) {
+    const dupWhere: any = { wid: msg.key.id, companyId };
+    if (msg.key.remoteJid) {
+      dupWhere.remoteJid = msg.key.remoteJid;
+    }
+    const existingMessage = await Message.findOne({ where: dupWhere });
+    if (existingMessage) {
+      console.log(
+        `[DEBUG 2026] Mensagem já existe no banco (ID: ${msg.key.id}). Ignorando.`
+      );
+      return;
+    }
+  }
   if (isImported) {
     addLogs({
       fileName: `processImportMessagesWppId${wbot.id}.txt`,
@@ -4868,27 +4850,50 @@ const handleMessage = async (
     // NÃO exigir status !== "open": após a 1ª resposta processResponse define status "open" + isBot true;
     // a condição antiga bloqueava todas as mensagens seguintes do cliente (sem IA e possível inconsistência na UI).
     // Parar IA só quando humano assume: isBot === false ou useIntegration desligado.
-    if (!msg.key.fromMe && ticket.useIntegration && ticket.isBot !== false) {
-      const dataWebhook = ticket.dataWebhook as any;
-      const isAIMode = dataWebhook?.type === "openai" || dataWebhook?.type === "gemini";
+    if (
+      !msg.key.fromMe &&
+      (ticket.useIntegration === true || !isNil(ticket.integrationId))
+    ) {
+      // Estado fresco do banco após verifyMessage / FindOrCreate (evita ticket em memória desatualizado na 2ª+ mensagem).
+      try {
+        const aiSnap = await Ticket.findOne({
+          where: { id: ticket.id, companyId },
+          attributes: ["dataWebhook", "useIntegration", "isBot", "userId", "status"]
+        });
+        if (aiSnap) {
+          ticket.setDataValue("dataWebhook", aiSnap.dataWebhook);
+          ticket.setDataValue("useIntegration", aiSnap.useIntegration);
+          ticket.setDataValue("isBot", aiSnap.isBot);
+          ticket.setDataValue("userId", aiSnap.userId);
+          ticket.setDataValue("status", aiSnap.status);
+        }
+      } catch (e) {
+        logger.warn(`[AI MODE] Falha ao recarregar ticket ${ticket.id} para gate IA:`, e);
+      }
+    }
 
-      if (isAIMode && dataWebhook?.settings) {
-        logger.info(`[AI MODE] Processando mensagem em modo ${dataWebhook.type} - ticket ${ticket.id}`);
+    if (!msg.key.fromMe && ticket.useIntegration && ticket.isBot !== false && !ticket.userId) {
+      const dataWebhookNorm = normalizeTicketDataWebhook(ticket.dataWebhook) as any;
+      const isAIMode =
+        dataWebhookNorm?.type === "openai" || dataWebhookNorm?.type === "gemini";
+
+      if (isAIMode && dataWebhookNorm?.settings) {
+        logger.info(`[AI MODE] Processando mensagem em modo ${dataWebhookNorm.type} - ticket ${ticket.id}`);
 
         try {
           const aiSettings = {
-            ...dataWebhook.settings,
-            provider: dataWebhook.type
+            ...dataWebhookNorm.settings,
+            provider: dataWebhookNorm.type
           };
 
           // ✅ VERIFICAR SE É A PRIMEIRA RESPOSTA DO USUÁRIO APÓS BOAS-VINDAS
-          if (dataWebhook.awaitingUserResponse) {
-            logger.info(`[AI SERVICE] Primeira resposta do usuário para ${dataWebhook.type} - iniciando conversa - ticket ${ticket.id}`);
+          if (dataWebhookNorm.awaitingUserResponse) {
+            logger.info(`[AI SERVICE] Primeira resposta do usuário para ${dataWebhookNorm.type} - iniciando conversa - ticket ${ticket.id}`);
 
             // ✅ REMOVER FLAG - AGORA A CONVERSA ESTÁ ATIVA
             await ticket.update({
               dataWebhook: {
-                ...dataWebhook,
+                ...dataWebhookNorm,
                 awaitingUserResponse: false
               }
             });
@@ -4954,7 +4959,7 @@ const handleMessage = async (
 
         await ticket.update({
           dataWebhook: {
-            ...ticket.dataWebhook,
+            ...normalizeTicketDataWebhook(ticket.dataWebhook),
             waitingInput: false,
             inputProcessed: true,
             inputVariableName: null,

@@ -448,23 +448,13 @@ export const storeFacebook = async (
             });
           }
         } else {
-          // Placeholder para garantir o ícone "Instagram" na lista de conexões
-          // quando o Graph não retorna o `instagram_business_account`.
-          pages.push({
+          // Não criar conexão "instagram" sem ID real da conta profissional.
+          // Conexão placeholder com pageId pode gerar roteamento inconsistente
+          // de webhooks e tickets "sumidos" no painel.
+          logger.warn("[storeFacebook] Instagram não resolvido para a página. Conexão IG não será criada.", {
             companyId,
-            name: "Instagram",
-            facebookUserId: facebookUserId,
-            // sem o IG business account id, reaproveitamos o id da Page
-            facebookPageUserId: id,
-            facebookUserToken: acessTokenPage,
-            tokenMeta: facebookUserToken,
-            isDefault: false,
-            channel: "instagram",
-            status: "CONNECTED",
-            greetingMessage: "",
-            farewellMessage: "",
-            queueIds: [],
-            isMultidevice: false
+            pageId: id,
+            pageName: name
           });
         }
       }

@@ -11,7 +11,11 @@ import {
   Layers,
   UserPlus,
   Target,
-  HeartHandshake
+  HeartHandshake,
+  RefreshCw,
+  Wallet,
+  GraduationCap,
+  Wrench
 } from "lucide-react";
 
 const cardBase = {
@@ -59,6 +63,30 @@ export const PROACTIVE_MISSION_OPTIONS = [
     title: "Foco em agenda",
     subtitle: "Conduz para marcar reunião ou demo com opções de horário.",
     Icon: CalendarClock
+  },
+  {
+    value: "retention",
+    title: "Retenção",
+    subtitle: "Valor contínuo, risco de churn e win-back com empatia.",
+    Icon: RefreshCw
+  },
+  {
+    value: "billing",
+    title: "Cobrança / financeiro",
+    subtitle: "Clareza em valores e prazos; tom profissional.",
+    Icon: Wallet
+  },
+  {
+    value: "onboarding",
+    title: "Onboarding",
+    subtitle: "Primeiros passos, checklists e próximo marco claro.",
+    Icon: GraduationCap
+  },
+  {
+    value: "technical_depth",
+    title: "Técnico aprofundado",
+    subtitle: "Requisitos, especificação e limitações sem inventar.",
+    Icon: Wrench
   }
 ];
 
@@ -179,12 +207,12 @@ export function ProactiveMissionPicker({ value, onChange }) {
   return (
     <Box>
       <Typography className="MuiTypography-root" variant="caption" style={{ display: "block", marginBottom: 10, color: "#4b5563" }}>
-        Tom geral das mensagens automáticas (follow-up, lead quente, reengajamento, prospecção)
+        Missão principal: orienta o follow-up automático e o bloco “Proatividade” no prompt do chat ao vivo (com Cargo e Cérebro).
       </Typography>
       <Box
         display="grid"
         style={{
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))",
           gap: 10
         }}
       >

@@ -125,7 +125,7 @@ export const webHook = async (
         channel = "instagram";
       }
 
-      body.entry?.forEach(async (entry: any) => {
+      for (const entry of body.entry || []) {
         const getTokenPage =
           (connectionFromParams && connectionFromParams.channel === channel
             ? connectionFromParams
@@ -190,9 +190,23 @@ export const webHook = async (
                     ? connectionFromParams
                     : null) ||
                   (await findTokenByIds(recipientId)) ||
+                  (await findTokenByIds(senderId)) ||
                   (await findTokenByIds(entry?.id));
 
-                if (!token) return;
+                if (!token) {
+                  try {
+                    console.log("[InstagramWebhook][TOKEN_NOT_FOUND]", {
+                      entryId: entry?.id,
+                      senderId,
+                      recipientId,
+                      companyIdFromParams,
+                      connectionIdFromParams
+                    });
+                  } catch {
+                    // ignore
+                  }
+                  return;
+                }
 
                 const normalized = {
                   sender: { id: senderId },
@@ -229,7 +243,7 @@ export const webHook = async (
             });
           });
         }
-      });
+      }
 
       return res.status(200).json({
         message: "EVENT_RECEIVED"

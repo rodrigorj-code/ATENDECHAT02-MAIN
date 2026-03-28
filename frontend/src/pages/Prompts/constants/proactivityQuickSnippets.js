@@ -30,7 +30,11 @@ export const QUICK_OBJECTIVES = {
     { label: "Qualificar", text: "Entender necessidade, prazo e orçamento em poucas perguntas." },
     { label: "Agendar", text: "Conduzir para marcar reunião ou demo com data sugerida." },
     { label: "Enviar link", text: "Apresentar solução e convidar a pagar ou acessar link oficial." },
-    { label: "Suporte + upsell", text: "Resolver dúvida e, se couber, sugerir upgrade ou add-on." }
+    { label: "Suporte + upsell", text: "Resolver dúvida e, se couber, sugerir upgrade ou add-on." },
+    { label: "Campanha → conversa", text: "Quem veio de disparo: reconhecer interesse e não parecer robô genérico." },
+    { label: "Prova social", text: "Citar caso ou número sem exagerar; convidar a próximo passo." },
+    { label: "Urgência leve", text: "Se houver prazo real (promoção/vaga), mencionar sem pressão falsa." },
+    { label: "Descobrir orçamento", text: "Perguntar faixa de investimento ou tamanho do projeto com naturalidade." }
   ]
 };
 
@@ -58,28 +62,53 @@ export const QUICK_TONES = {
   inbound: [
     { label: "Alinhar ao Cargo", text: "Manter o tom da aba Cargo; não contradizer identidade do agente." },
     { label: "Uma pergunta por vez", text: "Evitar lista longa de perguntas na mesma mensagem." },
-    { label: "CTA claro", text: "Encerrar com próximo passo único (link, horário ou confirmação)." }
+    { label: "CTA claro", text: "Encerrar com próximo passo único (link, horário ou confirmação)." },
+    { label: "Mensagens curtas", text: "Blocos curtos; evitar texto longo na primeira resposta após campanha." },
+    { label: "Não inventar preço", text: "Preço e condições só com base em links ou Cargo; senão, qualificar e encaminhar." },
+    { label: "Confirmação antes de anexar", text: "Antes de prometer arquivo, confirmar interesse ou dúvida do cliente." }
   ]
 };
 
-/** Tom sugerido quando a última msg foi sua (cliente em vácuo) — follow-up automático */
 export const FOLLOWUP_VACUO_CHIPS = [
   { label: "Lembrete suave", text: "Tom de lembrete curto, sem cobrar." },
   { label: "Perguntar se viu", text: "Pergunte se chegou a ver a última mensagem." },
-  { label: "Uma pergunta", text: "Uma pergunta objetiva para retomar o diálogo." }
+  { label: "Uma pergunta", text: "Uma pergunta objetiva para retomar o diálogo." },
+  { label: "Valor em 1 linha", text: "Relembrar benefício ou próximo passo em uma linha." },
+  { label: "Sem culpa", text: "Não dizer que a pessoa não respondeu ou sumiu." }
 ];
 
-/** Tom quando o cliente falou por último e sumiu depois */
 export const FOLLOWUP_CLIENTE_CHIPS = [
   { label: "Utilidade", text: "Ofereça algo útil (link, resposta, próximo passo) em uma linha." },
   { label: "Sem culpa", text: "Não diga que a pessoa sumiu ou demorou." },
-  { label: "CTA único", text: "Um único próximo passo claro (horário, link ou confirmação)." }
+  { label: "CTA único", text: "Um único próximo passo claro (horário, link ou confirmação)." },
+  { label: "Retomar fio", text: "Mencionar o último ponto que o cliente falou em uma frase." },
+  { label: "Duas opções", text: "Oferecer duas opções de horário ou dois próximos passos simples." }
 ];
 
 export const INBOUND_SALES_PRESETS = [
   { label: "Vender", text: "Qualificar necessidade e conduzir para compra ou proposta." },
   { label: "Agendar", text: "Marcar reunião ou demo com duas opções de horário quando couber." },
-  { label: "Link de pagamento", text: "Quando fizer sentido, enviar link oficial de pagamento com clareza." }
+  { label: "Link de pagamento", text: "Quando fizer sentido, enviar link oficial de pagamento com clareza." },
+  { label: "Apresentar valor", text: "Em 1–2 frases: o que resolve, para quem e diferencial — depois pergunta de fit." },
+  { label: "Não espelhar cliente", text: "Se o cliente for genérico ('como ajudo?'), não repetir o mesmo tom: assuma vendedor e avance com pergunta." },
+  { label: "Objeções", text: "Ouvir objeção, validar em uma linha e responder com benefício ou próximo passo." }
+];
+
+export const INBOUND_ROTEIRO_CHIPS = [
+  { label: "1) Saudação + nome", text: "1) Saudação curta com nome do cliente" },
+  { label: "2) Pergunta fit", text: "2) Uma pergunta de qualificação (necessidade ou prazo)" },
+  { label: "3) Oferta clara", text: "3) O que você oferece em uma frase" },
+  { label: "4) CTA único", text: "4) Um próximo passo: link, horário ou confirmação" },
+  { label: "5) Material sob pedido", text: "5) Só enviar PDF/catálogo se o cliente pedir ou após interesse" },
+  { label: "6) Fechar ou agendar", text: "6) Se houver interesse real, fechar ou agendar com data" }
+];
+
+export const LINK_WHEN_CHIPS = [
+  { label: "Pagamento", text: "cliente pedir valores, boleto ou checkout" },
+  { label: "Site", text: "institucional ou landing para saber mais" },
+  { label: "Agenda", text: "marcar horário ou reunião" },
+  { label: "Contrato", text: "enviar documento ou assinatura" },
+  { label: "Suporte", text: "dúvida pós-venda ou uso do produto" }
 ];
 
 export function appendToField(prevText, snippetText, sep = "\n") {

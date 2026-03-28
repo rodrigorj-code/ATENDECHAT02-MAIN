@@ -124,7 +124,7 @@ const WhatsAppModalCompany = ({
   const { user, socket } = useContext(AuthContext);
   const { list } = useCompanies();
   const [loadingComp, setLoadingComp] = useState(false);
-  const { whatsApps, loading } = useContext(WhatsAppsContext);
+  const { whatsApps, loading, fetchWhatsApps } = useContext(WhatsAppsContext);
   const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -252,6 +252,7 @@ const WhatsAppModalCompany = ({
       try {
         await api.delete(`/whatsapp/${confirmModalInfo.whatsAppId}`);
         toast.success(i18n.t("connections.toasts.deleted"));
+        if (typeof fetchWhatsApps === "function") fetchWhatsApps();
       } catch (err) {
         toastError(err);
       }
@@ -447,7 +448,9 @@ const WhatsAppModalCompany = ({
                           fields="name,email,picture"
                           version="19.0"
                           redirectUri={typeof window !== "undefined" ? window.location.origin : undefined}
-                          scope="public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                          scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE"
+                            ? "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                            : "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
                           callback={responseFacebook}
                           render={(renderProps) => (
                             <MenuItem onClick={renderProps.onClick}>
@@ -468,7 +471,9 @@ const WhatsAppModalCompany = ({
                           fields="name,email,picture"
                           version="19.0"
                           redirectUri={typeof window !== "undefined" ? window.location.origin : undefined}
-                          scope="public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                          scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE"
+                            ? "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                            : "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
                           callback={responseInstagram}
                           render={(renderProps) => (
                             <MenuItem onClick={renderProps.onClick}>
