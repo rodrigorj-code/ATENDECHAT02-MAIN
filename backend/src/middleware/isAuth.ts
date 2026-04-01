@@ -4,9 +4,8 @@ import { Request, Response, NextFunction } from "express";
 import AppError from "../errors/AppError";
 import authConfig from "../config/auth";
 
-import { getIO } from "../libs/socket";
-import ShowUserService from "../services/UserServices/ShowUserService";
 import { updateUser } from "../helpers/updateUser";
+import requireActiveSubscription from "./requireActiveSubscription";
 // import { moment} from "moment-timezone"
 
 interface TokenPayload {
@@ -55,7 +54,7 @@ const isAuth = async (req: Request, res: Response, next: NextFunction): Promise<
     }
   }
 
-  return next();
+  return requireActiveSubscription(req, res, next);
 };
 
 export default isAuth;

@@ -8,6 +8,7 @@ import Dashboard from "../pages/Dashboard/";
 import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
 import Signup from "../pages/Signup";
 import Register from "../pages/Register";
+import RegisterFreemium from "../pages/RegisterFreemium";
 import Login from "../pages/Login/";
 import ResetPassword from "../pages/ResetPassword";
 import Connections from "../pages/Connections/";
@@ -106,6 +107,7 @@ const RoutesContent = () => {
         <Route exact path="/reset-password" component={ResetPassword} title="Redefinir Senha" allowWhenAuth />
         <Route exact path="/signup" component={Signup} title="Cadastro" allowWhenAuth />
         <Route exact path="/register" component={Register} title="Registrar" allowWhenAuth />
+        <Route exact path="/cadastro-gratis" component={RegisterFreemium} title="Nova organização — cadastro grátis" allowWhenAuth />
         <Route exact path="/payment" component={Payment} title="Pagamento" allowWhenAuth />
         <WhatsAppsProvider>
           <CampaignSendingProvider>

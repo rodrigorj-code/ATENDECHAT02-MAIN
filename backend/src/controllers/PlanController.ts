@@ -28,6 +28,7 @@ type IndexQuery = {
   searchParam: string;
   pageNumber: string;
   listPublic: string;
+  paidOnly?: string;
 };
 
 type StorePlanData = {
@@ -105,9 +106,10 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
-  const {listPublic} = req.query as IndexQuery;
+  const { listPublic, paidOnly } = req.query as IndexQuery;
+  const onlyPaid = paidOnly === "true" || paidOnly === "1";
 
-  const plans: Plan[] = await FindAllPlanService(listPublic);
+  const plans: Plan[] = await FindAllPlanService(listPublic, onlyPaid);
 
   return res.status(200).json(plans);
 };

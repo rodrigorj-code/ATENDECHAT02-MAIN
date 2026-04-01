@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import api, { openApi } from "../../services/api";
 import toastError from "../../errors/toastError";
 
@@ -5,14 +6,23 @@ const emptyPlanPayload = { plan: {} };
 
 const usePlans = () => {
 
-    const getPlanList = async (params) => {
+    const getPlanList = useCallback(async (params) => {
         const { data } = await openApi.request({
             url: '/public/plans',
             method: 'GET',
             params
         });
         return data;
-    }
+    }, []);
+
+    const getPaidPlanList = useCallback(async (params) => {
+        const { data } = await openApi.request({
+            url: '/public/plans',
+            method: 'GET',
+            params: { ...params, paidOnly: true }
+        });
+        return data;
+    }, []);
 
     const list = async (params) => {
         const { data } = await api.request({
@@ -68,6 +78,7 @@ const usePlans = () => {
 
     return {
         getPlanList,
+        getPaidPlanList,
         list,
         save,
         update,

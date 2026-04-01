@@ -7,7 +7,7 @@ import {
 import { SerializeUser } from "../../helpers/SerializeUser";
 import Queue from "../../models/Queue";
 import Company from "../../models/Company";
-import Setting from "../../models/Setting";
+import Plan from "../../models/Plan";
 import CompaniesSettings from "../../models/CompaniesSettings";
 
 interface SerializedUser {
@@ -48,7 +48,17 @@ const AuthUserService = async ({
     where: { email },
     include: [
       "queues",
-      { model: Company, include: [{ model: CompaniesSettings }] }
+      {
+        model: Company,
+        include: [
+          {
+            model: Plan,
+            as: "plan",
+            attributes: ["id", "name", "trial", "trialDays", "amount"]
+          },
+          { model: CompaniesSettings }
+        ]
+      }
     ],
     attributes: { include: ["finalizacaoComValorVendaAtiva"] }
   });

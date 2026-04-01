@@ -80,7 +80,7 @@ export default function Options(props) {
   const [loadingUserRating, setLoadingUserRating] = useState(false);
   const [loadingScheduleType, setLoadingScheduleType] = useState(false);
 
-  const [userCreation, setUserCreation] = useState("disabled");
+  const [userCreation, setUserCreation] = useState("enabled");
   const [loadingUserCreation, setLoadingUserCreation] = useState(false);
 
   const [SendGreetingAccepted, setSendGreetingAccepted] = useState("enabled");

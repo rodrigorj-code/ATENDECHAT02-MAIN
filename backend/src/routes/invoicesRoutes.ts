@@ -8,7 +8,7 @@ const invoiceRoutes = express.Router();
 
 invoiceRoutes.get("/invoices", isAuth, isSpecificAdmin, InvoicesController.index);
 invoiceRoutes.get("/invoices/list", isAuth, isSpecificAdmin, InvoicesController.list);
-invoiceRoutes.get("/invoices/all", isAuth, isSpecificAdmin, InvoicesController.list);
+invoiceRoutes.get("/invoices/all", isAuth, InvoicesController.list);
 invoiceRoutes.get("/invoices/:Invoiceid", isAuth, isSpecificAdmin, InvoicesController.show);
 invoiceRoutes.put("/invoices/:id", isAuth, isSpecificAdmin, InvoicesController.update);
 

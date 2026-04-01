@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { Box, Typography, Paper, CircularProgress } from "@material-ui/core";
 import { useLocation } from "react-router-dom";
+import { resolveCaktoBaseUrl } from "../../utils/caktoCheckout";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -50,29 +51,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const resolveLink = (cycle, tier) => {
-  const map = {
-    mensal: {
-      starter: "https://pay.cakto.com.br/yfsvcpc",
-      essencial: "https://pay.cakto.com.br/dm2p96b",
-      pro: "https://pay.cakto.com.br/3ecov2x",
-    },
-    semestral: {
-      starter: "https://pay.cakto.com.br/3wkepst",
-      essencial: "https://pay.cakto.com.br/rasnk6e",
-      pro: "https://pay.cakto.com.br/ecosrjo",
-    },
-    anual: {
-      starter: "https://pay.cakto.com.br/8jcckd5",
-      essencial: "https://pay.cakto.com.br/h8woa7d",
-      pro: "https://pay.cakto.com.br/me8p4x3",
-    },
-  };
-  const c = String(cycle || "").toLowerCase();
-  const t = String(tier || "").toLowerCase();
-  return map[c]?.[t] || null;
-};
-
 export default function Payment() {
   const classes = useStyles();
   const location = useLocation();
@@ -80,11 +58,18 @@ export default function Payment() {
   const cycle = params.get("cycle"); // mensal|semestral|anual
   const tier = params.get("tier"); // starter|essencial|pro
   const directUrl = params.get("url");
+  const email = params.get("email");
 
   const url = useMemo(() => {
     if (directUrl) return directUrl;
-    return resolveLink(cycle, tier);
-  }, [directUrl, cycle, tier]);
+    const base = resolveCaktoBaseUrl(cycle, tier);
+    if (!base) return null;
+    if (email && String(email).trim()) {
+      const join = base.includes("?") ? "&" : "?";
+      return `${base}${join}email=${encodeURIComponent(email.trim())}`;
+    }
+    return base;
+  }, [directUrl, cycle, tier, email]);
 
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {

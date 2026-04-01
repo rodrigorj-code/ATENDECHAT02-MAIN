@@ -19,6 +19,8 @@ interface CompanyData {
   password?: string;
   companyUserName?: string;
   generateInvoice?: boolean;
+  /** Quando true, não consulta ReceitaWS (cadastro freemium / evita falhas de rede/API). */
+  skipExternalCnpjValidation?: boolean;
 }
 
 const validateCnpjWithReceita = async (cnpj: string): Promise<boolean> => {
@@ -55,7 +57,8 @@ const CreateCompanyService = async (
     document,
     paymentMethod,
     companyUserName,
-    generateInvoice
+    generateInvoice,
+    skipExternalCnpjValidation
   } = companyData;
 
   const companySchema = Yup.object().shape({
@@ -70,26 +73,17 @@ const CreateCompanyService = async (
     throw new AppError(err.message);
   }
 
-// Validar CNPJ se fornecido e for um CNPJ (14 dígitos)
-if (document && document.trim() !== "") {
-  // Remove todos os caracteres não numéricos
-  const cleanDoc = document.replace(/\D/g, '');
-  
-  // Verifica se é um CNPJ (14 dígitos)
-  if (cleanDoc.length === 14) {
-    const isCnpjValid = await validateCnpjWithReceita(document);
-    if (!isCnpjValid) {
-      throw new AppError("CNPJ inválido ou não encontrado na Receita Federal", 400);
+  // Validar CNPJ na ReceitaWS apenas quando habilitado (API externa instável / rate limit)
+  if (!skipExternalCnpjValidation && document && document.trim() !== "") {
+    const cleanDoc = document.replace(/\D/g, "");
+
+    if (cleanDoc.length === 14) {
+      const isCnpjValid = await validateCnpjWithReceita(document);
+      if (!isCnpjValid) {
+        throw new AppError("CNPJ inválido ou não encontrado na Receita Federal", 400);
+      }
     }
   }
-  // Opcional: Você pode adicionar validação de CPF aqui se quiser
-  // else if (cleanDoc.length === 11) {
-  //   const isCpfValid = await validateCpfWithReceita(document);
-  //   if (!isCpfValid) {
-  //     throw new AppError("CPF inválido ou não encontrado na Receita Federal", 400);
-  //   }
-  // }
-}
 
   const t = await sequelize.transaction();
 
@@ -151,9 +145,21 @@ if (document && document.trim() !== "") {
     await t.commit();
 
     return company;
-  } catch (error) {
+  } catch (error: any) {
     await t.rollback();
-    throw new AppError("Não foi possível criar a empresa!", error);
+    if (error instanceof AppError) {
+      throw error;
+    }
+    const errName = error?.name;
+    const parentCode = error?.parent?.code;
+    if (errName === "SequelizeUniqueConstraintError" || parentCode === "23505") {
+      throw new AppError("Este e-mail já está cadastrado", 409);
+    }
+    const msg =
+      typeof error?.message === "string" && error.message.length < 240
+        ? error.message
+        : "Não foi possível criar a empresa!";
+    throw new AppError(msg, 400);
   }
 };
 

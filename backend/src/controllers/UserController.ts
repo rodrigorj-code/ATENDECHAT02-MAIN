@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import { isEmpty, isNil } from "lodash";
-import CheckSettingsHelper from "../helpers/CheckSettings";
 import AppError from "../errors/AppError";
 
 import CreateUserService from "../services/UserServices/CreateUserService";
@@ -13,7 +12,6 @@ import SimpleListService from "../services/UserServices/SimpleListService";
 import CreateCompanyService from "../services/CompanyService/CreateCompanyService";
 import { SendMailSmart } from "../helpers/SendMail";
 import { useDate } from "../utils/useDate";
-import ShowCompanyService from "../services/CompanyService/ShowCompanyService";
 import { getWbot } from "../libs/wbot";
 import FindCompaniesWhatsappService from "../services/CompanyService/FindCompaniesWhatsappService";
 import User from "../models/User";
@@ -26,6 +24,7 @@ import GetOnlineUsersService from "../services/UserServices/GetOnlineUsersServic
 import Chat from "../models/Chat";
 import ChatUser from "../models/ChatUser";
 import Plan from "../models/Plan";
+import Subscriptions from "../models/Subscriptions";
 import axios from "axios";
 
 type IndexQuery = {
@@ -47,6 +46,10 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   return res.json({ users, count, hasMore });
 };
 
+/**
+ * POST /auth/signup: sem `companyId` no body, cria nova organização (Company) + usuário admin inicial.
+ * Inclui fluxos públicos como /cadastro-gratis (freemium) e demais cadastros de empresa.
+ */
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const {
     email,
@@ -77,7 +80,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     showFlow,
     birthDate,
     allowSeeMessagesInPendingTickets = "enabled",
-    document // CNPJ da empresa
+    document, // CNPJ da empresa
+    signupSource
 
   } = req.body;
   let userCompanyId: number | null = null;
@@ -89,12 +93,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     userCompanyId = cId;
   }
 
-  if (
-    req.url === "/signup" &&
-    (await CheckSettingsHelper("userCreation")) === "disabled"
-  ) {
-    throw new AppError("ERR_USER_CREATION_DISABLED", 403);
-  } else if (req.url !== "/signup" && req.user.profile !== "admin") {
+  if (req.url !== "/signup" && req.user.profile !== "admin") {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
@@ -109,36 +108,149 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   const companyUser = bodyCompanyId || userCompanyId;
 
-  let plan = null;
-  if (planId) {
-    plan = await Plan.findByPk(planId, {
-      attributes: ["id", "name", "trial", "trialDays"]
-    });
-  }
-
   if (!companyUser) {
-    let date = "";
-    if (plan.trial === true) {
-      const dataNowMoreTwoDays = new Date();
-      dataNowMoreTwoDays.setDate(dataNowMoreTwoDays.getDate() + Number(plan?.trialDays || 3));
+    if (signupSource === "freemium") {
+      const freemiumDaysRaw = process.env.FREEMIUM_DAYS;
+      const freemiumDays =
+        freemiumDaysRaw && Number(freemiumDaysRaw) > 0
+          ? Number(freemiumDaysRaw)
+          : 30;
 
-      date = dataNowMoreTwoDays.toISOString().split("T")[0];
-    } else {
-      const dataNowMoreTwoDays = new Date();
-      dataNowMoreTwoDays.setDate(dataNowMoreTwoDays.getDate() + 3);
+      let starterPlan: Plan | null = null;
+      const envPlanId = process.env.FREEMIUM_PLAN_ID;
+      if (envPlanId) {
+        starterPlan = await Plan.findByPk(envPlanId, {
+          attributes: ["id", "name", "trial", "trialDays"]
+        });
+      }
+      if (!starterPlan) {
+        starterPlan = await Plan.findOne({
+          where: { name: "Starter" },
+          order: [["id", "ASC"]],
+          attributes: ["id", "name", "trial", "trialDays"]
+        });
+      }
+      if (!starterPlan) {
+        throw new AppError("ERR_FREEMIUM_PLAN_NOT_CONFIGURED", 503);
+      }
 
-      date = dataNowMoreTwoDays.toISOString().split("T")[0];
+      const endFreemium = new Date();
+      endFreemium.setDate(endFreemium.getDate() + freemiumDays);
+      const dateFreemium = endFreemium.toISOString().split("T")[0];
+
+      const companyDataFreemium = {
+        name: companyName,
+        email: email,
+        phone: phone,
+        planId: starterPlan.id,
+        status: true,
+        dueDate: dateFreemium,
+        recurrence: "freemium",
+        document: document ? document.replace(/\D/g, "") : "",
+        paymentMethod: "",
+        password: password,
+        companyUserName: name,
+        startWork: startWork,
+        endWork: endWork,
+        defaultTheme: "light",
+        defaultMenu: "closed",
+        allowGroup: false,
+        allHistoric: false,
+        userClosePendingTicket: "enabled",
+        allowSeeMessagesInPendingTickets: "enabled",
+        showDashboard: "disabled",
+        defaultTicketsManagerWidth: 550,
+        allowRealTime: "disabled",
+        allowConnections: "disabled",
+        skipExternalCnpjValidation: true
+      };
+
+      const createdCompanyFreemium = await CreateCompanyService(
+        companyDataFreemium
+      );
+
+      try {
+        await Subscriptions.create({
+          companyId: createdCompanyFreemium.id,
+          isActive: true,
+          expiresAt: new Date(`${dateFreemium}T23:59:59.999Z`),
+          providerSubscriptionId: "freemium_starter"
+        } as any);
+      } catch (subErr) {
+        console.warn("Subscriptions freemium record:", subErr);
+      }
+
+      try {
+        const _emailFreemium = {
+          to: email,
+          subject: `Login e senha da Empresa ${companyName}`,
+          text: `Olá ${name}, este é um email sobre o cadastro da ${companyName}!<br><br>
+        Segue os dados da sua empresa:<br><br>Nome: ${companyName}<br>Email: ${email}<br>Senha: ${password}<br>Data fim do período grátis: ${dateToClient(
+            dateFreemium
+          )}`
+        };
+
+        await SendMailSmart(_emailFreemium);
+      } catch (error) {
+        console.log("Não consegui enviar o email");
+      }
+
+      try {
+        const whatsappCompanyF = await FindCompaniesWhatsappService(
+          createdCompanyFreemium.id
+        );
+
+        if (
+          whatsappCompanyF?.whatsapps?.[0]?.status === "CONNECTED" &&
+          (phone !== undefined || !isNil(phone) || !isEmpty(phone))
+        ) {
+          const whatsappIdF = whatsappCompanyF.whatsapps[0].id;
+          const wbotF = await getWbot(whatsappIdF);
+
+          const bodyF = `Olá ${name}, este é uma mensagem sobre o cadastro da ${companyName}!\n\nSegue os dados da sua empresa:\n\nNome: ${companyName}\nEmail: ${email}\nSenha: ${password}\nData fim do período grátis: ${dateToClient(
+            dateFreemium
+          )}`;
+
+          await wbotF.sendMessage(`55${phone}@s.whatsapp.net`, { text: bodyF });
+        }
+      } catch (error) {
+        console.log("Não consegui enviar a mensagem");
+      }
+
+      return res.status(200).json(createdCompanyFreemium);
     }
+
+    let plan: Plan | null = null;
+    if (planId) {
+      plan = await Plan.findByPk(planId, {
+        attributes: ["id", "name", "trial", "trialDays"]
+      });
+    }
+    if (!plan) {
+      plan = await Plan.findOne({
+        where: { trial: true, isPublic: true },
+        order: [["id", "ASC"]],
+        attributes: ["id", "name", "trial", "trialDays"]
+      });
+    }
+    if (!plan || plan.trial !== true) {
+      throw new AppError("ERR_SIGNUP_REQUIRES_TRIAL_PLAN", 400);
+    }
+
+    const trialDays = Number(plan.trialDays) > 0 ? Number(plan.trialDays) : 30;
+    const end = new Date();
+    end.setDate(end.getDate() + trialDays);
+    const date = end.toISOString().split("T")[0];
 
     const companyData = {
       name: companyName,
       email: email,
       phone: phone,
-      planId: planId,
+      planId: plan.id,
       status: true,
       dueDate: date,
       recurrence: "",
-      document: document ? document.replace(/\D/g, '') : "",
+      document: document ? document.replace(/\D/g, "") : "",
       paymentMethod: "",
       password: password,
       companyUserName: name,
@@ -156,7 +268,18 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       allowConnections: "disabled"
     };
 
-    const user = await CreateCompanyService(companyData);
+    const createdCompany = await CreateCompanyService(companyData);
+
+    try {
+      await Subscriptions.create({
+        companyId: createdCompany.id,
+        isActive: true,
+        expiresAt: new Date(`${date}T23:59:59.999Z`),
+        providerSubscriptionId: "trial_signup"
+      } as any);
+    } catch (subErr) {
+      console.warn("Subscriptions trial record:", subErr);
+    }
 
     try {
       const _email = {
@@ -174,11 +297,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     }
 
     try {
-      const company = await ShowCompanyService(1);
-      const whatsappCompany = await FindCompaniesWhatsappService(company.id);
+      const whatsappCompany = await FindCompaniesWhatsappService(createdCompany.id);
 
       if (
-        whatsappCompany.whatsapps[0].status === "CONNECTED" &&
+        whatsappCompany?.whatsapps?.[0]?.status === "CONNECTED" &&
         (phone !== undefined || !isNil(phone) || !isEmpty(phone))
       ) {
         const whatsappId = whatsappCompany.whatsapps[0].id;
@@ -194,7 +316,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       console.log("Não consegui enviar a mensagem");
     }
 
-    return res.status(200).json(user);
+    return res.status(200).json(createdCompany);
   }
 
   if (companyUser) {

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
+import { Link } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
+import Typography from "@material-ui/core/Typography";
+import Grid from "@material-ui/core/Grid";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -15,8 +18,16 @@ import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import usePlans from "../../hooks/usePlans";
 
 import moment from "moment";
+
+function tierFromPlanName(name) {
+  const n = String(name || "").toLowerCase();
+  if (n.includes("pro")) return "pro";
+  if (n.includes("essencial")) return "essencial";
+  return "starter";
+}
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_INVOICES") {
@@ -74,6 +85,7 @@ const useStyles = makeStyles((theme) => ({
 const Invoices = ({ renderAsTab }) => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
+  const { getPaidPlanList } = usePlans();
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
@@ -84,14 +96,31 @@ const Invoices = ({ renderAsTab }) => {
   const [selectedContactId, setSelectedContactId] = useState(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [isCompanyExpired, setIsCompanyExpired] = useState(false);
+  const [paidPlans, setPaidPlans] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getPaidPlanList();
+        if (!cancelled && Array.isArray(list)) {
+          setPaidPlans(list);
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getPaidPlanList]);
 
   // Verificar se a empresa está vencida
   useEffect(() => {
-    if (user && user.company) {
-      const hoje = moment();
-      const vencimento = moment(user.company.dueDate);
-      const isExpired = hoje.isAfter(vencimento);
-      setIsCompanyExpired(isExpired);
+    if (user && user.company?.dueDate) {
+      const hoje = moment().startOf("day");
+      const vencimento = moment(user.company.dueDate).startOf("day");
+      setIsCompanyExpired(hoje.isAfter(vencimento));
     }
   }, [user]);
 
@@ -203,10 +232,38 @@ const Invoices = ({ renderAsTab }) => {
             marginTop: '10px',
             border: '1px solid #ef9a9a'
           }}>
-            <strong>Atenção:</strong> Sua assinatura está vencida. Entre em contato com o suporte para regularizar sua situação.
+            <strong>Atenção:</strong>{" "}
+            {user?.company?.recurrence === "freemium"
+              ? "Seu período grátis Starter terminou. Escolha um plano pago abaixo para continuar — seus dados e conversas permanecem disponíveis após a regularização."
+              : "Sua assinatura está vencida. Escolha um plano abaixo ou pague uma fatura em aberto."}
           </div>
         )}
       </MainHeader>
+      {paidPlans.length > 0 && (
+        <Paper style={{ padding: 16, marginBottom: 12 }} variant="outlined">
+          <Typography variant="subtitle1" gutterBottom style={{ fontWeight: 600 }}>
+            Planos disponíveis (pagamento)
+          </Typography>
+          <Typography variant="body2" color="textSecondary" paragraph>
+            Mensal via checkout Cakto. Outros ciclos podem ser ajustados na URL conforme configurado.
+          </Typography>
+          <Grid container spacing={1}>
+            {paidPlans.map((p) => (
+              <Grid item key={p.id}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                  component={Link}
+                  to={`/payment?cycle=mensal&tier=${tierFromPlanName(p.name)}`}
+                >
+                  {p.name} — R$ {String(p.amount || "0").replace(".", ",")}
+                </Button>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      )}
       <Paper
         className={classes.mainPaper}
         variant="outlined"

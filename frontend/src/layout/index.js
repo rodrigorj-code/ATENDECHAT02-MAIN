@@ -65,6 +65,8 @@ import VersionControl from "../components/VersionControl";
 import useSocketListener from "../hooks/useSocketListener";
 import PublicIcon from "@material-ui/icons/Public";
 import { logInfo, logError } from "../utils/logger";
+import SubscriptionAlertBanner from "../components/SubscriptionAlertBanner";
+import FreemiumTrialBar from "../components/FreemiumTrialBar";
 
 const backendUrl = getBackendUrl();
 const drawerWidth = 240;
@@ -1138,6 +1140,8 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
 
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
+        <SubscriptionAlertBanner />
+        <FreemiumTrialBar />
         {children ? children : null}
       </main>
 

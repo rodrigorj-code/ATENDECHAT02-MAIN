@@ -67,6 +67,14 @@ api.interceptors.response.use(
       const nextCfg = await scheduleRetry(error.config);
       return api.request(nextCfg);
     }
+    if (
+      error?.response?.status === 402 &&
+      error?.response?.data?.error === "ERR_SUBSCRIPTION_EXPIRED" &&
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/financeiro-aberto"
+    ) {
+      window.location.assign("/financeiro-aberto");
+    }
     return Promise.reject(error);
   }
 );

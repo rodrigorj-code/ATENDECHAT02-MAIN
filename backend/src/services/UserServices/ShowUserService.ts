@@ -55,7 +55,7 @@ const ShowUserService = async (
       {
         model: Company,
         as: "company",
-        attributes: ["id", "name", "dueDate", "document"],
+        attributes: ["id", "name", "dueDate", "document", "recurrence"],
         include: [
           {
             model: Plan,
@@ -64,6 +64,8 @@ const ShowUserService = async (
               "id",
               "name",
               "amount",
+              "trial",
+              "trialDays",
               "useWhatsapp",
               "useFacebook",
               "useInstagram",

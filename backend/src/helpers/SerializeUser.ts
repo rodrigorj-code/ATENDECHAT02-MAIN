@@ -1,8 +1,46 @@
+import moment from "moment";
 import Queue from "../models/Queue";
 import Company from "../models/Company";
 import User from "../models/User";
 import jwt from "jsonwebtoken";
 import authConfig from "../config/auth";
+
+function buildSubscriptionMeta(company: Company | null | undefined) {
+  if (!company) {
+    return {
+      active: true,
+      daysRemaining: null as number | null,
+      expired: false,
+      isTrialPlan: false,
+      isFreemiumPeriod: false
+    };
+  }
+  const rawDue = (company as any).dueDate;
+  if (!rawDue || !moment(rawDue).isValid()) {
+    return {
+      active: true,
+      daysRemaining: null as number | null,
+      expired: false,
+      isTrialPlan: false,
+      isFreemiumPeriod: String((company as any).recurrence || "") === "freemium"
+    };
+  }
+  const today = moment().startOf("day");
+  const due = moment(rawDue).startOf("day");
+  const expired = today.isAfter(due);
+  const daysRemaining = expired ? 0 : due.diff(today, "days");
+  const plan = (company as any).plan;
+  const isTrialPlan = Boolean(plan?.trial);
+  const recurrence = String((company as any).recurrence || "");
+  const isFreemiumPeriod = recurrence === "freemium";
+  return {
+    active: !expired,
+    daysRemaining,
+    expired,
+    isTrialPlan,
+    isFreemiumPeriod
+  };
+}
 
 interface SerializedUser {
   id: number;
@@ -34,6 +72,13 @@ interface SerializedUser {
   showContacts: string;
   showCampaign: string;
   showFlow: string;
+  subscription?: {
+    active: boolean;
+    daysRemaining: number | null;
+    expired: boolean;
+    isTrialPlan: boolean;
+    isFreemiumPeriod?: boolean;
+  };
 }
 
 export const SerializeUser = async (user: User): Promise<SerializedUser> => {
@@ -71,6 +116,7 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
     finalizacaoComValorVendaAtiva: user.finalizacaoComValorVendaAtiva,
     showContacts: user.showContacts,
     showCampaign: user.showCampaign,
-    showFlow: user.showFlow
+    showFlow: user.showFlow,
+    subscription: buildSubscriptionMeta(user.company)
   };
 };

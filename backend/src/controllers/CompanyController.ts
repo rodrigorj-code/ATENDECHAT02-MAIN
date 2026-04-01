@@ -32,6 +32,7 @@ interface TokenPayload {
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
+  subscriptionFilter?: string;
 };
 
 type CompanyData = {
@@ -405,7 +406,7 @@ export const listPlan = async (req: Request, res: Response): Promise<Response> =
 };
 
 export const indexPlan = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { searchParam, pageNumber, subscriptionFilter } = req.query as IndexQuery;
 
   const authHeader = req.headers.authorization;
   const [, token] = authHeader.split(" ");
@@ -415,7 +416,9 @@ export const indexPlan = async (req: Request, res: Response): Promise<Response> 
 
   if (requestUser.super === true) {
     try {
-      const companies = await ListCompaniesPlanService();
+      const companies = await ListCompaniesPlanService({
+        subscriptionFilter: subscriptionFilter || "all"
+      });
       
       // Transformar os dados das empresas com tipagem correta
       const companiesData = companies.map(company => {
