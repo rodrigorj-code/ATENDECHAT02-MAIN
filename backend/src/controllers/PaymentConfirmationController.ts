@@ -33,9 +33,8 @@ export async function byEmail(req: Request, res: Response) {
   const { email } = req.query as any;
   if (!email) return res.status(400).json({ error: "Email obrigatório" });
   const q = String(email).trim();
-  const allowSelf =
-    String(process.env.CONFIRM_ALLOW_SELF_ISSUE || "").toLowerCase() === "true" ||
-    (typeof process.env.NODE_ENV === "undefined" || process.env.NODE_ENV !== "production");
+  /** Só com variável explícita — nunca inferir por NODE_ENV (evita “confirmação” falsa em dev). */
+  const allowSelf = String(process.env.CONFIRM_ALLOW_SELF_ISSUE || "").toLowerCase() === "true";
   // 1) Tenta case-insensitive por email diretamente
   let rec = await PaymentConfirmationToken.findOne({
     where: {
@@ -64,10 +63,8 @@ export async function byEmail(req: Request, res: Response) {
       order: [["createdAt", "DESC"]]
     });
     if (rec) return res.status(200).json({ token: rec.token });
-    // 2b) Como fallback, emite um novo token atrelado à empresa
-    const planName = (company as any).plan?.name || (company as any).recurrence || null;
-    const fresh = await issueToken(q, company.id, planName || undefined);
-    return res.status(200).json({ token: fresh.token });
+    /* Sem token pendente: não emitir aqui — só o webhook Cakto (pagamento aprovado) cria o registro. */
+    return res.status(404).json({ error: "Token não encontrado" });
   }
   // 3) Não achou. Em ambiente dev (ou se habilitado), emite token para destravar fluxo
   if (allowSelf) {
@@ -97,6 +94,42 @@ export async function resolvePlanByName(planName?: string) {
   if (synonyms.pro.some(s => name.includes(s))) return byName(synonyms.pro);
   const direct = await Plan.findOne({ where: { name: { [Op.iLike]: `%${planName}%` } } as any });
   return direct;
+}
+
+/**
+ * Usuário já logado: marca token de confirmação de pagamento como usado (fluxo freemium / upgrade no app).
+ * O webhook já atualizou plano e vencimento; isso alinha o fluxo com o Register (polling + confirmação).
+ */
+export async function acknowledgePaid(req: Request, res: Response) {
+  const { token } = req.params as any;
+  const auth = req.user as any;
+  if (!auth?.id) {
+    return res.status(401).json({ error: "Não autenticado" });
+  }
+  const user = await User.findByPk(auth.id);
+  if (!user) {
+    return res.status(401).json({ error: "Usuário não encontrado" });
+  }
+  const rec = await PaymentConfirmationToken.findOne({ where: { token } as any });
+  if (!rec) return res.status(404).json({ error: "Token inválido" });
+  if (rec.usedAt) return res.status(400).json({ error: "Token já utilizado" });
+  if (rec.expiresAt && rec.expiresAt.getTime() < Date.now()) {
+    return res.status(400).json({ error: "Token expirado" });
+  }
+  const mailOk =
+    rec.email &&
+    user.email &&
+    String(rec.email).toLowerCase() === String(user.email).toLowerCase();
+  const companyOk =
+    rec.companyId &&
+    user.companyId &&
+    Number(rec.companyId) === Number(user.companyId);
+  if (!mailOk && !companyOk) {
+    return res.status(403).json({ error: "Token não pertence à sua sessão" });
+  }
+  rec.usedAt = new Date();
+  await rec.save();
+  return res.status(200).json({ ok: true });
 }
 
 export async function consume(req: Request, res: Response) {

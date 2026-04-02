@@ -108,7 +108,23 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
   },
 
+  toolbarCenterCluster: {
+    position: "absolute",
+    left: "50%",
+    transform: "translateX(calc(-50% - 20px))",
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "nowrap",
+    gap: theme.spacing(0.25),
+    zIndex: 1,
+    pointerEvents: "auto",
+    [theme.breakpoints.down("xs")]: {
+      transform: "translateX(calc(-50% - 10px))",
+      maxWidth: "88vw"
+    }
+  },
   toolbar: {
+    position: "relative",
     paddingRight: 24,
     color: theme.palette.dark.main,
     background: theme.palette.primary.main,
@@ -178,6 +194,18 @@ const useStyles = makeStyles((theme) => ({
     height: "30px", // Reduzido altura
     alignItems: "center",
     display: "flex",
+  },
+  /** Pesquisa dentro do cluster central (sem flexGrow, largura fixa). */
+  searchCentered: {
+    flexGrow: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    width: "min(300px, 42vw)",
+    maxWidth: 300,
+    [theme.breakpoints.down("xs")]: {
+      width: "min(220px, 52vw)",
+      maxWidth: 260
+    }
   },
   searchIcon: {
     padding: theme.spacing(0, 1), // Reduzido padding
@@ -957,50 +985,50 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
               style={{ color: "white" }}
               onClick={() => setDrawerOpen(!drawerOpen)}
               className={clsx(
-                // Esconde se a drawer estiver aberta OU se estiver no modo permanente (reduzido)
                 (drawerOpen || drawerVariant === "permanent") && classes.menuButtonHidden
               )}
             >
               <MenuIcon />
             </IconButton>
           )}
-          {/* Logo removida da AppBar para ficar apenas no Menu Lateral */}
-          
+          <FreemiumTrialBar variant="appBar" />
           <Typography
             variant="body2"
             color="inherit"
             noWrap
             className={clsx(classes.title, drawerOpen && classes.titleShift)}
           >
-             {/* Boas vindas removido da topbar */}
+            {/* Boas vindas removido da topbar */}
           </Typography>
 
           <div style={{ flexGrow: 1 }} />
-          <Tooltip title="Calendário">
-            <IconButton
-              component={Link}
-              to="/schedules"
-              style={{ color: "white" }}
-            >
-              <EventIcon />
-            </IconButton>
-          </Tooltip>
 
-          <div className={classes.search}>
-            <div className={classes.searchIcon}>
-              <SearchIcon />
+          <div className={classes.toolbarCenterCluster}>
+            <Tooltip title="Calendário">
+              <IconButton
+                component={Link}
+                to="/schedules"
+                style={{ color: "white" }}
+              >
+                <EventIcon />
+              </IconButton>
+            </Tooltip>
+            <div className={clsx(classes.search, classes.searchCentered)}>
+              <div className={classes.searchIcon}>
+                <SearchIcon />
+              </div>
+              <InputBase
+                placeholder="Pesquisar..."
+                classes={{
+                  root: classes.inputRoot,
+                  input: classes.inputInput,
+                }}
+                inputProps={{ "aria-label": "search" }}
+                value={searchParam}
+                onChange={handleSearch}
+                onKeyDown={handleSearchKeyDown}
+              />
             </div>
-            <InputBase
-              placeholder="Pesquisar..."
-              classes={{
-                root: classes.inputRoot,
-                input: classes.inputInput,
-              }}
-              inputProps={{ 'aria-label': 'search' }}
-              value={searchParam}
-              onChange={handleSearch}
-              onKeyDown={handleSearchKeyDown}
-            />
           </div>
 
           <div style={{ flexGrow: 1 }} />
@@ -1065,10 +1093,6 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
                 )}
               </IconButton>
 
-              
-
-
-
               {/* <DarkMode themeToggle={themeToggle} /> */}
 
               {user.id && <NotificationsPopOver volume={volume} />}
@@ -1076,8 +1100,6 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
               <AnnouncementsPopover />
 
               <ChatPopover />
-
-
 
               <div className="user-menu-wrapper" style={{ marginLeft: 8 }}>
                 <StyledBadge
@@ -1141,7 +1163,6 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
       <main className={classes.content}>
         <div className={classes.appBarSpacer} />
         <SubscriptionAlertBanner />
-        <FreemiumTrialBar />
         {children ? children : null}
       </main>
 

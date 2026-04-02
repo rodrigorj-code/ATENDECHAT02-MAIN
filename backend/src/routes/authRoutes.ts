@@ -15,6 +15,11 @@ authRoutes.get("/me", isAuth, SessionController.me);
 authRoutes.post("/validate-cnpj", UserController.validateCnpj);
 authRoutes.get("/confirm/by-email", PaymentConfirmationController.byEmail);
 authRoutes.get("/confirm/:token", PaymentConfirmationController.show);
+authRoutes.post(
+  "/confirm/:token/acknowledge",
+  isAuth,
+  PaymentConfirmationController.acknowledgePaid
+);
 authRoutes.post("/confirm/:token", PaymentConfirmationController.consume);
 authRoutes.post("/forgot-password", AuthPasswordController.forgot);
 authRoutes.post("/reset-password", AuthPasswordController.reset);

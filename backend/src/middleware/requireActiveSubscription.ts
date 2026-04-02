@@ -34,6 +34,9 @@ const requireActiveSubscription = async (
   if (req.baseUrl === "/auth" && (req.path === "/me" || req.path === "/me/")) {
     return next();
   }
+  if (req.baseUrl === "/auth" && /\/confirm\/[^/]+\/acknowledge\/?$/.test(p)) {
+    return next();
+  }
 
   const exemptPrefixes = [
     "/subscription",

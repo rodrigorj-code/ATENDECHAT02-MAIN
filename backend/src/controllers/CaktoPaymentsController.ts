@@ -20,11 +20,25 @@ function resolveCycleDays(cycle?: string) {
   return 30;
 }
 
+/** Grava ciclo pago na empresa (substitui recurrence "freemium"). */
+function normalizePaidRecurrence(cycle?: string) {
+  const c = String(cycle || "").toLowerCase();
+  if (c.includes("semes") || c === "semestral") return "semestral";
+  if (c.includes("an") || c === "anual" || c === "annual" || c === "year") return "anual";
+  if (c.includes("men") || c === "mensal" || c === "monthly") return "mensal";
+  return "mensal";
+}
+
 async function findCompanyByEmail(email: string) {
-  if (!email) return null;
-  const company = await Company.findOne({ where: { email } as any });
+  const q = String(email || "").trim();
+  if (!q) return null;
+  const company = await Company.findOne({
+    where: { email: { [Op.iLike]: q } } as any
+  });
   if (company) return company;
-  const user = await User.findOne({ where: { email } as any });
+  const user = await User.findOne({
+    where: { email: { [Op.iLike]: q } } as any
+  });
   if (!user) return null;
   const comp = await Company.findOne({ where: { id: user.companyId } as any });
   return comp;
@@ -137,6 +151,7 @@ export async function webhook(req: Request, res: Response) {
       const base = company.dueDate ? new Date(company.dueDate) : now;
       const nextDue = addDays(base > now ? base : now, days);
       const nextDueStr = nextDue.toISOString().slice(0, 10);
+      const paidRecurrence = normalizePaidRecurrence(cycle);
 
       if (isApproved(type)) {
         const planCandidate = ev?.plan?.name || ev?.plan?.title || ev?.plan || ev?.data?.plan?.name || ev?.data?.plan;
@@ -146,7 +161,17 @@ export async function webhook(req: Request, res: Response) {
             await company.update({ planId: (plan as any).id } as any);
           }
         }
-        await company.update({ dueDate: nextDueStr, status: true } as any);
+        await company.reload();
+        const prevRec = String((company as any).recurrence || "");
+        const cycleFromEvent = extractCycle(ev);
+        const patch: any = { dueDate: nextDueStr, status: true };
+        if (prevRec === "freemium") {
+          patch.recurrence = normalizePaidRecurrence(cycleFromEvent || cycle);
+        } else if (cycleFromEvent) {
+          patch.recurrence = normalizePaidRecurrence(cycleFromEvent);
+        }
+        await company.update(patch as any);
+        await company.reload();
         let sub = await Subscriptions.findOne({ where: { companyId: company.id } as any });
         if (!sub) {
           sub = await Subscriptions.create({
@@ -157,13 +182,28 @@ export async function webhook(req: Request, res: Response) {
         } else {
           await sub.update({ isActive: true, expiresAt: nextDue } as any);
         }
-        const rec = await issueToken(company.email || "", company.id, company.plan?.name || company.recurrence || undefined);
+        const planLabel =
+          (company as any).plan?.name || (company as any).recurrence || undefined;
+        const tokenEmail = String((email && email.trim()) || company.email || "").trim();
+        const rec = await issueToken(tokenEmail, company.id, planLabel);
         const link = `${process.env.FRONTEND_URL?.replace(/\/$/, "")}/confirm?token=${rec.token}`;
-        await SendMailSmart({
-          to: company.email || "",
-          subject: "Confirme seu acesso",
-          text: `Seu pagamento foi aprovado. Crie sua senha para acessar: ${link}`
+        const adminUser = await User.findOne({
+          where: { companyId: company.id } as any
         });
+        const notifyTo = tokenEmail || company.email || "";
+        if (adminUser) {
+          await SendMailSmart({
+            to: notifyTo,
+            subject: "Pagamento aprovado — plano atualizado",
+            text: `Seu pagamento foi aprovado. O plano da sua organização foi liberado conforme a contratação. Se estiver no sistema, confirme na barra de planos (e-mail do checkout) ou atualize a página após alguns instantes. Link de apoio: ${link}`
+          });
+        } else {
+          await SendMailSmart({
+            to: notifyTo,
+            subject: "Confirme seu acesso",
+            text: `Seu pagamento foi aprovado. Crie sua senha para acessar: ${link}`
+          });
+        }
         logger.info({ msg: "Pagamento aprovado/renovado processado", companyId: company.id, nextDue: nextDueStr });
         await SendMailSmart({
           to: "visaobusinesstech@gmail.com",
