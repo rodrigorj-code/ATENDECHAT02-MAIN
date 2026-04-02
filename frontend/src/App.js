@@ -24,6 +24,14 @@ const isValidHex = (color) => {
   return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3}|[A-Fa-f0-9]{8})$/.test(color);
 };
 
+/** Fundos neutros (sem tom marrom); primária continua vinda do whitelabel */
+const LIGHT_BG_DEFAULT = "#f5f5f5";
+const LIGHT_BG_PAPER = "#ffffff";
+/** Preto neutro (alinhado à Identidade Visual / Opções em modo escuro) */
+const DARK_BG_DEFAULT = "#000000";
+const DARK_BG_PAPER = "#000000";
+const DARK_BG_ELEVATED = "#0a0a0a";
+
 const App = () => {
   const [locale, setLocale] = useState();
   
@@ -96,7 +104,8 @@ const App = () => {
               borderRadius: "4px", // Bordas arredondadas
             },
             "&::-webkit-scrollbar-track": {
-              backgroundColor: mode === "light" ? "#f5f5f5" : "#2a2a2a",
+              backgroundColor:
+                mode === "light" ? LIGHT_BG_DEFAULT : DARK_BG_ELEVATED,
               borderRadius: "4px",
             },
           },
@@ -123,6 +132,24 @@ const App = () => {
 
           palette: {
             type: mode,
+            background:
+              mode === "light"
+                ? { default: LIGHT_BG_DEFAULT, paper: LIGHT_BG_PAPER }
+                : { default: DARK_BG_DEFAULT, paper: DARK_BG_PAPER },
+            text:
+              mode === "light"
+                ? {
+                    primary: "rgba(0, 0, 0, 0.87)",
+                    secondary: "rgba(0, 0, 0, 0.6)",
+                    disabled: "rgba(0, 0, 0, 0.38)",
+                  }
+                : {
+                    primary: "#f4f4f5",
+                    secondary: "#a1a1aa",
+                    disabled: "rgba(244, 244, 245, 0.38)",
+                  },
+            divider:
+              mode === "light" ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.08)",
             primary: {
               main: mode === "light" ? getSafeColor(primaryColorLight) : getSafeColor(primaryColorDark), // Usa cores dinâmicas
               light: mode === "light"
@@ -140,13 +167,18 @@ const App = () => {
             dark: { main: mode === "light" ? "#333333" : "#F3F3F3" },
             light: { main: mode === "light" ? "#F3F3F3" : "#333333" },
             fontColor: mode === "light" ? getSafeColor(primaryColorLight) : getSafeColor(primaryColorDark),
-            tabHeaderBackground: mode === "light" ? "#EEE" : "#666",
-            optionsBackground: mode === "light" ? "#fafafa" : "#333",
-            fancyBackground: mode === "light" ? "#fafafa" : "#333",
-            total: mode === "light" ? "#fff" : "#222",
+            tabHeaderBackground:
+              mode === "light" ? "#EEE" : DARK_BG_DEFAULT,
+            optionsBackground:
+              mode === "light" ? "#fafafa" : DARK_BG_PAPER,
+            fancyBackground:
+              mode === "light" ? "#fafafa" : DARK_BG_DEFAULT,
+            total: mode === "light" ? "#fff" : DARK_BG_DEFAULT,
             messageIcons: mode === "light" ? "grey" : "#F3F3F3",
-            inputBackground: mode === "light" ? "#FFFFFF" : "#333",
-            barraSuperior: mode === "light" ? getSafeColor(primaryColorLight) : "#666", // Usa cor do tema
+            inputBackground:
+              mode === "light" ? "#FFFFFF" : DARK_BG_ELEVATED,
+            barraSuperior:
+              mode === "light" ? getSafeColor(primaryColorLight) : DARK_BG_ELEVATED,
           },
 
           typography: {
@@ -194,7 +226,8 @@ const App = () => {
             MuiCssBaseline: {
               "@global": {
                 body: {
-                  backgroundColor: mode === "light" ? "#f5f5f5" : "#333",
+                  backgroundColor:
+                    mode === "light" ? LIGHT_BG_DEFAULT : DARK_BG_DEFAULT,
                   overflowX: "hidden",
                   overflowY: "hidden", // Hide native scrollbar
                   fontFamily: [
@@ -206,21 +239,24 @@ const App = () => {
                 },
                 // Labels e bordas em Modais (Drawer/Dialog)
                 ".MuiDrawer-paper .MuiFormLabel-root, .MuiDialog-paper .MuiFormLabel-root, .MuiDrawer-paper .MuiInputLabel-root, .MuiDialog-paper .MuiInputLabel-root": {
-                  color: "#000",
+                  color: mode === "light" ? "#000" : "#e4e4e7",
                   fontWeight: 400,
                   textTransform: "none",
                   fontSize: "13px"
                 },
                 ".MuiDrawer-paper .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline, .MuiDialog-paper .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#E5E7EB",
+                  borderColor:
+                    mode === "light" ? "#E5E7EB" : "rgba(255, 255, 255, 0.12)",
                   borderWidth: "1px"
                 },
                 ".MuiDrawer-paper .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline, .MuiDialog-paper .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#E5E7EB",
+                  borderColor:
+                    mode === "light" ? "#E5E7EB" : "rgba(255, 255, 255, 0.2)",
                   borderWidth: "1px"
                 },
                 ".MuiDrawer-paper .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline, .MuiDialog-paper .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#E5E7EB"
+                  borderColor:
+                    mode === "light" ? "#E5E7EB" : "rgba(255, 255, 255, 0.16)"
                 }
               },
             },
@@ -291,15 +327,18 @@ const App = () => {
             MuiOutlinedInput: {
               root: {
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5E7EB',
+                  borderColor:
+                    mode === "light" ? "#E5E7EB" : "rgba(255, 255, 255, 0.12)",
                   borderWidth: 1,
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5E7EB',
+                  borderColor:
+                    mode === "light" ? "#E5E7EB" : "rgba(255, 255, 255, 0.22)",
                   borderWidth: 1,
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#E5E7EB',
+                  borderColor:
+                    mode === "light" ? "#E5E7EB" : "rgba(255, 255, 255, 0.18)",
                 },
                 outline: 'none',
               },
@@ -318,7 +357,8 @@ const App = () => {
                   '&.Mui-focused': {
                     outline: 'none',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: "#E5E7EB",
+                      borderColor:
+                        mode === "light" ? "#E5E7EB" : "rgba(255, 255, 255, 0.22)",
                       borderWidth: 1,
                     }
                   }
@@ -349,6 +389,8 @@ const App = () => {
             MuiDrawer: {
               paper: {
                 border: 'none',
+                backgroundColor:
+                  mode === "light" ? LIGHT_BG_PAPER : DARK_BG_PAPER,
               }
             },
 
@@ -366,24 +408,13 @@ const App = () => {
           appLogoFavicon,
           appLogoTickets,
           appName,
-          calculatedLogoDark: () => {
-            if (
-              appLogoDark === defaultLogoDark &&
-              appLogoLight !== defaultLogoLight
-            ) {
-              return appLogoLight;
-            }
-            return appLogoDark;
-          },
-          calculatedLogoLight: () => {
-            if (
-              appLogoDark !== defaultLogoDark &&
-              appLogoLight === defaultLogoLight
-            ) {
-              return appLogoDark;
-            }
-            return appLogoLight;
-          },
+          /**
+           * Logo para fundo escuro (sidebar/tema escuro): só appLogoDark ou default branca.
+           * Nunca reutilizar appLogoLight aqui — era isso que mostrava a PNG preta no modo escuro.
+           */
+          calculatedLogoDark: () => appLogoDark,
+          /** Logo para fundo claro: só appLogoLight ou default preta */
+          calculatedLogoLight: () => appLogoLight,
         },
         locale
       ),
@@ -471,6 +502,7 @@ const App = () => {
       "--primaryColor",
       mode === "light" ? primaryColorLight : primaryColorDark
     );
+    root.style.colorScheme = mode === "dark" ? "dark" : "light";
   }, [primaryColorLight, primaryColorDark, mode]);
 
   useEffect(() => {

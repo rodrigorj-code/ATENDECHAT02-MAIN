@@ -1,23 +1,26 @@
-import React, { useEffect, useState, useContext, useRef } from "react";
+import React, { useEffect, useState, useContext, useRef, useMemo } from "react";
 
 import Grid from "@material-ui/core/Grid";
 import FormControl from "@material-ui/core/FormControl";
 import TextField from "@material-ui/core/TextField";
 import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
-import Divider from "@material-ui/core/Divider";
-import Box from "@material-ui/core/Box";
 import useSettings from "../../hooks/useSettings";
 import { toast } from "react-toastify";
 import { makeStyles } from "@material-ui/core/styles";
-import { grey, blue } from "@material-ui/core/colors";
 import OnlyForSuperUser from "../OnlyForSuperUser";
 import useAuth from "../../hooks/useAuth.js";
 
-import { IconButton, InputAdornment, Chip, Button } from "@material-ui/core";
+import {
+  Box,
+  IconButton,
+  InputAdornment,
+  Button,
+  FormControlLabel,
+  Switch,
+} from "@material-ui/core";
 
-import { Colorize, AttachFile, Delete, Palette, Image, Language, Apps } from "@material-ui/icons";
-import ColorPicker from "../ColorPicker";
+import { AttachFile, Delete } from "@material-ui/icons";
 import ColorModeContext from "../../layout/themeContext";
 import api from "../../services/api";
 import { getBackendUrl } from "../../config";
@@ -31,33 +34,77 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   container: {
-    paddingTop: theme.spacing(2),
+    width: "100%",
+    paddingTop: 0,
     paddingBottom: theme.spacing(4),
+    boxSizing: "border-box",
+    /** Aproxima um pouco da barra de abas e alinha levemente à esquerda (só Identidade Visual) */
+    marginTop: theme.spacing(-0.5),
+    marginLeft: theme.spacing(-0.75),
+    [theme.breakpoints.down("sm")]: {
+      marginLeft: theme.spacing(-0.5),
+    },
+  },
+  pageHeader: {
+    marginBottom: theme.spacing(1.5),
+    paddingBottom: theme.spacing(1.5),
+    borderBottom:
+      theme.mode === "light"
+        ? "1px solid rgba(15, 23, 42, 0.08)"
+        : "1px solid rgba(255, 255, 255, 0.08)",
+  },
+  pageTitle: {
+    fontWeight: 400,
+    letterSpacing: "-0.02em",
+    fontSize: "clamp(1.45rem, 2.2vw, 1.85rem)",
+    lineHeight: 1.15,
+    marginBottom: theme.spacing(0.75),
+    color: theme.palette.text.primary,
+  },
+  pageSubtitle: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.9375rem",
+    fontWeight: 400,
+    maxWidth: 520,
+    lineHeight: 1.55,
+    margin: 0,
   },
   sectionPaper: {
     padding: theme.spacing(3),
-    marginBottom: theme.spacing(3),
-    borderRadius: theme.spacing(1),
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    "&:first-of-type": {
+      paddingTop: theme.spacing(1),
+    },
+    marginBottom: 0,
+    borderRadius: 0,
+    backgroundColor: "transparent",
+    border: "none",
+    boxShadow: "none",
+    backdropFilter: "none",
+    WebkitBackdropFilter: "none",
+    "&:not(:first-of-type)": {
+      borderTop:
+        theme.mode === "light"
+          ? "1px solid rgba(15, 23, 42, 0.08)"
+          : "1px solid rgba(255, 255, 255, 0.08)",
+    },
     [theme.breakpoints.down("sm")]: {
       padding: theme.spacing(2),
-      marginBottom: theme.spacing(2),
     },
   },
   sectionHeader: {
-    display: "flex",
-    alignItems: "center",
     marginBottom: theme.spacing(2),
     [theme.breakpoints.down("sm")]: {
       marginBottom: theme.spacing(1.5),
     },
   },
-  sectionIcon: {
-    marginRight: theme.spacing(1),
-    color: theme.palette.primary.main,
+  sectionHeaderTight: {
+    marginBottom: theme.spacing(1),
+    [theme.breakpoints.down("sm")]: {
+      marginBottom: theme.spacing(1),
+    },
   },
   sectionTitle: {
-    fontWeight: 600,
+    fontWeight: 400,
     color: theme.palette.text.primary,
     [theme.breakpoints.down("sm")]: {
       fontSize: "1.1rem",
@@ -71,6 +118,10 @@ const useStyles = makeStyles((theme) => ({
       fontSize: "0.8rem",
     },
   },
+  identityIntroSubtitle: {
+    marginBottom: theme.spacing(2),
+    display: "block",
+  },
   formField: {
     marginBottom: theme.spacing(2),
     [theme.breakpoints.down("sm")]: {
@@ -81,7 +132,10 @@ const useStyles = makeStyles((theme) => ({
     width: 20,
     height: 20,
     borderRadius: 4,
-    border: "1px solid #ddd",
+    border:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255, 255, 255, 0.2)"
+        : "1px solid #ddd",
   },
   uploadInput: {
     display: "none",
@@ -97,21 +151,83 @@ const useStyles = makeStyles((theme) => ({
       marginTop: theme.spacing(1),
     },
   },
+  previewSidebar: {
+    marginTop: 0,
+    [theme.breakpoints.down("sm")]: {
+      marginTop: theme.spacing(2),
+    },
+  },
   previewGrid: {
     [theme.breakpoints.down("sm")]: {
       justifyContent: "center",
     },
   },
+  livePreview: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginTop: theme.spacing(1.5),
+    border: "none",
+    boxShadow:
+      theme.mode === "light"
+        ? "0 8px 32px rgba(15, 23, 42, 0.1)"
+        : "0 12px 40px rgba(0, 0, 0, 0.4)",
+  },
+  livePreviewSticky: {
+    [theme.breakpoints.up("md")]: {
+      position: "sticky",
+      top: theme.spacing(2),
+    },
+  },
+  livePreviewInner: {
+    minHeight: 140,
+    padding: theme.spacing(3),
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing(1.5),
+  },
+  livePreviewLogo: {
+    maxWidth: 160,
+    maxHeight: 56,
+    objectFit: "contain",
+  },
+  paletteGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+    gap: theme.spacing(1),
+    marginBottom: 0,
+    width: "100%",
+    maxWidth: "100%",
+    [theme.breakpoints.down("md")]: {
+      gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+    },
+    [theme.breakpoints.down("sm")]: {
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    },
+  },
+  paletteSwatch: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    border:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.12)"
+        : "1px solid rgba(0,0,0,0.08)",
+    cursor: "pointer",
+    flexShrink: 0,
+  },
   previewCard: {
     padding: theme.spacing(2),
     borderRadius: theme.spacing(1),
-    border: "2px solid #e0e0e0",
+    border: "none",
     textAlign: "center",
     height: "120px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "column",
+    boxShadow: "0 1px 0 rgba(15, 23, 42, 0.06)",
     [theme.breakpoints.down("sm")]: {
       height: "100px",
       padding: theme.spacing(1),
@@ -126,8 +242,14 @@ const useStyles = makeStyles((theme) => ({
     borderColor: "#666666",
   },
   previewCardFavicon: {
-    backgroundColor: "#f5f5f5",
-    borderColor: "#d0d0d0",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.background.default
+        : "#f5f5f5",
+    borderColor:
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.12)"
+        : "#d0d0d0",
   },
   previewImage: {
     maxWidth: "100%",
@@ -166,7 +288,10 @@ const useStyles = makeStyles((theme) => ({
   languageItem: {
     display: "flex",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.background.default
+        : "#f5f5f5",
     borderRadius: theme.spacing(0.5),
     padding: theme.spacing(0.5, 1),
     minWidth: "120px",
@@ -185,12 +310,48 @@ const useStyles = makeStyles((theme) => ({
       fontSize: "0.8rem",
     },
   },
+  paletteSuggestedLabel: {
+    fontWeight: 400,
+    marginBottom: 8,
+    letterSpacing: "-0.02em",
+  },
   colorSection: {
+    marginTop: theme.spacing(2.5),
     [theme.breakpoints.down("sm")]: {
       "& .MuiGrid-item": {
         paddingBottom: theme.spacing(1),
       },
     },
+  },
+  paletteActionsRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing(1.5),
+    marginTop: theme.spacing(2),
+    width: "100%",
+  },
+  sectionFooterActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: theme.spacing(2),
+    width: "100%",
+  },
+  /** Abaixo do último upload da coluna esquerda (fundos) */
+  /** Abaixo só do campo fundo escuro, alinhado à direita da coluna */
+  backgroundDarkColumn: {
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+    height: "100%",
+  },
+  logoSaveActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: theme.spacing(2),
+    marginBottom: 0,
+    width: "100%",
   },
   logoSection: {
     [theme.breakpoints.down("sm")]: {
@@ -214,6 +375,65 @@ const LANGUAGE_OPTIONS = [
   { code: "ar", label: "عربي" },
 ];
 
+function hexToRgb(hex) {
+  if (!hex || typeof hex !== "string") return { r: 99, g: 99, b: 99 };
+  let h = hex.replace("#", "").trim();
+  if (h.length === 3) {
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  if (h.length !== 6) return { r: 99, g: 99, b: 99 };
+  const n = parseInt(h, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function relativeLuminance(rgb) {
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((x) => {
+    x /= 255;
+    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** True when the gradient reads as “dark” — use logo tema escuro (ex.: branca) no preview */
+function previewGradientIsDark(lightHex, darkHex) {
+  const l1 = relativeLuminance(hexToRgb(lightHex));
+  const l2 = relativeLuminance(hexToRgb(darkHex));
+  const minL = Math.min(l1, l2);
+  const avg = (l1 + l2) / 2;
+  /* Fundo escuro: média baixa OU qualquer extremo bem escuro (ex.: azul #1e3a8a + claro) */
+  return avg < 0.5 || minL < 0.18;
+}
+
+const COLOR_PALETTES = [
+  { name: "Azul clássico", light: "#2563eb", dark: "#1e3a8a" },
+  { name: "Verde", light: "#16a34a", dark: "#14532d" },
+  { name: "Roxo", light: "#7c3aed", dark: "#4c1d95" },
+  { name: "Coral", light: "#ea580c", dark: "#9a3412" },
+  { name: "Ardósia", light: "#475569", dark: "#0f172a" },
+  { name: "Padrão VB", light: "#131B2D", dark: "#131B2D" },
+  { name: "Teal", light: "#0d9488", dark: "#115e59" },
+  { name: "Rosa", light: "#db2777", dark: "#831843" },
+  { name: "Índigo", light: "#4f46e5", dark: "#312e81" },
+  { name: "Âmbar", light: "#d97706", dark: "#78350f" },
+  { name: "Ciano", light: "#0891b2", dark: "#164e63" },
+  { name: "Lima", light: "#65a30d", dark: "#365314" },
+  { name: "Vinho", light: "#9f1239", dark: "#4c0519" },
+  { name: "Grafite", light: "#52525b", dark: "#18181b" },
+  { name: "Esmeralda", light: "#10b981", dark: "#064e3b" },
+  { name: "Sky", light: "#0ea5e9", dark: "#0c4a6e" },
+  { name: "Fúcsia", light: "#d946ef", dark: "#86198f" },
+  { name: "Oliva", light: "#84cc16", dark: "#3f6212" },
+  { name: "Terracota", light: "#c65d07", dark: "#7c2d12" },
+  { name: "Real", light: "#1e40af", dark: "#172554" },
+  { name: "Turquesa", light: "#14b8a6", dark: "#115e59" },
+  { name: "Ameixa", light: "#a855f7", dark: "#581c87" },
+  { name: "Areia", light: "#ca8a04", dark: "#713f12" },
+  { name: "Bronze", light: "#b45309", dark: "#78350f" },
+];
+
 export default function Whitelabel(props) {
   const { settings } = props;
   const classes = useStyles();
@@ -222,7 +442,9 @@ export default function Whitelabel(props) {
   const { getCurrentUserInfo } = useAuth();
   const [currentUser, setCurrentUser] = useState({});
   const [loading, setLoading] = useState(true);
-  const { colorMode } = useContext(ColorModeContext);
+  const colorMode = useContext(ColorModeContext);
+  const ctxLogoLight = colorMode.appLogoLight;
+  const ctxLogoDark = colorMode.appLogoDark;
   const [primaryColorLightModalOpen, setPrimaryColorLightModalOpen] =
     useState(false);
   const [primaryColorDarkModalOpen, setPrimaryColorDarkModalOpen] =
@@ -239,6 +461,27 @@ export default function Whitelabel(props) {
   const [enabledLanguages, setEnabledLanguages] = useState(["pt-BR", "en"]);
 
   const { update } = useSettings();
+
+  const [draftLight, setDraftLight] = useState("#131B2D");
+  const [draftDark, setDraftDark] = useState("#131B2D");
+  /** Se true, ignora o contraste e mantém sempre a logo do tema claro no preview. */
+  const [previewForceLightLogo, setPreviewForceLightLogo] = useState(false);
+
+  const previewGradientDark = useMemo(
+    () =>
+      previewGradientIsDark(draftLight || "#131B2D", draftDark || "#131B2D"),
+    [draftLight, draftDark]
+  );
+  const useDarkLogoInPreview =
+    previewGradientDark && !previewForceLightLogo;
+
+  /** Mesmas URLs que o App carrega via getPublicSetting — evita preview com fallback preto enquanto settings só tem filename */
+  const previewLogoSrc = useMemo(() => {
+    if (useDarkLogoInPreview) {
+      return ctxLogoDark || defaultLogoDark;
+    }
+    return ctxLogoLight || defaultLogoLight;
+  }, [useDarkLogoInPreview, ctxLogoDark, ctxLogoLight]);
 
   function updateSettingsLoaded(key, value) {
     if (
@@ -325,6 +568,13 @@ export default function Whitelabel(props) {
     };
   }, []);
 
+  useEffect(() => {
+    const l = settingsLoaded.primaryColorLight;
+    const d = settingsLoaded.primaryColorDark;
+    if (l) setDraftLight(l);
+    if (d) setDraftDark(d);
+  }, [settingsLoaded.primaryColorLight, settingsLoaded.primaryColorDark]);
+
   async function handleSaveSetting(key, value) {
     await update({
       key,
@@ -339,14 +589,31 @@ export default function Whitelabel(props) {
     setEnabledLanguages(newLangs);
   }
 
-  const handleResetColors = async () => {
+  const handleDraftReset = () => {
     const DEFAULT = "#131B2D";
-    await handleSaveSetting("primaryColorLight", DEFAULT);
-    await handleSaveSetting("primaryColorDark", DEFAULT);
-    colorMode.setPrimaryColorLight(DEFAULT);
-    colorMode.setPrimaryColorDark(DEFAULT);
-    toast.success("Cores resetadas ao padrão.");
+    setDraftLight(DEFAULT);
+    setDraftDark(DEFAULT);
   };
+
+  async function handleSaveDraftColors() {
+    const l = draftLight || "#131B2D";
+    const d = draftDark || "#131B2D";
+    await update({ key: "primaryColorLight", value: l });
+    await update({ key: "primaryColorDark", value: d });
+    updateSettingsLoaded("primaryColorLight", l);
+    updateSettingsLoaded("primaryColorDark", d);
+    colorMode.setPrimaryColorLight(l);
+    colorMode.setPrimaryColorDark(d);
+    toast.success("Cores salvas com sucesso.");
+  }
+
+  function handleSaveLogosSection() {
+    toast.success(i18n.t("whitelabel.logoSectionSave"));
+  }
+
+  async function handleSaveLanguagesClick() {
+    await handleSaveEnabledLanguages(enabledLanguages);
+  }
 
   const uploadLogo = async (e, mode) => {
     if (!e.target.files) {
@@ -419,18 +686,16 @@ export default function Whitelabel(props) {
         user={currentUser}
         yes={() => (
           <>
-            {/* Seção de Configurações Gerais */}
             <Paper className={classes.sectionPaper}>
-              <div className={classes.sectionHeader}>
-                <Apps className={classes.sectionIcon} />
-                <div>
-                  <Typography variant="h6" className={classes.sectionTitle}>
-                    {i18n.t("whitelabel.sections.general")}
-                  </Typography>
-                  <Typography className={classes.sectionSubtitle}>
-                    {i18n.t("whitelabel.sections.generalDescription")}
-                  </Typography>
-                </div>
+              <div className={`${classes.sectionHeader} ${classes.sectionHeaderTight}`}>
+                <Typography variant="h6" className={classes.sectionTitle}>
+                  {i18n.t("whitelabel.pageTitle")}
+                </Typography>
+                <Typography
+                  className={`${classes.sectionSubtitle} ${classes.identityIntroSubtitle}`}
+                >
+                  {i18n.t("whitelabel.sections.identityIntro")}
+                </Typography>
               </div>
 
               <Grid container spacing={3}>
@@ -460,126 +725,202 @@ export default function Whitelabel(props) {
             {/* Seção de Cores */}
             <Paper className={classes.sectionPaper}>
               <div className={classes.sectionHeader}>
-                <Palette className={classes.sectionIcon} />
-                <div>
-                  <Typography variant="h6" className={classes.sectionTitle}>
-                    {i18n.t("whitelabel.sections.colors")}
-                  </Typography>
-                  <Typography className={classes.sectionSubtitle}>
-                    {i18n.t("whitelabel.sections.colorsDescription")}
-                  </Typography>
-                </div>
+                <Typography variant="h6" className={classes.sectionTitle}>
+                  {i18n.t("whitelabel.sections.colors")}
+                </Typography>
+                <Typography className={classes.sectionSubtitle}>
+                  {i18n.t("whitelabel.sections.colorsDescription")}
+                </Typography>
               </div>
 
-              <Grid container spacing={3} className={classes.colorSection}>
-                <Grid xs={12} sm={6} md={6} item>
-                  <FormControl className={classes.formField} fullWidth>
-                    <TextField
-                      id="primary-color-light-field"
-                      label={i18n.t("whitelabel.primaryColorLight")}
-                      variant="outlined"
-                      value={settingsLoaded.primaryColorLight || ""}
-                      onClick={() => setPrimaryColorLightModalOpen(true)}
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <div
-                              style={{
-                                backgroundColor: settingsLoaded.primaryColorLight,
-                              }}
-                              className={classes.colorAdorment}
-                            ></div>
-                          </InputAdornment>
-                        ),
-                        endAdornment: (
-                          <IconButton
-                            size="small"
-                            color="default"
-                            onClick={() => setPrimaryColorLightModalOpen(true)}
-                          >
-                            <Colorize />
-                          </IconButton>
-                        ),
-                      }}
-                    />
-                  </FormControl>
-                  <ColorBoxModal
-                    open={primaryColorLightModalOpen}
-                    handleClose={() => setPrimaryColorLightModalOpen(false)}
-                    onChange={(color) => {
-                      console.log("🔍 [Whitelabel] Color changed:", color);
-                      handleSaveSetting("primaryColorLight", `#${color.hex}`);
-                      colorMode.setPrimaryColorLight(`#${color.hex}`);
-                    }}
-                    currentColor={settingsLoaded.primaryColorLight}
-                  />
+              <Grid container spacing={4} alignItems="flex-start">
+                <Grid item xs={12} md={7}>
+                  <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                    {i18n.t("whitelabel.paletteHint")}
+                  </Typography>
+                  <Typography
+                    variant="subtitle2"
+                    className={classes.paletteSuggestedLabel}
+                  >
+                    {i18n.t("whitelabel.paletteSuggested")}
+                  </Typography>
+                  <div className={classes.paletteGrid}>
+                    {COLOR_PALETTES.map((p, idx) => (
+                      <button
+                        type="button"
+                        key={`${p.name}-${idx}`}
+                        title={p.name}
+                        className={classes.paletteSwatch}
+                        style={{
+                          background: `linear-gradient(135deg, ${p.light} 0%, ${p.dark} 100%)`,
+                        }}
+                        onClick={() => {
+                          setDraftLight(p.light);
+                          setDraftDark(p.dark);
+                        }}
+                        aria-label={p.name}
+                      />
+                    ))}
+                  </div>
+
+                  <Grid container spacing={3} className={classes.colorSection}>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="primary-color-light-field"
+                          label={i18n.t("whitelabel.primaryColorLight")}
+                          variant="outlined"
+                          value={draftLight || ""}
+                          onClick={() => setPrimaryColorLightModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor: draftLight,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={primaryColorLightModalOpen}
+                        handleClose={() => setPrimaryColorLightModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftLight(`#${color.hex}`);
+                        }}
+                        currentColor={draftLight}
+                      />
+                    </Grid>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="primary-color-dark-field"
+                          label={i18n.t("whitelabel.primaryColorDark")}
+                          variant="outlined"
+                          value={draftDark || ""}
+                          onClick={() => setPrimaryColorDarkModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor: draftDark,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={primaryColorDarkModalOpen}
+                        handleClose={() => setPrimaryColorDarkModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftDark(`#${color.hex}`);
+                        }}
+                        currentColor={draftDark}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  <Box className={classes.paletteActionsRow}>
+                    <Button variant="outlined" color="primary" onClick={handleDraftReset}>
+                      {i18n.t("whitelabel.resetPreview")}
+                    </Button>
+                    <Button variant="contained" color="primary" onClick={handleSaveDraftColors}>
+                      {i18n.t("whitelabel.saveColors")}
+                    </Button>
+                  </Box>
                 </Grid>
-                <Grid xs={12} sm={6} md={6} item>
-                  <FormControl className={classes.formField} fullWidth>
-                    <TextField
-                      id="primary-color-dark-field"
-                      label={i18n.t("whitelabel.primaryColorDark")}
-                      variant="outlined"
-                      value={settingsLoaded.primaryColorDark || ""}
-                      onClick={() => setPrimaryColorDarkModalOpen(true)}
-                      size="small"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <div
-                              style={{
-                                backgroundColor: settingsLoaded.primaryColorDark,
-                              }}
-                              className={classes.colorAdorment}
-                            ></div>
-                          </InputAdornment>
-                        ),
-                        endAdornment: (
-                          <IconButton
-                            size="small"
-                            color="default"
-                            onClick={() => setPrimaryColorDarkModalOpen(true)}
-                          >
-                            <Colorize />
-                          </IconButton>
-                        ),
-                      }}
+
+                <Grid item xs={12} md={5}>
+                  <Box className={classes.livePreviewSticky}>
+                    <Typography
+                      variant="subtitle2"
+                      className={classes.paletteSuggestedLabel}
+                    >
+                      {i18n.t("whitelabel.livePreview")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 10 }}>
+                      {i18n.t("whitelabel.livePreviewHint")}
+                    </Typography>
+                    <FormControlLabel
+                      style={{ marginLeft: 0, marginBottom: 8, alignItems: "flex-start" }}
+                      control={
+                        <Switch
+                          checked={previewForceLightLogo}
+                          onChange={(e) => setPreviewForceLightLogo(e.target.checked)}
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" color="textSecondary" style={{ lineHeight: 1.35 }}>
+                          {i18n.t("whitelabel.previewForceLightLogo")}
+                        </Typography>
+                      }
                     />
-                  </FormControl>
-                  <ColorBoxModal
-                    open={primaryColorDarkModalOpen}
-                    handleClose={() => setPrimaryColorDarkModalOpen(false)}
-                    onChange={(color) => {
-                      handleSaveSetting("primaryColorDark", `#${color.hex}`);
-                      colorMode.setPrimaryColorDark(`#${color.hex}`);
-                    }}
-                    currentColor={settingsLoaded.primaryColorDark}
-                  />
+                    <Box className={classes.livePreview}>
+                      <div
+                        className={classes.livePreviewInner}
+                        style={{
+                          background: `linear-gradient(155deg, ${draftLight} 0%, ${draftDark} 100%)`,
+                        }}
+                      >
+                        <img
+                          className={classes.livePreviewLogo}
+                          src={previewLogoSrc}
+                          alt=""
+                          onError={(e) => {
+                            const fallback = useDarkLogoInPreview
+                              ? defaultLogoDark
+                              : defaultLogoLight;
+                            if (e.target.src !== fallback) {
+                              e.target.onerror = null;
+                              e.target.src = fallback;
+                            }
+                          }}
+                        />
+                        <Typography
+                          variant="body2"
+                          style={{
+                            color: useDarkLogoInPreview
+                              ? "rgba(255,255,255,0.95)"
+                              : "rgba(15,23,42,0.92)",
+                            fontWeight: 400,
+                            letterSpacing: "-0.02em",
+                          }}
+                        >
+                          {appName || "VBSolution"}
+                        </Typography>
+                      </div>
+                    </Box>
+                  </Box>
                 </Grid>
               </Grid>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                <Button variant="outlined" color="primary" onClick={handleResetColors}>
-                  Resetar ao Padrão
-                </Button>
-              </div>
             </Paper>
 
             {/* Seção de Logos e Imagens */}
             <Paper className={classes.sectionPaper}>
               <div className={classes.sectionHeader}>
-                <Image className={classes.sectionIcon} />
-                <div>
-                  <Typography variant="h6" className={classes.sectionTitle}>
-                    {i18n.t("whitelabel.sections.logos")}
-                  </Typography>
-                  <Typography className={classes.sectionSubtitle}>
-                    {i18n.t("whitelabel.sections.logosDescription")}
-                  </Typography>
-                </div>
+                <Typography variant="h6" className={classes.sectionTitle}>
+                  {i18n.t("whitelabel.sections.logos")}
+                </Typography>
+                <Typography className={classes.sectionSubtitle}>
+                  {i18n.t("whitelabel.sections.logosDescription")}
+                </Typography>
               </div>
 
-              <Grid container spacing={3} className={classes.logoSection}>
+              <Grid container spacing={3} alignItems="flex-start">
+                <Grid item xs={12} md={7}>
+                  <Grid container spacing={3} className={classes.logoSection}>
                 <Grid xs={12} sm={6} md={4} item>
                   <FormControl className={classes.formField} fullWidth>
                     <TextField
@@ -885,66 +1226,83 @@ export default function Whitelabel(props) {
                 </Grid>
 
                 <Grid xs={12} sm={6} md={6} item>
-                  <FormControl className={classes.formField} fullWidth>
-                    <TextField
-                      id="background-dark-upload-field"
-                      label={i18n.t("whitelabel.backgroundDark")}
-                      variant="outlined"
-                      value={settingsLoaded.appLogoBackgroundDark || ""}
-                      size="small"
-                      className={classes.uploadField}
-                      InputProps={{
-                        readOnly: true,
-                        endAdornment: (
-                          <>
-                            {settingsLoaded.appLogoBackgroundDark && (
-                              <IconButton
-                                size="small"
-                                color="default"
-                                onClick={() => {
-                                  handleSaveSetting("appLogoBackgroundDark", "");
-                                }}
-                              >
-                                <Delete
-                                  titleAccess={i18n.t("whitelabel.delete")}
-                                />
-                              </IconButton>
-                            )}
-                            <input
-                              type="file"
-                              id="upload-background-dark-button"
-                              ref={backgroundDarkInput}
-                              className={classes.uploadInput}
-                              onChange={(e) => uploadLogo(e, "BackgroundDark")}
-                            />
-                            <label htmlFor="upload-background-dark-button">
-                              <IconButton
-                                size="small"
-                                color="default"
-                                onClick={() => {
-                                  backgroundDarkInput.current.click();
-                                }}
-                              >
-                                <AttachFile
-                                  titleAccess={i18n.t("whitelabel.upload")}
-                                />
-                              </IconButton>
-                            </label>
-                          </>
-                        ),
-                      }}
-                    />
-                  </FormControl>
+                  <Box className={classes.backgroundDarkColumn}>
+                    <FormControl className={classes.formField} fullWidth>
+                      <TextField
+                        id="background-dark-upload-field"
+                        label={i18n.t("whitelabel.backgroundDark")}
+                        variant="outlined"
+                        value={settingsLoaded.appLogoBackgroundDark || ""}
+                        size="small"
+                        className={classes.uploadField}
+                        InputProps={{
+                          readOnly: true,
+                          endAdornment: (
+                            <>
+                              {settingsLoaded.appLogoBackgroundDark && (
+                                <IconButton
+                                  size="small"
+                                  color="default"
+                                  onClick={() => {
+                                    handleSaveSetting("appLogoBackgroundDark", "");
+                                  }}
+                                >
+                                  <Delete
+                                    titleAccess={i18n.t("whitelabel.delete")}
+                                  />
+                                </IconButton>
+                              )}
+                              <input
+                                type="file"
+                                id="upload-background-dark-button"
+                                ref={backgroundDarkInput}
+                                className={classes.uploadInput}
+                                onChange={(e) => uploadLogo(e, "BackgroundDark")}
+                              />
+                              <label htmlFor="upload-background-dark-button">
+                                <IconButton
+                                  size="small"
+                                  color="default"
+                                  onClick={() => {
+                                    backgroundDarkInput.current.click();
+                                  }}
+                                >
+                                  <AttachFile
+                                    titleAccess={i18n.t("whitelabel.upload")}
+                                  />
+                                </IconButton>
+                              </label>
+                            </>
+                          ),
+                        }}
+                      />
+                    </FormControl>
+                    <Box className={classes.logoSaveActions}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSaveLogosSection}
+                      >
+                        {i18n.t("whitelabel.saveLogosSection")}
+                      </Button>
+                    </Box>
+                  </Box>
                 </Grid>
               </Grid>
+                </Grid>
 
-              {/* Preview Section */}
-              <div className={classes.previewContainer}>
-                <Typography variant="subtitle2" gutterBottom style={{ fontWeight: 600, marginBottom: 16 }}>
+                <Grid item xs={12} md={5}>
+              <Box className={`${classes.previewSidebar} ${classes.livePreviewSticky}`}>
+                <Typography
+                  variant="subtitle2"
+                  gutterBottom
+                  className={classes.paletteSuggestedLabel}
+                  style={{ marginBottom: 16 }}
+                >
                   {i18n.t("whitelabel.preview")}
                 </Typography>
                 <Grid container spacing={2} className={classes.previewGrid}>
-                  <Grid xs={12} sm={6} md={3} item>
+                  <Grid xs={12} sm={6} item>
                     <div className={`${classes.previewCard} ${classes.previewCardLight}`}>
                       <img
                         className={classes.previewImage}
@@ -963,7 +1321,7 @@ export default function Whitelabel(props) {
                     </div>
                   </Grid>
 
-                  <Grid xs={12} sm={6} md={3} item>
+                  <Grid xs={12} sm={6} item>
                     <div className={`${classes.previewCard} ${classes.previewCardDark}`}>
                       <img
                         className={classes.previewImage}
@@ -982,7 +1340,7 @@ export default function Whitelabel(props) {
                     </div>
                   </Grid>
 
-                  <Grid xs={12} sm={6} md={3} item>
+                  <Grid xs={12} sm={6} item>
                     <div className={`${classes.previewCard} ${classes.previewCardFavicon}`}>
                       <img
                         className={classes.previewImage}
@@ -1001,7 +1359,7 @@ export default function Whitelabel(props) {
                     </div>
                   </Grid>
 
-                  <Grid xs={12} sm={6} md={3} item>
+                  <Grid xs={12} sm={6} item>
                     <div className={`${classes.previewCard} ${classes.previewCardLight}`}>
                       <img
                         className={classes.previewImage}
@@ -1066,21 +1424,20 @@ export default function Whitelabel(props) {
                     </div>
                   </Grid>
                 </Grid>
-              </div>
+              </Box>
+                </Grid>
+              </Grid>
             </Paper>
 
             {/* Seção de Idiomas */}
             <Paper className={classes.sectionPaper}>
               <div className={classes.sectionHeader}>
-                <Language className={classes.sectionIcon} />
-                <div>
-                  <Typography variant="h6" className={classes.sectionTitle}>
-                    {i18n.t("whitelabel.sections.languages")}
-                  </Typography>
-                  <Typography className={classes.sectionSubtitle}>
-                    {i18n.t("whitelabel.sections.languagesDescription")}
-                  </Typography>
-                </div>
+                <Typography variant="h6" className={classes.sectionTitle}>
+                  {i18n.t("whitelabel.sections.languages")}
+                </Typography>
+                <Typography className={classes.sectionSubtitle}>
+                  {i18n.t("whitelabel.sections.languagesDescription")}
+                </Typography>
               </div>
 
               <div className={classes.languageSection}>
@@ -1112,6 +1469,16 @@ export default function Whitelabel(props) {
                   ))}
                 </div>
               </div>
+
+              <Box className={classes.sectionFooterActions}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSaveLanguagesClick}
+                >
+                  {i18n.t("whitelabel.saveLanguagesSection")}
+                </Button>
+              </Box>
             </Paper>
           </>
         )}

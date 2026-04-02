@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
+import Tooltip from "@material-ui/core/Tooltip";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -23,6 +24,7 @@ import { FormControl, InputLabel, Select, MenuItem } from "@material-ui/core";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import AddIcon from "@material-ui/icons/Add";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -70,6 +72,22 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+  },
+  fab: {
+    position: "fixed",
+    bottom: theme.spacing(3),
+    right: theme.spacing(3),
+    width: 56,
+    height: 56,
+    borderRadius: "50%",
+    backgroundColor: theme.palette.primary.main,
+    color: "#fff",
+    boxShadow: `0 8px 24px ${theme.palette.primary.main}4D`,
+    zIndex: theme.zIndex.snackbar,
+    "&:hover": {
+      backgroundColor: theme.palette.primary.dark,
+      color: "#fff",
+    },
   },
 }));
 
@@ -200,7 +218,7 @@ const Tags = ({ renderAsTab }) => {
   const Container = renderAsTab ? ({ children }) => <>{children}</> : MainContainer;
 
   return (
-    <Container className={classes.mainContainer}>
+    <Container>
       {contactModalOpen && (
         <ContactTagListModal
           open={contactModalOpen}
@@ -252,13 +270,6 @@ const Tags = ({ renderAsTab }) => {
               ),
             }}
           />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenTagModal}
-          >
-            {i18n.t("tags.buttons.add")}
-          </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper
@@ -339,6 +350,15 @@ const Tags = ({ renderAsTab }) => {
           </div>
         )}
       </Paper>
+      <Tooltip title={i18n.t("tags.buttons.add")}>
+        <IconButton
+          className={classes.fab}
+          onClick={handleOpenTagModal}
+          aria-label={i18n.t("tags.buttons.add")}
+        >
+          <AddIcon />
+        </IconButton>
+      </Tooltip>
     </Container>
   );
 };

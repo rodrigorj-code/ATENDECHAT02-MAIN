@@ -1758,6 +1758,57 @@ const messages = {
               "Mover automáticamente al cliente a la cartera",
             showNotificationPending:
               "Mostrar notificación para tickets pendientes",
+            legends: {
+              userCreation:
+                "Define si se pueden crear nuevas empresas y usuarios.",
+              evaluations:
+                "Envía encuesta de satisfacción al cerrar el atendimiento.",
+              officeScheduling:
+                "Ámbito del horario: cola, empresa o conexión.",
+              sendGreetingAccepted:
+                "Mensaje automático al aceptar el ticket.",
+              userRandom:
+                "Asigna tickets nuevos al azar entre agentes disponibles.",
+              sendMsgTransfTicket:
+                "Texto al transferir entre colas o agentes.",
+              chatBotType: "Formato de respuesta del bot.",
+              acceptCallWhatsapp:
+                "Avisa que no se aceptan llamadas de voz por WhatsApp.",
+              sendSignMessage:
+                "Permite al agente elegir enviar la firma.",
+              sendGreetingMessageOneQueues:
+                "Saludo cuando solo hay una cola.",
+              sendQueuePosition:
+                "Indica la posición del contacto en la fila.",
+              sendFarewellWaitingTicket:
+                "Mensaje mientras el ticket está en espera.",
+              acceptAudioMessageContact:
+                "Acepta o bloquea audios de los contactos.",
+              enableLGPD:
+                "Activa consentimiento y reglas de datos (LGPD).",
+              requiredTag: "Exige etiqueta antes de cerrar el ticket.",
+              closeTicketOnTransfer: "Cierra el ticket al pasar a otra cola.",
+              showNotificationPending:
+                "Muestra avisos para tickets pendientes.",
+              directTicketsToWallets:
+                "Mueve al cliente automáticamente a la cartera.",
+              lgpdWelcome: "Texto de bienvenida en el flujo LGPD.",
+              lgpdLink: "URL de la política de privacidad o términos.",
+              lgpdObfuscateDelete:
+                "Oculta el contenido de mensajes borrados para el agente.",
+              lgpdAlwaysConsent:
+                "Solicita consentimiento cuando aplica la regla.",
+              lgpdObfuscatePhone:
+                "Enmascara parte del teléfono en la interfaz.",
+              transferMessage:
+                "En transferencia; variables como ${queue.name} las completa el sistema.",
+              greetingAcceptedMessage:
+                "Mensaje cuando comienza el atendimiento del ticket.",
+              acceptCallWhatsappMessage:
+                "Texto cuando no se aceptan llamadas por WhatsApp.",
+              sendQueuePositionMessage:
+                "Contenido que informa la posición en la fila.",
+            },
           },
           customMessages: {
             sendQueuePositionMessage: "Mensaje de posición en la fila",
@@ -2126,6 +2177,15 @@ const messages = {
         },
       },
       whitelabel: {
+        pageTitle: "Identidad visual",
+        pageSubtitle:
+          "Personaliza colores, logos y idiomas para reflejar tu marca.",
+        previewForceLightLogo:
+          "Forzar el logo del tema claro en la vista previa (desactiva el contraste automático).",
+        saveLogosSection: "Guardar logos",
+        saveLanguagesSection: "Guardar idiomas",
+        logoSectionSave:
+          "Cambios registrados. Cada archivo subido se aplica automáticamente.",
         primaryColorLight: "Color Primario (Tema Claro)",
         primaryColorDark: "Color Primario (Tema Oscuro)",
         appName: "Nombre de la Aplicación",
@@ -2143,6 +2203,8 @@ const messages = {
         sections: {
           general: "Configuraciones Generales",
           generalDescription: "Configura el nombre y la información básica de la aplicación",
+          identityIntro:
+            "Nombre de la app e identidad de marca (la vista previa usa los mismos logos que la app).",
           colors: "Colores y Temas",
           colorsDescription: "Personaliza los colores primarios para los temas claro y oscuro",
           logos: "Logos e Imágenes",

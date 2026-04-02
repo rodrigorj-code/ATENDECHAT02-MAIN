@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { useTranslation } from "react-i18next";
 import {
   Dashboard as DashboardIcon,
@@ -131,6 +131,19 @@ const EmailCalendar = ({ data }) => (
 );
 
 const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.type === "dark";
+  const surface = isDark ? "#161616" : "#FFFFFF";
+  const surfaceBorder = isDark ? "rgba(255,255,255,0.12)" : "#E2E8F0";
+  const paperShadow = isDark
+    ? "0 4px 16px rgba(0,0,0,0.45)"
+    : "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)";
+  const textMain = isDark ? "#f4f4f5" : "#111827";
+  const textMuted = isDark ? "#94a3b8" : "#64748B";
+  const heading = isDark ? "#e4e4e7" : "#1E293B";
+  const inactiveBtnBg = isDark ? "#1f1f1f" : "#fff";
+  const activeBtnBg = "#131B2D";
+
   const [totals, setTotals] = useState({ templates: 0, sent: 0, scheduled: 0, success: 0 });
   const [chartDate, setChartDate] = useState("");
   const [anchorChartDate, setAnchorChartDate] = useState(null);
@@ -205,6 +218,7 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
   const chartData = React.useMemo(() => {
     const labels = series.labels;
     const data = series.values;
+    const line = isDark ? "#60a5fa" : "#1E293B";
     return {
       labels,
       datasets: [
@@ -212,64 +226,100 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
           label: "Envios",
           data,
           fill: false,
-          borderColor: "#1E293B",
+          borderColor: line,
           tension: 0.3,
           borderWidth: 2,
-          pointBackgroundColor: "#1E293B",
+          pointBackgroundColor: line,
         },
       ],
     };
-  }, [series]);
+  }, [series, isDark]);
 
-  const chartOptions = {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { borderDash: [4, 4], color: "#E2E8F0" }
+  const chartOptions = React.useMemo(
+    () => ({
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { borderDash: [4, 4], color: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0" },
+          ticks: { color: textMuted },
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: textMuted },
+        },
       },
-      x: {
-        grid: { display: false },
-      },
-    },
-    elements: { point: { radius: 0, hoverRadius: 4 } },
+      elements: { point: { radius: 0, hoverRadius: 4 } },
+    }),
+    [isDark, textMuted]
+  );
+
+  const cardStyle = {
+    padding: 16,
+    borderRadius: 12,
+    boxShadow: paperShadow,
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 360,
+    height: "100%",
+    overflow: "hidden",
+    backgroundColor: surface,
+    border: `1px solid ${isDark ? surfaceBorder : "transparent"}`,
   };
-
-  const cardStyle = { padding: 16, borderRadius: 12, boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", display: "flex", flexDirection: "column", minHeight: 360, height: "100%", overflow: "hidden" };
   const tableWrapStyle = { flex: 1 };
   return (
     <Grid container spacing={3} alignItems="stretch" style={{ margin: 0, width: "100%", overflow: "hidden" }}>
-      {kpis.map(({ title, value, subtitle, Icon, circle, color }) => (
+      {kpis.map(({ title, value, subtitle, Icon, circle, color }) => {
+        const valueColor =
+          title === "Taxa de Sucesso" ? (isDark ? "#34d399" : color) : isDark ? textMain : color;
+        return (
         <Grid item xs={12} sm={6} md={3} key={title}>
-          <Paper style={{ padding: 16, borderRadius: 12, boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" }}>
+          <Paper
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              boxShadow: paperShadow,
+              backgroundColor: surface,
+              border: `1px solid ${isDark ? surfaceBorder : "transparent"}`,
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <div style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: circle, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon style={{ fontSize: 18, color: "#1E293B" }} />
               </div>
-              <Typography variant="body2" style={{ color: "#111827", opacity: 1 }}>{title}</Typography>
+              <Typography variant="body2" style={{ color: textMain, opacity: 1 }}>{title}</Typography>
             </div>
-            <Typography variant="h4" style={{ fontWeight: 700, color }}>{value}</Typography>
-            <Typography variant="caption" style={{ color: "#64748B" }}>{subtitle}</Typography>
+            <Typography variant="h4" style={{ fontWeight: 700, color: valueColor }}>{value}</Typography>
+            <Typography variant="caption" style={{ color: textMuted }}>{subtitle}</Typography>
           </Paper>
         </Grid>
-      ))}
+        );
+      })}
 
       <Grid item xs={12}>
-            <Paper style={{ padding: 16, borderRadius: 12, boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" }}>
+            <Paper
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                boxShadow: paperShadow,
+                backgroundColor: surface,
+                border: `1px solid ${isDark ? surfaceBorder : "transparent"}`,
+              }}
+            >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
-              <Typography variant="h6" style={{ color: "#1E293B", fontWeight: 600 }}>Tendência de Envios</Typography>
-              <Typography variant="body2" style={{ color: "#64748B" }}>Quantidade de emails enviados por período</Typography>
+              <Typography variant="h6" style={{ color: heading, fontWeight: 400 }}>Tendência de Envios</Typography>
+              <Typography variant="body2" style={{ color: textMuted }}>Quantidade de emails enviados por período</Typography>
             </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <ButtonGroup variant="outlined" color="default">
                   <MuiButton
                     onClick={() => setPeriod("week")}
                     style={{
-                      backgroundColor: period === "week" ? "#131B2D" : "#fff",
-                      color: period === "week" ? "#fff" : "#111827",
-                      borderColor: "#E2E8F0",
+                      backgroundColor: period === "week" ? activeBtnBg : inactiveBtnBg,
+                      color: period === "week" ? "#fff" : textMain,
+                      borderColor: surfaceBorder,
                       fontWeight: 400
                     }}
                   >
@@ -278,9 +328,9 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
                   <MuiButton
                     onClick={() => setPeriod("month")}
                     style={{
-                      backgroundColor: period === "month" ? "#131B2D" : "#fff",
-                      color: period === "month" ? "#fff" : "#111827",
-                      borderColor: "#E2E8F0",
+                      backgroundColor: period === "month" ? activeBtnBg : inactiveBtnBg,
+                      color: period === "month" ? "#fff" : textMain,
+                      borderColor: surfaceBorder,
                       fontWeight: 400
                     }}
                   >
@@ -289,9 +339,9 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
                   <MuiButton
                     onClick={() => setPeriod("year")}
                     style={{
-                      backgroundColor: period === "year" ? "#131B2D" : "#fff",
-                      color: period === "year" ? "#fff" : "#111827",
-                      borderColor: "#E2E8F0",
+                      backgroundColor: period === "year" ? activeBtnBg : inactiveBtnBg,
+                      color: period === "year" ? "#fff" : textMain,
+                      borderColor: surfaceBorder,
                       fontWeight: 400
                     }}
                   >
@@ -301,8 +351,15 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
                 <MuiButton
                   variant="outlined"
                   onClick={(e) => setAnchorChartDate(e.currentTarget)}
-                  startIcon={<CalendarIcon style={{ fontSize: 16, color: "#9CA3AF" }} />}
-                  style={{ background: "#fff", color: "#111827", borderColor: "#E2E8F0", fontWeight: 400, padding: "6px 10px", minWidth: 124 }}
+                  startIcon={<CalendarIcon style={{ fontSize: 16, color: textMuted }} />}
+                  style={{
+                    background: inactiveBtnBg,
+                    color: textMain,
+                    borderColor: surfaceBorder,
+                    fontWeight: 400,
+                    padding: "6px 10px",
+                    minWidth: 124
+                  }}
                 >
                   {chartDate ? fmtDate(chartDate) : "dd/mm/aaaa"}
                 </MuiButton>
@@ -330,7 +387,7 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
 
       <Grid item xs={12} md={6}>
         <Paper style={cardStyle}>
-          <Typography variant="h6" style={{ color: "#0F172A", fontWeight: 400, letterSpacing: 0, marginBottom: 8 }}>
+          <Typography variant="h6" style={{ color: heading, fontWeight: 400, letterSpacing: 0, marginBottom: 8 }}>
             Status dos Envios Recentes
           </Typography>
           <TableContainer style={{ ...tableWrapStyle, overflowX: "hidden", overflowY: "hidden", maxHeight: "none" }}>
@@ -352,9 +409,15 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
                   const isOk = /(sent|enviado|delivered|sucesso)/i.test(status);
                   const isError = /(erro|error|fail|bounce|bounced)/i.test(status);
                   const chipStyle = isOk
-                    ? { background: "#ECFDF5", color: "#059669" }
+                    ? isDark
+                      ? { background: "rgba(16,185,129,0.15)", color: "#34d399" }
+                      : { background: "#ECFDF5", color: "#059669" }
                     : isError
-                    ? { background: "#FEF2F2", color: "#DC2626" }
+                    ? isDark
+                      ? { background: "rgba(248,113,113,0.12)", color: "#f87171" }
+                      : { background: "#FEF2F2", color: "#DC2626" }
+                    : isDark
+                    ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa" }
                     : { background: "#EFF6FF", color: "#2563EB" };
                   const label =
                     isOk ? "Enviado" : isError ? "Erro" : "Pendente";
@@ -384,7 +447,7 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
 
       <Grid item xs={12} md={6}>
         <Paper style={cardStyle}>
-          <Typography variant="h6" style={{ color: "#0F172A", fontWeight: 400, letterSpacing: 0, marginBottom: 8 }}>
+          <Typography variant="h6" style={{ color: heading, fontWeight: 400, letterSpacing: 0, marginBottom: 8 }}>
             Agendamentos Pendentes
           </Typography>
           <TableContainer style={{ ...tableWrapStyle, overflowX: "hidden", overflowY: "hidden", maxHeight: "none" }}>
@@ -408,7 +471,7 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
                       <TableCell style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" }}>{statusPt}</TableCell>
                       <TableCell style={{ whiteSpace: "normal", wordBreak: "break-word", overflow: "hidden", verticalAlign: "middle" }}>
                         <div style={{ fontWeight: 600 }}>{s.contactName || to || "-"}</div>
-                        <div style={{ fontSize: 12, color: "#64748B", whiteSpace: "normal", wordBreak: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>{to || "-"}</div>
+                        <div style={{ fontSize: 12, color: textMuted, whiteSpace: "normal", wordBreak: "break-word", overflow: "hidden", textOverflow: "ellipsis" }}>{to || "-"}</div>
                       </TableCell>
                       <TableCell style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" }}>{s.campaignName || "-"}</TableCell>
                       <TableCell style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle" }}>{s.subject || "-"}</TableCell>
@@ -434,7 +497,7 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     height: "100%",
     padding: theme.spacing(1.5),
-    backgroundColor: "#F8FAFC",
+    backgroundColor: theme.palette.type === "dark" ? "#000000" : "#F8FAFC",
   },
   content: {
     flex: 1,
@@ -450,6 +513,13 @@ const useStyles = makeStyles((theme) => ({
 
 const EmailPage = () => {
   const classes = useStyles();
+  const theme = useTheme();
+  const isDarkPage = theme.palette.type === "dark";
+  const emailSurface = isDarkPage ? "#161616" : "#FFFFFF";
+  const emailBorder = isDarkPage ? "rgba(255,255,255,0.12)" : "#E5E7EB";
+  const emailText = isDarkPage ? "#f4f4f5" : "#111827";
+  const emailMuted = isDarkPage ? "#94a3b8" : "#6B7280";
+  const emailHeading = isDarkPage ? "#e4e4e7" : "#0F172A";
   const { t } = useTranslation();
   const location = useLocation();
   const history = useHistory();
@@ -1115,40 +1185,40 @@ const EmailPage = () => {
               return (
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
-                <Paper style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+                <Paper style={{ padding: 16, borderRadius: 12, border: `1px solid ${emailBorder}`, background: emailSurface }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 12, background: "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <MailOutlineIcon style={{ color: "#1E40AF" }} />
+                    <div style={{ width: 36, height: 36, borderRadius: 12, background: isDarkPage ? "rgba(59,130,246,0.22)" : "#EEF2FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <MailOutlineIcon style={{ color: isDarkPage ? "#60a5fa" : "#1E40AF" }} />
                     </div>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 12, color: "#6B7280" }}>Total</span>
-                      <span style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1 }}>{total}</span>
+                      <span style={{ fontSize: 12, color: emailMuted }}>Total</span>
+                      <span style={{ fontSize: 20, fontWeight: 700, color: emailText, lineHeight: 1 }}>{total}</span>
                     </div>
                   </div>
                 </Paper>
               </Grid>
               <Grid item xs={12} sm={4}>
-                <Paper style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+                <Paper style={{ padding: 16, borderRadius: 12, border: `1px solid ${emailBorder}`, background: emailSurface }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 12, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CheckCircleOutlineIcon style={{ color: "#059669" }} />
+                    <div style={{ width: 36, height: 36, borderRadius: 12, background: isDarkPage ? "rgba(16,185,129,0.15)" : "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <CheckCircleOutlineIcon style={{ color: isDarkPage ? "#34d399" : "#059669" }} />
                     </div>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 12, color: "#6B7280" }}>Enviados</span>
-                      <span style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1 }}>{sent}</span>
+                      <span style={{ fontSize: 12, color: emailMuted }}>Enviados</span>
+                      <span style={{ fontSize: 20, fontWeight: 700, color: emailText, lineHeight: 1 }}>{sent}</span>
                     </div>
                   </div>
                 </Paper>
               </Grid>
               <Grid item xs={12} sm={4}>
-                <Paper style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+                <Paper style={{ padding: 16, borderRadius: 12, border: `1px solid ${emailBorder}`, background: emailSurface }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 12, background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CancelOutlinedIcon style={{ color: "#DC2626" }} />
+                    <div style={{ width: 36, height: 36, borderRadius: 12, background: isDarkPage ? "rgba(248,113,113,0.12)" : "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <CancelOutlinedIcon style={{ color: isDarkPage ? "#f87171" : "#DC2626" }} />
                     </div>
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: 12, color: "#6B7280" }}>Erros</span>
-                      <span style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1 }}>{errors}</span>
+                      <span style={{ fontSize: 12, color: emailMuted }}>Erros</span>
+                      <span style={{ fontSize: 20, fontWeight: 700, color: emailText, lineHeight: 1 }}>{errors}</span>
                     </div>
                   </div>
                 </Paper>
@@ -1157,16 +1227,16 @@ const EmailPage = () => {
               );
             })()}
 
-            <Paper style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
-              <Typography variant="h6" style={{ fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>Histórico de Envios</Typography>
+            <Paper style={{ padding: 16, borderRadius: 12, border: `1px solid ${emailBorder}`, background: emailSurface }}>
+              <Typography variant="h6" style={{ fontWeight: 700, color: emailHeading, marginBottom: 8 }}>Histórico de Envios</Typography>
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell style={{ color: "#6B7280", fontWeight: 600 }}>Data/Hora</TableCell>
-                      <TableCell style={{ color: "#6B7280", fontWeight: 600 }}>Destinatário</TableCell>
-                      <TableCell style={{ color: "#6B7280", fontWeight: 600 }}>Remetente</TableCell>
-                      <TableCell style={{ color: "#6B7280", fontWeight: 600 }}>Status</TableCell>
+                      <TableCell style={{ color: emailMuted, fontWeight: 600 }}>Data/Hora</TableCell>
+                      <TableCell style={{ color: emailMuted, fontWeight: 600 }}>Destinatário</TableCell>
+                      <TableCell style={{ color: emailMuted, fontWeight: 600 }}>Remetente</TableCell>
+                      <TableCell style={{ color: emailMuted, fontWeight: 600 }}>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1178,21 +1248,27 @@ const EmailPage = () => {
                       const isOk = /(sent|enviado|delivered|sucesso)/.test(status) && !/(erro|error|fail|bounce|bounced)/.test(status);
                       const isError = /(erro|error|fail|bounce|bounced)/.test(status);
                       const chipStyle = isOk
-                        ? { background: "#ECFDF5", color: "#059669" }
+                        ? isDarkPage
+                          ? { background: "rgba(16,185,129,0.15)", color: "#34d399" }
+                          : { background: "#ECFDF5", color: "#059669" }
                         : isError
-                        ? { background: "#FEF2F2", color: "#DC2626" }
+                        ? isDarkPage
+                          ? { background: "rgba(248,113,113,0.12)", color: "#f87171" }
+                          : { background: "#FEF2F2", color: "#DC2626" }
+                        : isDarkPage
+                        ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa" }
                         : { background: "#EFF6FF", color: "#2563EB" };
                       const label = isOk ? "Enviado" : isError ? "Erro" : "Pendente";
                       return (
                         <TableRow key={e.id || `${to}-${when}-${from}`}>
-                          <TableCell style={{ color: "#111827" }}>{when ? new Date(when).toLocaleString() : "-"}</TableCell>
+                          <TableCell style={{ color: emailText }}>{when ? new Date(when).toLocaleString() : "-"}</TableCell>
                           <TableCell>
-                            <div style={{ color: "#111827", fontWeight: 600 }}>{e.recipientName || to || "-"}</div>
-                            <div style={{ color: "#6B7280", fontSize: 12 }}>{to || "-"}</div>
+                            <div style={{ color: emailText, fontWeight: 600 }}>{e.recipientName || to || "-"}</div>
+                            <div style={{ color: emailMuted, fontSize: 12 }}>{to || "-"}</div>
                           </TableCell>
                           <TableCell>
-                            <div style={{ color: "#111827", fontWeight: 600 }}>{e.senderName || from || "-"}</div>
-                            <div style={{ color: "#6B7280", fontSize: 12 }}>{from || "-"}</div>
+                            <div style={{ color: emailText, fontWeight: 600 }}>{e.senderName || from || "-"}</div>
+                            <div style={{ color: emailMuted, fontSize: 12 }}>{from || "-"}</div>
                           </TableCell>
                           <TableCell>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "2px 10px", borderRadius: 999, fontWeight: 600, fontSize: 12, ...chipStyle }}>

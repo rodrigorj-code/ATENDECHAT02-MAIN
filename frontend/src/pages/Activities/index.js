@@ -1,6 +1,6 @@
 // Re-saved
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import {
   List as ListIcon,
   CalendarToday as CalendarIcon,
@@ -394,6 +394,7 @@ const ActivitiesCalendar = ({ activities, onCreate }) => {
 };
 
 const Activities = () => {
+  const theme = useTheme();
   const classes = useStyles();
   const [viewMode, setViewMode] = useState("board");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -865,21 +866,38 @@ const Activities = () => {
       ) : (
         <>
           {viewMode === "dashboard" && (() => {
-            const palette = {
-              bg: "#F8FAFC",
-              card: "#FFFFFF",
-              text: "#0F172A",
-              sub: "#64748B",
-              border: "#E2E8F0",
-              shadow: "0 2px 8px rgba(2,6,23,0.06)",
-              blue: "#3B82F6",
-              blueDark: "#2563EB",
-              blueLight: "#60A5FA",
-              green: "#10B981",
-              red: "#EF4444",
-              amber: "#F59E0B",
-              gray: "#6B7280"
-            };
+            const isDark = theme.palette.type === "dark";
+            const palette = isDark
+              ? {
+                  bg: "#000000",
+                  card: "#161616",
+                  text: "#f4f4f5",
+                  sub: "#94a3b8",
+                  border: "rgba(255,255,255,0.12)",
+                  shadow: "0 4px 16px rgba(0,0,0,0.45)",
+                  blue: "#60a5fa",
+                  blueDark: "#3b82f6",
+                  blueLight: "#93c5fd",
+                  green: "#34d399",
+                  red: "#f87171",
+                  amber: "#fbbf24",
+                  gray: "#9ca3af",
+                }
+              : {
+                  bg: "#F8FAFC",
+                  card: "#FFFFFF",
+                  text: "#0F172A",
+                  sub: "#64748B",
+                  border: "#E2E8F0",
+                  shadow: "0 2px 8px rgba(2,6,23,0.06)",
+                  blue: "#3B82F6",
+                  blueDark: "#2563EB",
+                  blueLight: "#60A5FA",
+                  green: "#10B981",
+                  red: "#EF4444",
+                  amber: "#F59E0B",
+                  gray: "#6B7280",
+                };
             const todayMid = new Date(); todayMid.setHours(0,0,0,0);
             const total = filteredActivities.length;
             const completed = filteredActivities.filter(a => String(a.status).toLowerCase() === "completed").length;
@@ -1017,7 +1035,9 @@ const Activities = () => {
               justifyContent: "space-between",
               gap: 6,
               minHeight: 110,
-              background: `linear-gradient(180deg, rgba(99,102,241,0.06) 0%, rgba(255,255,255,0.88) 100%)`,
+              background: isDark
+                ? `linear-gradient(180deg, rgba(99,102,241,0.14) 0%, ${palette.card} 100%)`
+                : `linear-gradient(180deg, rgba(99,102,241,0.06) 0%, rgba(255,255,255,0.88) 100%)`,
               overflow: "hidden"
             };
             const chartCardStyle = {
@@ -1058,7 +1078,10 @@ const Activities = () => {
               },
               scales: {
                 x: { grid: { display: false }, ticks: { color: palette.sub } },
-                y: { grid: { color: "#E6F0FF" }, ticks: { color: palette.sub } }
+                y: {
+                  grid: { color: isDark ? "rgba(255,255,255,0.08)" : "#E6F0FF" },
+                  ticks: { color: palette.sub },
+                },
               }
             };
             const barCreatedDone = {
@@ -1118,7 +1141,13 @@ const Activities = () => {
               spanGaps: true,
               scales: {
                 x: { grid: { display: false }, ticks: { color: palette.sub } },
-                y: { grid: { color: "#E6F0FF" }, ticks: { color: palette.sub }, beginAtZero: true, suggestedMax, grace: "10%" }
+                y: {
+                  grid: { color: isDark ? "rgba(255,255,255,0.08)" : "#E6F0FF" },
+                  ticks: { color: palette.sub },
+                  beginAtZero: true,
+                  suggestedMax,
+                  grace: "10%",
+                },
               }
             };
             const linePerDay = {

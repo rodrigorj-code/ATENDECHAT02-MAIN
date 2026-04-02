@@ -103,7 +103,8 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
   },
   miniTopbar: {
-    backgroundColor: "#ffffff",
+    backgroundColor:
+      theme.palette.type === "dark" ? "#161616" : "#ffffff",
     borderRadius: 0,
     padding: theme.spacing(0.3, 2),
     display: "flex",
@@ -114,7 +115,9 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     width: "100%",
     boxShadow:
-      "0 2px 4px rgba(2, 6, 23, 0.04), 0 6px 16px rgba(2, 6, 23, 0.06), inset 0 1px 0 rgba(17, 24, 39, 0.04)",
+      theme.palette.type === "dark"
+        ? "0 2px 10px rgba(0, 0, 0, 0.45)"
+        : "0 2px 4px rgba(2, 6, 23, 0.04), 0 6px 16px rgba(2, 6, 23, 0.06), inset 0 1px 0 rgba(17, 24, 39, 0.04)",
     borderBottom: "none",
     position: "sticky",
     top: 0,
@@ -157,7 +160,12 @@ const useStyles = makeStyles((theme) => ({
   blockPaper: {
     padding: theme.spacing(1.5),
     borderRadius: 8,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor:
+      theme.palette.type === "dark" ? "#161616" : theme.palette.background.paper,
+    border:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255, 255, 255, 0.08)"
+        : "none",
     boxShadow:
       theme.palette.mode === "light"
         ? "0 10px 30px rgba(2, 6, 23, 0.08)"
@@ -207,7 +215,7 @@ const useStyles = makeStyles((theme) => ({
     width: 22,
     height: 22,
     color: theme.palette.text.secondary,
-    stroke: "#111",
+    stroke: theme.palette.type === "dark" ? "#e5e7eb" : "#111",
     strokeWidth: 1.75,
   },
   dragHandleBtn: {
@@ -1309,7 +1317,7 @@ const Dashboard = () => {
                     onClick={toggleDrawer}
                     aria-label="Alternar menu lateral"
                     title="Menu"
-                    style={{ color: "#000" }}
+                    style={{ color: theme.palette.text.primary }}
                   >
                     <MenuIcon style={{ fontSize: 20 }} />
                   </IconButton>
@@ -1329,7 +1337,7 @@ const Dashboard = () => {
                     aria-label="Mais opções"
                     title="Mais"
                   >
-                    <MoreHorizIcon style={{ fontSize: 20, color: "#000" }} />
+                    <MoreHorizIcon style={{ fontSize: 20, color: theme.palette.text.primary }} />
                   </IconButton>
                 </div>
               </div>

@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useLocation } from "react-router-dom";
-import { makeStyles, Paper } from "@material-ui/core";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
+import Paper from "@material-ui/core/Paper";
 
-import TabPanel from "../../components/TabPanel";
+import TabPanel from "../../components/TabPanel/index.js";
 
 import SchedulesForm from "../../components/SchedulesForm";
 import CompaniesManager from "../../components/CompaniesManager";
-import PlansManager from "../../components/PlansManager";
-import Options from "../../components/Settings/Options";
-import Whitelabel from "../../components/Settings/Whitelabel";
+import Options from "../../components/Settings/Options.js";
+import Whitelabel from "../../components/Settings/Whitelabel.js";
 import FinalizacaoAtendimento from "../../components/Settings/FinalizacaoAtendimento";
 import Users from "../Users";
 import AllConnections from "../AllConnections";
 import QueueIntegration from "../QueueIntegration";
-import Invoices from "../Financeiro";
 import Tags from "../Tags";
 import BirthdaySettings from "../BirthdaySettings";
-import Announcements from "../Annoucements";
 import EmailSettings from "../../components/Settings/EmailSettings";
 import Connections from "../Connections";
 
@@ -30,9 +28,64 @@ import OnlyForSuperUser from "../../components/OnlyForSuperUser";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 import useSettings from "../../hooks/useSettings";
 import ForbiddenPage from "../../components/ForbiddenPage/index.js";
-import ActivitiesStyleLayout from "../../components/ActivitiesStyleLayout";
+import ActivitiesStyleLayout from "../../components/ActivitiesStyleLayout/index.js";
+
+const settingsFontStack = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
 const useStyles = makeStyles((theme) => ({
+  /** Tipografia /settings: Helvetica Neue; títulos como modal Nova Atividade (h6, peso normal) */
+  settingsRoot: {
+    fontFamily: settingsFontStack,
+    "& .MuiTypography-h6": {
+      fontFamily: settingsFontStack,
+      fontWeight: 400,
+    },
+    "& .MuiTypography-h5": {
+      fontFamily: settingsFontStack,
+      fontWeight: 400,
+    },
+    "& .MuiTypography-h4": {
+      fontFamily: settingsFontStack,
+      fontWeight: 400,
+    },
+    "& .MuiTypography-subtitle1": {
+      fontFamily: settingsFontStack,
+      fontWeight: 400,
+    },
+    "& .MuiTypography-subtitle2": {
+      fontFamily: settingsFontStack,
+      fontWeight: 400,
+    },
+    "& .MuiTypography-body1": {
+      fontFamily: settingsFontStack,
+    },
+    "& .MuiTypography-body2": {
+      fontFamily: settingsFontStack,
+    },
+    "& .MuiTypography-caption": {
+      fontFamily: settingsFontStack,
+    },
+    "& .MuiButton-root": {
+      fontFamily: settingsFontStack,
+    },
+    "& .MuiInputBase-root": {
+      fontFamily: settingsFontStack,
+    },
+    "& .MuiFormLabel-root": {
+      fontFamily: settingsFontStack,
+    },
+    "& .MuiTab-root": {
+      fontFamily: settingsFontStack,
+      fontWeight: 400,
+    },
+    "& .MuiTableCell-head": {
+      fontFamily: settingsFontStack,
+      fontWeight: 400,
+    },
+    "& .MuiTableCell-body": {
+      fontFamily: settingsFontStack,
+    },
+  },
   root: {
     flex: 1,
     backgroundColor: theme.palette.background.paper,
@@ -43,16 +96,32 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
   },
   paper: {
-    overflowY: "hidden",
+    overflowY: "auto",
     overflowX: "hidden",
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.25, 2, 2),
     display: "flex",
-    alignItems: "center",
+    flexDirection: "column",
+    flex: 1,
+    alignSelf: "stretch",
+    alignItems: "stretch",
     width: "100%",
+    minHeight: 0,
+    maxWidth: "100%",
+    margin: 0,
+    backgroundColor: "transparent",
+    boxSizing: "border-box",
+    fontFamily: settingsFontStack,
+    [theme.breakpoints.up("md")]: {
+      padding: theme.spacing(1.5, 2.5, 2.5),
+    },
   },
   container: {
     width: "100%",
     maxHeight: "100%",
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
   },
   control: {
     padding: theme.spacing(1),
@@ -64,6 +133,7 @@ const useStyles = makeStyles((theme) => ({
 
 const SettingsCustom = () => {
   const classes = useStyles();
+  const theme = useTheme();
   const [tab, setTab] = useState("options");
   const [schedules, setSchedules] = useState([]);
   const [company, setCompany] = useState({});
@@ -84,11 +154,21 @@ const SettingsCustom = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initialTab = params.get("tab");
-    if (initialTab) {
+    if (initialTab && initialTab !== "financeiro" && initialTab !== "plans") {
       setTab(initialTab);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (
+      tab === "financeiro" ||
+      tab === "plans" ||
+      tab === "announcements"
+    ) {
+      setTab("options");
+    }
+  }, [tab]);
 
   useEffect(() => {
     async function findData() {
@@ -152,7 +232,6 @@ const SettingsCustom = () => {
     return currentUser?.email?.toLowerCase() === "admin@admin.com";
   };
 
-  // Construct viewModes (Tabs) - keeping Plans and Financeiro as the last items, with Plans before Financeiro
   const baseTabs = [
     { value: "options", label: i18n.t("settings.tabs.options") },
     ...(schedulesEnabled ? [{ value: "schedules", label: "Horários" }] : []),
@@ -163,16 +242,9 @@ const SettingsCustom = () => {
     { value: "integrations", label: "Integrações" },
     { value: "email", label: "Email" },
     { value: "tags", label: "Tags" },
-    { value: "announcements", label: "Informativos" },
     ...(isSpecificAdminUI() ? [{ value: "companies", label: "Assinaturas" }] : []),
   ];
-  const trailingTabs = isSpecificAdminUI()
-    ? [
-        { value: "plans", label: i18n.t("settings.tabs.plans") },
-        { value: "financeiro", label: "Financeiro" }
-      ]
-    : [];
-  const settingsTabs = [...baseTabs, ...trailingTabs];
+  const settingsTabs = baseTabs;
 
   return (
     <>
@@ -190,6 +262,9 @@ const SettingsCustom = () => {
           enableTabsScroll={true}
           hideNavDivider={true}
           hideHeaderDivider={true}
+          contentEdgeToEdge={true}
+          rootBackground={theme.palette.background.paper}
+          rootClassName={classes.settingsRoot}
         >
             <Paper className={classes.paper} elevation={0}>
               <TabPanel
@@ -216,15 +291,6 @@ const SettingsCustom = () => {
                 user={currentUser}
                 yes={() => (
                   <>
-                    {isSpecificAdminUI() && (
-                      <TabPanel
-                        className={classes.container}
-                        value={tab}
-                        name={"plans"}
-                      >
-                        <PlansManager />
-                      </TabPanel>
-                    )}
                     <TabPanel
                       className={classes.container}
                       value={tab}
@@ -291,29 +357,12 @@ const SettingsCustom = () => {
               >
                 <EmailSettings renderAsTab={true} />
               </TabPanel>
-              {isSpecificAdminUI() && (
-                <TabPanel
-                  className={classes.container}
-                  value={tab}
-                  name={"financeiro"}
-                >
-                  <Invoices renderAsTab={true} />
-                </TabPanel>
-              )}
               <TabPanel
                 className={classes.container}
                 value={tab}
                 name={"tags"}
               >
                 <Tags renderAsTab={true} />
-              </TabPanel>
-              
-              <TabPanel
-                className={classes.container}
-                value={tab}
-                name={"announcements"}
-              >
-                <Announcements renderAsTab={true} />
               </TabPanel>
             </Paper>
         </ActivitiesStyleLayout>

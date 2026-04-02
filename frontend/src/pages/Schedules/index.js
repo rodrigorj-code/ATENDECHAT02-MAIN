@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import Grid from "@material-ui/core/Grid";
 import Typography from "@material-ui/core/Typography";
@@ -178,31 +178,14 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     height: "100%",
     overflow: "hidden",
-  },
-  calendarToolbar: {
-    "& .rbc-toolbar-label": {
-      color: theme.mode === "light" ? theme.palette.light : "white",
-    },
-    "& .rbc-btn-group button": {
-      color: theme.mode === "light" ? theme.palette.light : "white",
-      "&:hover": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-      "&:active": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-      "&:focus": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-      "&.rbc-active": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-    },
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
   },
 }));
 
 const Schedules = () => {
   const classes = useStyles();
+  const muiTheme = useTheme();
   const history = useHistory();
 
   //   const socketManager = useContext(SocketContext);
@@ -534,7 +517,7 @@ const Schedules = () => {
 
   return (
     <MainContainer>
-      <div className="schedules-page">
+      <div className="schedules-page" data-theme={muiTheme.palette.type}>
         <ConfirmationModal
           title={
             deletingSchedule &&
@@ -592,18 +575,18 @@ const Schedules = () => {
           disableFilterBar
           hideHeaderDivider
           hideNavDivider
-          rootBackground="#FFFFFF"
           compactHeader
           transparentHeader
-          disableFilterBar
-          hideHeaderDivider
-          hideNavDivider
         >
           <div className="schedules-header">
             <div className="breadcrumb">Dashboard &lt; Calendário</div>
             <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {drawerCtx && drawerCtx.drawerOpen === false ? (
-                <IconButton size="small" onClick={() => drawerCtx.setDrawerOpen(true)} style={{ marginRight: 6 }}>
+                <IconButton
+                  size="small"
+                  onClick={() => drawerCtx.setDrawerOpen(true)}
+                  style={{ marginRight: 6, color: muiTheme.palette.text.primary }}
+                >
                   <MenuIcon fontSize="small" />
                 </IconButton>
               ) : null}

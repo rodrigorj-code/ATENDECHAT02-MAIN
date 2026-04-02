@@ -64,7 +64,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: '0.85rem',
     fontWeight: 400,
     letterSpacing: '0.06em',
-    color: '#6B7280',
+    color: theme.palette.type === 'dark' ? '#94a3b8' : '#6B7280',
     textTransform: 'uppercase',
     opacity: 1
   },
@@ -72,8 +72,8 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 11,
     padding: '2px 8px',
     borderRadius: 8,
-    backgroundColor: '#F9FAFB',
-    color: '#6B7280',
+    backgroundColor: theme.palette.type === 'dark' ? 'rgba(255,255,255,0.08)' : '#F9FAFB',
+    color: theme.palette.type === 'dark' ? '#e5e7eb' : '#6B7280',
     fontWeight: 600
   },
   columnContent: {
@@ -96,16 +96,16 @@ const useStyles = makeStyles((theme) => ({
     position: 'relative',
     margin: theme.spacing(0.75, 0.5),
     borderRadius: 8,
-    border: '1px solid #E5E7EB',
-    boxShadow: '0 1px 2px rgba(15,23,42,0.05)',
+    border: theme.palette.type === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E5E7EB',
+    boxShadow: theme.palette.type === 'dark' ? '0 2px 8px rgba(0,0,0,0.35)' : '0 1px 2px rgba(15,23,42,0.05)',
     cursor: 'pointer',
     minHeight: 96,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: theme.palette.type === 'dark' ? '#161616' : '#fff',
     '&:hover': {
-      boxShadow: '0 3px 8px rgba(0,0,0,0.12)',
+      boxShadow: theme.palette.type === 'dark' ? '0 4px 14px rgba(0,0,0,0.45)' : '0 3px 8px rgba(0,0,0,0.12)',
       '& $cardDeleteBtn': {
         opacity: 1,
         transform: 'scale(1)'
@@ -119,7 +119,7 @@ const useStyles = makeStyles((theme) => ({
   },
   cardTitle: {
     fontWeight: 400,
-    color: '#111827',
+    color: theme.palette.type === 'dark' ? '#f4f4f5' : '#111827',
     display: '-webkit-box',
     WebkitLineClamp: 2,
     WebkitBoxOrient: 'vertical',
@@ -127,7 +127,7 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(1),
   },
   cardMeta: {
-    color: '#6B7280'
+    color: theme.palette.type === 'dark' ? '#94a3b8' : '#6B7280'
   },
   cardFooter: {
     display: 'flex',
@@ -148,31 +148,54 @@ const useStyles = makeStyles((theme) => ({
     height: 22,
     minWidth: 22,
     padding: 0,
-    backgroundColor: '#ffffffEE',
-    border: '1px solid #E5E7EB',
+    backgroundColor: theme.palette.type === 'dark' ? 'rgba(22,22,22,0.95)' : '#ffffffEE',
+    border: theme.palette.type === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E5E7EB',
     borderRadius: 6,
-    color: '#9CA3AF',
+    color: theme.palette.type === 'dark' ? '#94a3b8' : '#9CA3AF',
     opacity: 0,
     transform: 'scale(0.92)',
     transition: 'all 120ms ease',
     '&:hover': {
-      backgroundColor: '#fff'
+      backgroundColor: theme.palette.type === 'dark' ? '#1f1f1f' : '#fff'
     }
+  },
+  cardLinkIcon: {
+    fontSize: 14,
+    opacity: 0.9,
+    cursor: 'default',
+    color: theme.palette.type === 'dark' ? '#93c5fd' : '#0D47A1',
+  },
+  cardDivider: {
+    height: 1,
+    opacity: 0.8,
+    margin: '6px 0',
+    backgroundColor: theme.palette.type === 'dark' ? 'rgba(255,255,255,0.1)' : '#E5E7EB',
+  },
+  cardAvatarSm: {
+    width: 22,
+    height: 22,
+    fontSize: 11,
+    backgroundColor: theme.palette.type === 'dark' ? 'rgba(255,255,255,0.12)' : '#E5E7EB',
+    color: theme.palette.type === 'dark' ? '#f4f4f5' : '#111827',
+  },
+  calendarIconSm: {
+    fontSize: 12,
+    color: theme.palette.type === 'dark' ? '#94a3b8' : '#6B7280',
   },
   addButton: {
     margin: theme.spacing(1, 1.5, 1.5),
     textTransform: 'none',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    border: '1px dashed #CBD5E1',
-    color: '#6B7280',
+    border: theme.palette.type === 'dark' ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1',
+    color: theme.palette.type === 'dark' ? '#cbd5e1' : '#6B7280',
     fontSize: '0.85rem',
     fontWeight: 500,
     borderRadius: 8,
     padding: theme.spacing(0.75, 0),
     minHeight: 36,
     '&:hover': {
-      backgroundColor: '#F9FAFB'
+      backgroundColor: theme.palette.type === 'dark' ? 'rgba(255,255,255,0.06)' : '#F9FAFB'
     }
   }
 }));
@@ -371,7 +394,7 @@ const ProjectKanbanBoard = ({ projects, columns: columnsProp, onProjectClick, on
                                 placement="top"
                                 arrow
                               >
-                                <ArrowIcon style={{ fontSize: 14, color: '#0D47A1', opacity: 0.9, cursor: 'default' }} />
+                                <ArrowIcon className={classes.cardLinkIcon} />
                               </Tooltip>
                             </div>
 
@@ -386,7 +409,7 @@ const ProjectKanbanBoard = ({ projects, columns: columnsProp, onProjectClick, on
                                 <>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                      <Avatar src={src} style={{ width: 22, height: 22, fontSize: 11, background: '#E5E7EB', color: '#111827' }}>
+                                      <Avatar src={src} className={classes.cardAvatarSm}>
                                         {!src && initials}
                                       </Avatar>
                                       <Typography variant="caption" className={classes.cardMeta} style={{ fontSize: 12 }}>
@@ -405,7 +428,7 @@ const ProjectKanbanBoard = ({ projects, columns: columnsProp, onProjectClick, on
 
                             <div className={classes.cardFooter}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <CalendarIcon style={{ fontSize: 12, color: '#6B7280' }} />
+                                <CalendarIcon className={classes.calendarIconSm} />
                                 <Typography variant="caption" className={classes.cardMeta}>
                                   {formatDate(project.createdAt || project.deadlineAt)}
                                 </Typography>

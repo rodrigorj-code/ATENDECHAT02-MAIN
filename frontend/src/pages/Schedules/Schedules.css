@@ -1,4 +1,5 @@
 .schedules-page {
+  --vb-page-bg: #ffffff;
   --vb-primary: #131B2D;
   --vb-text: #111827;
   --vb-muted: #6B7280;
@@ -25,7 +26,7 @@
   --vb-event-blue-border: #BFDBFE;
   --vb-event-blue-text: #1E40AF;
   --vb-today-bg: #F1F5F9;
-  background: #FFFFFF;
+  background: var(--vb-page-bg);
   min-height: 100vh;
   overflow: hidden;
 }
@@ -388,4 +389,94 @@
   .schedules-page .rbc-date-cell {
     padding: 6px;
   }
+}
+
+/* Vista mensal: fundo branco uniforme (sem blocos cinza nos dias fora do mês) */
+.schedules-page:not([data-theme="dark"]) .rbc-month-view .rbc-day-bg {
+  background: #ffffff !important;
+}
+.schedules-page:not([data-theme="dark"]) .rbc-month-view .rbc-day-bg.rbc-off-range-bg {
+  background: #ffffff !important;
+}
+.schedules-page:not([data-theme="dark"]) .rbc-month-view .rbc-day-bg.rbc-today {
+  background: var(--vb-today-bg) !important;
+}
+.schedules-page:not([data-theme="dark"]) .rbc-time-view .rbc-day-bg {
+  background: #ffffff !important;
+}
+
+/* Modo escuro: textos claros, painel direito e grade sem “blocos” claros */
+.schedules-page[data-theme="dark"] {
+  --vb-page-bg: #000000;
+  --vb-text: #f4f4f5;
+  --vb-muted: #a1a1aa;
+  --vb-surface: #000000;
+  --vb-surface-2: #0a0a0a;
+  --vb-border: rgba(255, 255, 255, 0.1);
+  --vb-border-strong: rgba(255, 255, 255, 0.16);
+  --vb-today-bg: rgba(255, 255, 255, 0.08);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .rbc-month-view .rbc-day-bg {
+  background: var(--vb-surface) !important;
+}
+.schedules-page[data-theme="dark"] .rbc-month-view .rbc-day-bg.rbc-off-range-bg {
+  background: var(--vb-surface) !important;
+}
+.schedules-page[data-theme="dark"] .rbc-month-view .rbc-day-bg.rbc-today {
+  background: var(--vb-today-bg) !important;
+}
+.schedules-page[data-theme="dark"] .rbc-time-view .rbc-day-bg {
+  background: var(--vb-surface) !important;
+}
+.schedules-page[data-theme="dark"] .rbc-toolbar .rbc-btn-group button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.schedules-page[data-theme="dark"] .rbc-toolbar .rbc-btn-group .rbc-active,
+.schedules-page[data-theme="dark"] .rbc-toolbar .rbc-btn-group button:active,
+.schedules-page[data-theme="dark"] .rbc-toolbar .btn-naked.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .right-aside .aside-card {
+  background: var(--vb-surface);
+  border-color: var(--vb-border);
+}
+.schedules-page[data-theme="dark"] .right-aside .aside-action {
+  background: var(--vb-surface-2);
+  color: var(--vb-text);
+  border-color: var(--vb-border);
+}
+.schedules-page[data-theme="dark"] .right-aside .aside-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.schedules-page[data-theme="dark"] .mini-cal-day {
+  background: var(--vb-surface);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .mini-cal-off {
+  color: var(--vb-muted);
+}
+.schedules-page[data-theme="dark"] .mini-cal-selected {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+}
+.schedules-page[data-theme="dark"] .activity-icon {
+  background: var(--vb-surface-2);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .rbc-show-more {
+  background: var(--vb-surface);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .rbc-overlay {
+  background: var(--vb-surface);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .rbc-off-range .rbc-date-cell {
+  color: var(--vb-muted);
+}
+.schedules-page[data-theme="dark"] .rbc-now .rbc-date-cell {
+  color: var(--vb-text);
 }

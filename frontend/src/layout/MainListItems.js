@@ -95,11 +95,11 @@ const useStyles = makeStyles((theme) => ({
     margin: "2px 8px",
     "&:hover $iconHoverActive": {
       backgroundColor: "transparent",
-      color: theme.palette.primary.main,
+      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
       transform: "scale(1.05)",
     },
     "&:hover $listItemText": {
-      color: theme.palette.primary.main,
+      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
       fontWeight: 400,
     },
     "&:hover": {
@@ -125,6 +125,13 @@ const useStyles = makeStyles((theme) => ({
 
   listItemActive: {
     backgroundColor: theme.mode === "light" ? "#f3f4f6" : "rgba(255,255,255,0.1)",
+    "& $listItemText": {
+      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
+      fontWeight: 400,
+    },
+    "& $iconHoverActive": {
+      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
+    },
   },
 
   listItemText: {
@@ -153,11 +160,14 @@ const useStyles = makeStyles((theme) => ({
     height: 22,
     width: 22,
     backgroundColor: "transparent",
-    color: theme.mode === "light" ? "#000" : "#FFF",
+    color: theme.mode === "light" ? "#000" : "#ffffff",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     "&:hover, &.active": {
       backgroundColor: "transparent",
-      color: theme.palette.primary.main,
+      color:
+        theme.mode === "light"
+          ? theme.palette.primary.main
+          : "#ffffff",
       boxShadow: "none",
     },
     "& .MuiSvgIcon-root": {
@@ -209,16 +219,16 @@ const useStyles = makeStyles((theme) => ({
   versionContainer: {
     textAlign: "center",
     padding: "10px",
-    color: theme.palette.primary.main,
+    color: theme.palette.type === "dark" ? theme.palette.text.secondary : theme.palette.primary.main,
     fontSize: "12px",
     fontWeight: "bold",
-    borderTop: `1px solid ${theme.mode === "light" ? "#f0f0f0" : "#333"}`,
+    borderTop: `1px solid ${theme.palette.divider}`,
     marginTop: "auto",
   },
 
   adminSection: {
     "& .MuiListSubheader-root": {
-      color: theme.palette.primary.main,
+      color: theme.palette.type === "dark" ? "#e4e4e7" : theme.palette.primary.main,
       fontSize: "0.875rem",
       fontWeight: 600,
       textTransform: "uppercase",
@@ -228,7 +238,7 @@ const useStyles = makeStyles((theme) => ({
 
   expandIcon: {
     transition: "transform 0.3s ease",
-    color: theme.palette.primary.main,
+    color: theme.palette.type === "dark" ? "#e4e4e7" : theme.palette.primary.main,
     "&.expanded": {
       transform: "rotate(180deg)",
     }
@@ -652,13 +662,13 @@ const MainListItems = ({ collapsed, drawerClose, section }) => {
             {!collapsed && (
               <ListItemText 
                 primary={
-                  <Typography className={classes.listItemText} style={{ color: "#131B2D", fontWeight: 400, textAlign: "center", width: "100%" }}>
+                  <Typography className={classes.listItemText} style={{ fontWeight: 400, textAlign: "center", width: "100%" }}>
                     Mais
                   </Typography>
                 } 
               />
             )}
-            {!collapsed && (openMoreSubmenu ? <ExpandLessIcon /> : <ExpandMoreIcon />)}
+            {!collapsed && (openMoreSubmenu ? <ExpandLessIcon className={classes.expandIcon} /> : <ExpandMoreIcon className={classes.expandIcon} />)}
           </ListItem>
           <Collapse in={openMoreSubmenu} timeout="auto" unmountOnExit className={`${classes.submenuContainer} ${classes.moreCollapse}`}>
             <ListItemLink
@@ -729,7 +739,7 @@ const MainListItems = ({ collapsed, drawerClose, section }) => {
                     style={{ display: collapsed ? 'none' : 'block' }}
                   />
                 )}
-                {!collapsed && (openVBZappySubmenu ? <ExpandLessIcon /> : <ExpandMoreIcon />)}
+                {!collapsed && (openVBZappySubmenu ? <ExpandLessIcon className={classes.expandIcon} /> : <ExpandMoreIcon className={classes.expandIcon} />)}
             </ListItem>
            </Tooltip>
           <Collapse in={openVBZappySubmenu} timeout="auto" unmountOnExit className={classes.submenuContainer}>

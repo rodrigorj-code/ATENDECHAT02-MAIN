@@ -163,15 +163,21 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: "100%",
   },
   columnHeader: {
-    background: "#fff",
-    border: "1px solid #E5E7EB",
+    background: theme.palette.type === "dark" ? "#161616" : "#fff",
+    border:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.1)"
+        : "1px solid #E5E7EB",
     borderRadius: 12,
     padding: 12,
     minHeight: 56,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 2px 10px rgba(0,0,0,0.35)"
+        : "0 1px 3px rgba(0,0,0,0.06)",
     [theme.breakpoints.down("sm")]: {
       padding: 10,
       minHeight: 50,
@@ -179,7 +185,7 @@ const useStyles = makeStyles((theme) => ({
   },
   columnLabel: {
     fontWeight: 600,
-    color: "#111827",
+    color: theme.palette.type === "dark" ? "#f4f4f5" : "#111827",
     fontSize: 14,
     lineHeight: 1.2,
     whiteSpace: "nowrap",
@@ -224,8 +230,12 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     flex: 1,
     alignSelf: "flex-start",
-    backgroundColor: "#F3F4F6",
-    border: "1px solid #E5E7EB",
+    backgroundColor:
+      theme.palette.type === "dark" ? "#0a0a0a" : "#F3F4F6",
+    border:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.08)"
+        : "1px solid #E5E7EB",
     borderRadius: 10,
     ...theme.scrollbarStyles,
     [theme.breakpoints.down("sm")]: {
@@ -233,8 +243,11 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   card: {
-    background: "#FFFFFF",
-    border: "1px solid #E5E7EB",
+    background: theme.palette.type === "dark" ? "#161616" : "#FFFFFF",
+    border:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.1)"
+        : "1px solid #E5E7EB",
     borderRadius: 10,
     padding: "8px 10px 10px 40px",
     marginBottom: 10,
@@ -362,7 +375,7 @@ const useStyles = makeStyles((theme) => ({
   cardTitle: {
     fontWeight: 600,
     fontSize: "clamp(9px, 1.1vw, 12px)",
-    color: "#111827",
+    color: theme.palette.type === "dark" ? "#f4f4f5" : "#111827",
     lineHeight: 1.25,
     whiteSpace: "normal",
     wordBreak: "break-word",
@@ -374,7 +387,7 @@ const useStyles = makeStyles((theme) => ({
   cardSub: {
     fontSize: "clamp(8px, 1vw, 11px)",
     fontWeight: 400,
-    color: "#9CA3AF",
+    color: theme.palette.type === "dark" ? "#94a3b8" : "#9CA3AF",
     marginTop: 2,
     overflow: "hidden",
     textOverflow: "ellipsis",

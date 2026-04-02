@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import React, { useContext, useState, useCallback, useEffect, useLayoutEffect } from 'react';
+import { makeStyles, useTheme } from '@material-ui/core/styles';
 import { DrawerContext } from "../../context/DrawerContext";
 import {
   Paper,
@@ -24,230 +24,291 @@ import {
   Menu as MenuIcon
 } from '@material-ui/icons';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    minHeight: '100vh',
-    backgroundColor: '#f5f5f5',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  header: {
-    backgroundColor: '#fff',
-    borderBottom: '1px solid #e5e7eb',
-    boxShadow: '0 1px 2px 0 rgba(15, 23, 42, 0.04)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 10
-  },
-  headerContent: {
-    padding: theme.spacing(1.0, 2),
-  },
-  navRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    paddingBottom: theme.spacing(0.75),
-    paddingLeft: theme.spacing(1.5),
-    paddingRight: theme.spacing(1.5),
-    borderBottom: '1px solid #E5E7EB', // Added divider
-  },
-  tabsContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    overflowX: 'auto',
-    scrollbarWidth: 'none', // Firefox
-    '&::-webkit-scrollbar': {
-      display: 'none' // Chrome/Safari
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === 'dark';
+  const borderSubtle = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+  /** Papel do tema (faixas header/filtros); no escuro = #000 no App.js */
+  const chromeSurface = theme.palette.background.paper;
+  const pageBg = theme.palette.background.default;
+  const textPrimary = theme.palette.text.primary;
+  const textSecondary = theme.palette.text.secondary;
+  const mutedIcon = isDark ? '#a1a1aa' : '#9CA3AF';
+  const tabHoverBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)';
+  const tabActiveBg = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)';
+  const scrollHoverBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)';
+  /** Azul escuro da marca (claro); no escuro texto legível + acento na aba ativa */
+  const tabBrand = theme.palette.primary.main;
+  const tabTextDarkInactive = theme.palette.text.primary;
+
+  return {
+    root: {
+      minHeight: '100vh',
+      backgroundColor: pageBg,
+      display: 'flex',
+      flexDirection: 'column',
     },
-    scrollBehavior: 'smooth',
-    flex: 1,
-    whiteSpace: 'nowrap',
-    padding: theme.spacing(0.5, 0),
-  },
-  scrollButton: {
-    minWidth: 'auto',
-    padding: 6,
-    borderRadius: '50%',
-    color: theme.palette.text.secondary,
-    '&:hover': {
-      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-      color: theme.palette.text.primary,
+    header: {
+      backgroundColor: chromeSurface,
+      borderBottom: `1px solid ${borderSubtle}`,
+      boxShadow: isDark
+        ? '0 1px 2px 0 rgba(0, 0, 0, 0.45)'
+        : '0 1px 2px 0 rgba(15, 23, 42, 0.04)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 10,
     },
-  },
-  navTab: {
-    textTransform: 'none',
-    fontWeight: 400,
-    fontSize: '0.875rem',
-    color: '#374151',
-    minWidth: 'auto',
-    padding: theme.spacing(1, 2),
-    borderRadius: '8px',
-    backgroundColor: 'transparent',
-    border: 'none',
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1.5),
-    transition: 'all 0.15s ease',
-    '&:hover': {
-      backgroundColor: 'rgba(0,0,0,0.03)',
-      color: '#374151',
+    headerContent: {
+      padding: theme.spacing(1, 2, 0.5),
     },
-  },
-  navTabIcon: {
-    fontSize: '0.875rem',
-    opacity: 1,
-    display: 'flex',
-    alignItems: 'center',
-    marginRight: theme.spacing(1.25),
-  },
-  navTabActive: {
-    color: '#111827',
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    boxShadow: '0 2px 4px rgba(15, 23, 42, 0.16)',
-    border: 'none',
-    '&:hover': {
-      backgroundColor: 'rgba(0,0,0,0.02)',
+    navRow: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+      paddingBottom: theme.spacing(0.5),
+      paddingLeft: theme.spacing(1.5),
+      paddingRight: theme.spacing(1.5),
+      borderBottom: `1px solid ${borderSubtle}`,
     },
-  },
-  createButton: {
-    display: 'none'
-  },
-  statsContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(3),
-  },
-  statItem: {
-    textAlign: 'center',
-  },
-  statValue: {
-    fontSize: '1.5rem',
-    fontWeight: 700,
-  },
-  statLabel: {
-    fontSize: '0.75rem',
-    color: '#6b7280',
-  },
-  filterBar: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '8px 24px',
-    backgroundColor: '#FFFFFF',
-    // borderBottom: '1px solid #E5E7EB', // Removed
-    height: 48,
-    boxSizing: 'border-box',
-    width: '100%',
-    marginTop: 8 // Added margin top to lower it a bit
-  },
-  leftFilter: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    maxWidth: 400
-  },
-  funnelIcon: {
-    color: '#9CA3AF', // gray-400
-    fontSize: 20
-  },
-  filterInput: {
-    fontSize: '0.875rem', // 14px
-    color: '#111827', // gray-900
-    fontWeight: 400,
-    width: '100%',
-    '& input::placeholder': {
-      color: '#9CA3AF', // gray-400
-      opacity: 1
-    }
-  },
-  rightFilter: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16 // Spacing between filter groups
-  },
-  filterItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-    cursor: 'pointer',
-    padding: '2px 6px',
-    borderRadius: 6,
-    transition: 'background-color 0.2s',
-    '&:hover': {
-      backgroundColor: '#F9FAFB' // gray-50
-    }
-  },
-  filterLabel: {
-    fontSize: '0.75rem', // 12px
-    color: '#374151', // gray-700
-    fontWeight: 500, // Medium
-    lineHeight: '20px'
-  },
-  chevronIcon: {
-    color: '#9CA3AF', // gray-400
-    fontSize: 14
-  },
-  calendarIcon: {
-    color: '#9CA3AF', // gray-400
-    fontSize: 14,
-    marginRight: 2
-  },
-  viewModeGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1.5),
-    backgroundColor: '#fff',
-    padding: theme.spacing(0.5),
-    borderRadius: 8,
-    border: '1px solid #e5e7eb'
-  },
-  viewModeButton: {
-    textTransform: 'none',
-    fontWeight: 500,
-    minWidth: 'auto',
-    padding: theme.spacing(0.75, 1.25),
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-  },
-  content: {
-    flex: 1,
-    padding: theme.spacing(0.5),
-    overflowY: 'auto',
-    maxHeight: 'calc(100vh - 112px)',
-  },
-  noScroll: {
-    overflowY: 'hidden',
-    overflowX: 'hidden',
-    maxHeight: 'none',
-    height: 'auto',
-    scrollbarWidth: 'none',
-    msOverflowStyle: 'none',
-    '&::-webkit-scrollbar': {
-      display: 'none'
-    },
-    '& *::-webkit-scrollbar': {
-      display: 'none'
-    },
-    '& *': {
+    tabsContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+      overflowX: 'auto',
       scrollbarWidth: 'none',
-      msOverflowStyle: 'none'
-    }
-  },
-  fab: {
-    position: 'fixed',
-    bottom: theme.spacing(3),
-    right: theme.spacing(3),
-    width: 56,
-    height: 56,
-    borderRadius: '50%',
-    backgroundColor: theme.palette.primary.main,
-    color: '#fff',
-    boxShadow: `0 8px 24px ${theme.palette.primary.main}4D`
-  },
-}));
+      '&::-webkit-scrollbar': {
+        display: 'none',
+      },
+      scrollBehavior: 'smooth',
+      flex: 1,
+      whiteSpace: 'nowrap',
+      padding: theme.spacing(0.5, 0),
+    },
+    scrollButton: {
+      minWidth: 'auto',
+      padding: 6,
+      borderRadius: '50%',
+      color: textPrimary,
+      '&:hover': {
+        backgroundColor: scrollHoverBg,
+        color: textPrimary,
+      },
+    },
+    navTab: {
+      textTransform: 'none',
+      fontSize: '0.875rem',
+      /* MUI Button usa typography.button (600) */
+      '&&': { fontWeight: 400 },
+      /* Claro: azul escuro da identidade (primary); escuro: texto legível (sem “apagado”) */
+      color: isDark ? tabTextDarkInactive : tabBrand,
+      minWidth: 'auto',
+      padding: theme.spacing(1, 2),
+      borderRadius: '8px',
+      backgroundColor: 'transparent',
+      border: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(1.5),
+      transition: 'all 0.15s ease',
+      '&:hover': {
+        backgroundColor: tabHoverBg,
+        color: isDark ? '#ffffff' : tabBrand,
+      },
+    },
+    navTabIcon: {
+      fontSize: '0.875rem',
+      opacity: 1,
+      color: 'inherit',
+      display: 'flex',
+      alignItems: 'center',
+      marginRight: theme.spacing(1.25),
+    },
+    navTabActive: {
+      '&&': { fontWeight: 400 },
+      /* Escuro: aba ativa em branco (contraste no pill); claro: azul da marca */
+      color: isDark ? '#ffffff' : tabBrand,
+      backgroundColor: tabActiveBg,
+      boxShadow: isDark
+        ? '0 2px 4px rgba(0, 0, 0, 0.35)'
+        : '0 2px 4px rgba(15, 23, 42, 0.16)',
+      border: 'none',
+      '&:hover': {
+        backgroundColor: tabActiveBg,
+        color: isDark ? '#ffffff' : tabBrand,
+      },
+    },
+    createButton: {
+      display: 'none',
+    },
+    statsContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(3),
+    },
+    statItem: {
+      textAlign: 'center',
+    },
+    statValue: {
+      fontSize: '1.5rem',
+      fontWeight: 700,
+    },
+    statLabel: {
+      fontSize: '0.75rem',
+      color: textSecondary,
+    },
+    filterBar: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '8px 24px',
+      backgroundColor: chromeSurface,
+      height: 48,
+      boxSizing: 'border-box',
+      width: '100%',
+      marginTop: 8,
+      borderTop: isDark ? `1px solid ${borderSubtle}` : 'none',
+    },
+    leftFilter: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+      maxWidth: 400,
+    },
+    funnelIcon: {
+      color: mutedIcon,
+      fontSize: 20,
+    },
+    filterInput: {
+      fontSize: '0.875rem',
+      color: textPrimary,
+      fontWeight: 400,
+      width: '100%',
+      '& input::placeholder': {
+        color: mutedIcon,
+        opacity: 1,
+      },
+    },
+    rightFilter: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16,
+    },
+    filterItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+      cursor: 'pointer',
+      padding: '2px 6px',
+      borderRadius: 6,
+      transition: 'background-color 0.2s',
+      '&:hover': {
+        backgroundColor: tabHoverBg,
+      },
+    },
+    filterLabel: {
+      fontSize: '0.75rem',
+      color: textSecondary,
+      fontWeight: 500,
+      lineHeight: '20px',
+    },
+    chevronIcon: {
+      color: mutedIcon,
+      fontSize: 14,
+    },
+    calendarIcon: {
+      color: mutedIcon,
+      fontSize: 14,
+      marginRight: 2,
+    },
+    viewModeGroup: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(1.5),
+      backgroundColor: chromeSurface,
+      padding: theme.spacing(0.5),
+      borderRadius: 8,
+      border: `1px solid ${borderSubtle}`,
+    },
+    viewModeButton: {
+      textTransform: 'none',
+      fontWeight: 500,
+      minWidth: 'auto',
+      padding: theme.spacing(0.75, 1.25),
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+    },
+    content: {
+      flex: 1,
+      padding: theme.spacing(0.5),
+      overflowY: 'auto',
+      maxHeight: 'calc(100vh - 112px)',
+      backgroundColor: pageBg,
+    },
+    contentEdgeToEdge: {
+      flex: 1,
+      width: '100%',
+      minHeight: 0,
+      padding: 0,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      maxHeight: 'calc(100vh - 112px)',
+      backgroundColor: chromeSurface,
+      display: 'flex',
+      flexDirection: 'column',
+    },
+    noScroll: {
+      overflowY: 'hidden',
+      overflowX: 'hidden',
+      maxHeight: 'none',
+      height: 'auto',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
+      '&::-webkit-scrollbar': {
+        display: 'none',
+      },
+      '& *::-webkit-scrollbar': {
+        display: 'none',
+      },
+      '& *': {
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      },
+    },
+    fab: {
+      position: 'fixed',
+      bottom: theme.spacing(3),
+      right: theme.spacing(3),
+      width: 56,
+      height: 56,
+      borderRadius: '50%',
+      backgroundColor: theme.palette.primary.main,
+      color: '#fff',
+      boxShadow: `0 8px 24px ${theme.palette.primary.main}4D`,
+    },
+    searchContainer: {
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      borderRadius: 8,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+      paddingLeft: theme.spacing(1),
+      paddingRight: theme.spacing(1),
+    },
+    searchIcon: {
+      display: 'flex',
+      color: mutedIcon,
+      marginRight: theme.spacing(0.5),
+    },
+    inputRoot: {
+      color: textPrimary,
+    },
+    inputInput: {
+      padding: theme.spacing(1, 0),
+      fontSize: '0.875rem',
+    },
+  };
+});
 
 const ActivitiesStyleLayout = ({
   title,
@@ -278,22 +339,94 @@ const ActivitiesStyleLayout = ({
   compactHeader = false,
   transparentHeader = false,
   scrollContent = true,
-  hideLeftIcon = false
+  hideLeftIcon = false,
+  /** Preenche a área abaixo das abas com fundo papel, sem margem cinza */
+  contentEdgeToEdge = false,
+  rootClassName = ''
 }) => {
   const classes = useStyles();
+  const muiTheme = useTheme();
   const contentRef = React.useRef(null);
   const tabsRef = React.useRef(null);
   const context = useContext(DrawerContext);
   const { drawerOpen, setDrawerOpen } = context || {};
 
+  const [tabScrollArrows, setTabScrollArrows] = useState({ left: false, right: false });
+
+  const updateTabScrollArrows = useCallback(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = Math.max(0, scrollWidth - clientWidth);
+    const eps = 2;
+    const next = {
+      left: scrollLeft > eps,
+      right: maxScroll > eps && scrollLeft < maxScroll - eps,
+    };
+    setTabScrollArrows((prev) =>
+      prev.left === next.left && prev.right === next.right ? prev : next
+    );
+  }, []);
+
+  const tabScrollRafRef = React.useRef(null);
+  const scheduleTabScrollUpdate = useCallback(() => {
+    if (tabScrollRafRef.current != null) return;
+    tabScrollRafRef.current = window.requestAnimationFrame(() => {
+      tabScrollRafRef.current = null;
+      updateTabScrollArrows();
+    });
+  }, [updateTabScrollArrows]);
+
   const handleScroll = (direction) => {
     if (tabsRef.current) {
       const scrollAmount = 300;
       tabsRef.current.scrollLeft += direction === 'left' ? -scrollAmount : scrollAmount;
+      scheduleTabScrollUpdate();
     }
   };
 
-  React.useEffect(() => {
+  useLayoutEffect(() => {
+    if (!enableTabsScroll) {
+      if (tabScrollRafRef.current != null) {
+        window.cancelAnimationFrame(tabScrollRafRef.current);
+        tabScrollRafRef.current = null;
+      }
+      setTabScrollArrows({ left: false, right: false });
+      return;
+    }
+    const el = tabsRef.current;
+    if (!el) return;
+    scheduleTabScrollUpdate();
+    const onScroll = () => scheduleTabScrollUpdate();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    const ro =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            /* Deferir evita loop "ResizeObserver loop completed with undelivered notifications" */
+            scheduleTabScrollUpdate();
+          })
+        : null;
+    if (ro) ro.observe(el);
+    window.addEventListener('resize', scheduleTabScrollUpdate);
+    const t = window.setTimeout(scheduleTabScrollUpdate, 150);
+    return () => {
+      window.clearTimeout(t);
+      if (tabScrollRafRef.current != null) {
+        window.cancelAnimationFrame(tabScrollRafRef.current);
+        tabScrollRafRef.current = null;
+      }
+      el.removeEventListener('scroll', onScroll);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', scheduleTabScrollUpdate);
+    };
+  }, [
+    enableTabsScroll,
+    viewModes.length,
+    currentViewMode,
+    scheduleTabScrollUpdate,
+  ]);
+
+  useEffect(() => {
     if (scrollContent && contentRef.current) {
       contentRef.current.scrollTop = 0;
     } else if (typeof window !== "undefined" && window.scrollTo) {
@@ -302,7 +435,10 @@ const ActivitiesStyleLayout = ({
   }, []);
 
   return (
-    <div className={classes.root} style={rootBackground ? { backgroundColor: rootBackground } : undefined}>
+    <div
+      className={[classes.root, rootClassName].filter(Boolean).join(' ')}
+      style={rootBackground ? { backgroundColor: rootBackground } : undefined}
+    >
       <div
         className={classes.header}
         style={{
@@ -324,17 +460,25 @@ const ActivitiesStyleLayout = ({
                 <IconButton 
                   size="small" 
                   onClick={() => setDrawerOpen(true)}
-                  style={{ marginRight: 8, color: '#000000', opacity: 1, padding: 2, width: 24, height: 24 }}
+                  style={{
+                    marginRight: 8,
+                    color: muiTheme.palette.text.primary,
+                    opacity: 1,
+                    padding: 2,
+                    width: 24,
+                    height: 24,
+                  }}
                 >
                   <MenuIcon style={{ fontSize: 16 }} />
                 </IconButton>
               )}
 
-              {enableTabsScroll && (
+              {enableTabsScroll && tabScrollArrows.left && (
                 <IconButton 
                   size="small" 
                   onClick={() => handleScroll('left')} 
                   className={classes.scrollButton}
+                  aria-label="Rolar abas para a esquerda"
                 >
                   <ChevronLeftIcon fontSize="small" />
                 </IconButton>
@@ -345,6 +489,7 @@ const ActivitiesStyleLayout = ({
                   const active = currentViewMode === mode.value;
                   return (
                     <Button
+                      color="inherit"
                       key={mode.value}
                       onClick={() => onViewModeChange && onViewModeChange(mode.value)}
                       className={`${classes.navTab} ${active ? classes.navTabActive : ''}`}
@@ -359,11 +504,12 @@ const ActivitiesStyleLayout = ({
                 })}
               </div>
 
-              {enableTabsScroll && (
+              {enableTabsScroll && tabScrollArrows.right && (
                 <IconButton 
                   size="small" 
                   onClick={() => handleScroll('right')} 
                   className={classes.scrollButton}
+                  aria-label="Rolar abas para a direita"
                 >
                   <ChevronRightIcon fontSize="small" />
                 </IconButton>
@@ -441,7 +587,11 @@ const ActivitiesStyleLayout = ({
 
       <div
         ref={contentRef}
-        className={`${classes.content} ${!scrollContent ? classes.noScroll : ''}`}
+        className={
+          contentEdgeToEdge
+            ? `${classes.contentEdgeToEdge} ${!scrollContent ? classes.noScroll : ''}`
+            : `${classes.content} ${!scrollContent ? classes.noScroll : ''}`
+        }
         style={
           scrollContent
             ? undefined

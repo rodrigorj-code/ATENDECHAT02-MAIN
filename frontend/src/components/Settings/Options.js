@@ -1,78 +1,225 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 
 import Grid from "@material-ui/core/Grid";
 import MenuItem from "@material-ui/core/MenuItem";
-import FormControl from "@material-ui/core/FormControl";
-import InputLabel from "@material-ui/core/InputLabel";
-import Select from "@material-ui/core/Select";
-import FormHelperText from "@material-ui/core/FormHelperText";
-import Button from "@material-ui/core/Button";
+import { Box } from "@material-ui/core";
+import Typography from "@material-ui/core/Typography";
+import TextField from "@material-ui/core/TextField";
 
 import useSettings from "../../hooks/useSettings";
-import { ToastContainer, toast } from 'react-toastify';
 import { makeStyles } from "@material-ui/core/styles";
-import { grey, blue } from "@material-ui/core/colors";
 
-import { Tab, Tabs, TextField } from "@material-ui/core";
 import { i18n } from "../../translate/i18n";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 
 const useStyles = makeStyles((theme) => ({
-  container: {
-    paddingTop: theme.spacing(4),
-    paddingBottom: theme.spacing(4),
-  },
-  fixedHeightPaper: {
-    padding: theme.spacing(2),
+  root: {
+    width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    flex: 1,
     display: "flex",
-    overflow: "auto",
     flexDirection: "column",
-    height: 240,
+    minHeight: 0,
+    /** Alinha com Identidade Visual: um pouco acima e à esquerda dentro do Paper de /settings */
+    marginTop: theme.spacing(-0.5),
+    marginLeft: theme.spacing(-0.75),
+    [theme.breakpoints.down("sm")]: {
+      marginLeft: theme.spacing(-0.5),
+    },
   },
-  cardAvatar: {
-    fontSize: "55px",
-    color: grey[500],
-    backgroundColor: "#ffffff",
-    width: theme.spacing(7),
-    height: theme.spacing(7),
-  },
-  cardTitle: {
-    fontSize: "18px",
-    color: blue[700],
-  },
-  cardSubtitle: {
-    color: grey[600],
-    fontSize: "14px",
-  },
-  alignRight: {
-    textAlign: "right",
-  },
-  fullWidth: {
+  sheet: {
     width: "100%",
+    borderRadius: 0,
+    backgroundColor:
+      theme.mode === "light" ? "transparent" : "rgba(28, 28, 30, 0.96)",
+    border: "none",
+    boxShadow: "none",
+    overflow: "visible",
+    "& .MuiGrid-item": {
+      minWidth: 0,
+    },
   },
-  selectContainer: {
-    width: "100%",
-    textAlign: "left",
+  sectionBlock: {
+    padding: theme.spacing(3),
+    "&:first-of-type": {
+      paddingTop: theme.spacing(1.5),
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(2),
+    },
+    "&:not(:first-of-type)": {
+      borderTop:
+        theme.mode === "light"
+          ? "1px solid rgba(15, 23, 42, 0.08)"
+          : "1px solid rgba(255, 255, 255, 0.08)",
+    },
   },
-  tab: {
-    backgroundColor: theme.mode === 'light' ? "#f2f2f2" : "#7f7f7f",
-    borderRadius: 4,
+  sectionTitle: {
+    fontWeight: 400,
+    letterSpacing: "-0.02em",
+    fontSize: "1.05rem",
+    marginBottom: theme.spacing(0.5),
+  },
+  sectionHint: {
+    display: "block",
+    marginBottom: theme.spacing(2.5),
+    lineHeight: 1.5,
+    maxWidth: 720,
+  },
+  /** Coluna do grid: estica para alinhar linhas entre si */
+  gridItem: {
+    display: "flex",
+    alignItems: "stretch",
+  },
+  /** Cartão por opção — hover com leve elevação */
+  fieldShell: {
+    display: "flex",
+    flexDirection: "column",
     width: "100%",
-    "& .MuiTabs-flexContainer": {
-      justifyContent: "center"
-    }
+    height: "100%",
+    minHeight: 0,
+    padding: theme.spacing(2),
+    borderRadius: 10,
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.1)"
+        : "rgba(15, 23, 42, 0.08)"
+    }`,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.03)"
+        : "#f8fafc",
+    boxSizing: "border-box",
+    cursor: "default",
+    willChange: "transform, box-shadow",
+    transition:
+      "border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.28s ease",
+    "&:hover": {
+      borderColor:
+        theme.palette.type === "dark"
+          ? "rgba(255, 255, 255, 0.22)"
+          : "rgba(37, 99, 235, 0.35)",
+      boxShadow:
+        theme.palette.type === "dark"
+          ? "0 10px 28px rgba(0, 0, 0, 0.35)"
+          : "0 10px 28px rgba(15, 23, 42, 0.1)",
+      transform: "translateY(-3px)",
+      backgroundColor:
+        theme.palette.type === "dark"
+          ? "rgba(255, 255, 255, 0.055)"
+          : "#ffffff",
+    },
+  },
+  textFieldShell: {
+    width: "100%",
+    "& .MuiOutlinedInput-root": {
+      borderRadius: 8,
+    },
+    "& .MuiOutlinedInput-input": {
+      fontSize: "0.8125rem",
+    },
+    "& .MuiInputLabel-outlined": {
+      fontSize: "0.8125rem",
+    },
+    "& .MuiFormHelperText-root": {
+      fontSize: "0.75rem",
+    },
+  },
+  selectField: {
+    width: "100%",
+    "& .MuiOutlinedInput-root": {
+      borderRadius: 8,
+    },
+    "& .MuiOutlinedInput-input": {
+      paddingTop: theme.spacing(1.25),
+      paddingBottom: theme.spacing(1.25),
+      fontSize: "0.8125rem",
+    },
+    "& .MuiInputLabel-outlined": {
+      fontSize: "0.8125rem",
+    },
+    "& .MuiFormHelperText-root": {
+      fontSize: "0.75rem",
+      marginTop: theme.spacing(0.75),
+    },
+  },
+  /** Área fixa da legenda — mesma altura em todos os cartões */
+  legendSlot: {
+    marginTop: theme.spacing(1.5),
+    minHeight: "3.25em",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "flex-start",
+  },
+  fieldLegendText: {
+    margin: 0,
+    fontSize: "0.8125rem",
+    lineHeight: 1.45,
+    letterSpacing: "0.01em",
+    color: theme.palette.text.secondary,
+  },
+  optionsGrid: {
+    width: "100%",
   },
 }));
 
+/** Select outlined + legenda fixa (altura uniforme) */
+function OptionSelectField({
+  classes,
+  label,
+  value,
+  onChange,
+  loading,
+  children,
+  legend,
+}) {
+  return (
+    <Box className={classes.fieldShell}>
+      <TextField
+        select
+        fullWidth
+        variant="outlined"
+        size="small"
+        label={label}
+        value={value}
+        onChange={onChange}
+        helperText={
+          loading ? i18n.t("settings.settings.options.updating") : undefined
+        }
+        className={classes.selectField}
+      >
+        {children}
+      </TextField>
+      <Box className={classes.legendSlot}>
+        <Typography component="div" className={classes.fieldLegendText}>
+          {legend}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
+/** Legenda abaixo de TextField multilinha */
+function FieldLegendBlock({ classes, legend, children }) {
+  return (
+    <Box className={classes.fieldShell}>
+      <Box className={classes.textFieldShell}>{children}</Box>
+      <Box className={classes.legendSlot}>
+        <Typography component="div" className={classes.fieldLegendText}>
+          {legend}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
 export default function Options(props) {
-  const {
-    oldSettings = {},
-    settings = {},
-    scheduleTypeChanged,
-    user
-  } = props;
+  const { oldSettings = {}, settings = {}, scheduleTypeChanged, user } = props;
 
   const classes = useStyles();
+  const optLegend = (key) =>
+    i18n.t(`settings.settings.options.legends.${key}`);
   const [userRating, setUserRating] = useState("disabled");
   const [scheduleType, setScheduleType] = useState("disabled");
   const [chatBotType, setChatBotType] = useState("text");
@@ -84,59 +231,48 @@ export default function Options(props) {
   const [loadingUserCreation, setLoadingUserCreation] = useState(false);
 
   const [SendGreetingAccepted, setSendGreetingAccepted] = useState("enabled");
-  const [loadingSendGreetingAccepted, setLoadingSendGreetingAccepted] = useState(false);
+  const [loadingSendGreetingAccepted, setLoadingSendGreetingAccepted] =
+    useState(false);
 
   const [UserRandom, setUserRandom] = useState("enabled");
   const [loadingUserRandom, setLoadingUserRandom] = useState(false);
 
   const [SettingsTransfTicket, setSettingsTransfTicket] = useState("enabled");
-  const [loadingSettingsTransfTicket, setLoadingSettingsTransfTicket] = useState(false);
+  const [loadingSettingsTransfTicket, setLoadingSettingsTransfTicket] =
+    useState(false);
 
   const [AcceptCallWhatsapp, setAcceptCallWhatsapp] = useState("enabled");
-  const [loadingAcceptCallWhatsapp, setLoadingAcceptCallWhatsapp] = useState(false);
+  const [loadingAcceptCallWhatsapp, setLoadingAcceptCallWhatsapp] =
+    useState(false);
 
   const [sendSignMessage, setSendSignMessage] = useState("enabled");
   const [loadingSendSignMessage, setLoadingSendSignMessage] = useState(false);
 
-  const [sendGreetingMessageOneQueues, setSendGreetingMessageOneQueues] = useState("enabled");
-  const [loadingSendGreetingMessageOneQueues, setLoadingSendGreetingMessageOneQueues] = useState(false);
+  const [sendGreetingMessageOneQueues, setSendGreetingMessageOneQueues] =
+    useState("enabled");
+  const [
+    loadingSendGreetingMessageOneQueues,
+    setLoadingSendGreetingMessageOneQueues,
+  ] = useState(false);
 
   const [sendQueuePosition, setSendQueuePosition] = useState("enabled");
-  const [loadingSendQueuePosition, setLoadingSendQueuePosition] = useState(false);
-
-  const [sendFarewellWaitingTicket, setSendFarewellWaitingTicket] = useState("enabled");
-  const [loadingSendFarewellWaitingTicket, setLoadingSendFarewellWaitingTicket] = useState(false);
-
-  const [acceptAudioMessageContact, setAcceptAudioMessageContact] = useState("enabled");
-  const [loadingAcceptAudioMessageContact, setLoadingAcceptAudioMessageContact] = useState(false);
-
-  //PAYMENT METHODS
-  const [eficlientidType, setEfiClientidType] = useState('');
-  const [loadingEfiClientidType, setLoadingEfiClientidType] = useState(false);
-
-  const [eficlientsecretType, setEfiClientsecretType] = useState('');
-  const [loadingEfiClientsecretType, setLoadingEfiClientsecretType] =
+  const [loadingSendQueuePosition, setLoadingSendQueuePosition] =
     useState(false);
 
-  const [efichavepixType, setEfiChavepixType] = useState('');
-  const [loadingEfiChavepixType, setLoadingEfiChavepixType] = useState(false);
+  const [sendFarewellWaitingTicket, setSendFarewellWaitingTicket] =
+    useState("enabled");
+  const [
+    loadingSendFarewellWaitingTicket,
+    setLoadingSendFarewellWaitingTicket,
+  ] = useState(false);
 
-  const [mpaccesstokenType, setmpaccesstokenType] = useState('');
-  const [loadingmpaccesstokenType, setLoadingmpaccesstokenType] =
-    useState(false);
+  const [acceptAudioMessageContact, setAcceptAudioMessageContact] =
+    useState("enabled");
+  const [
+    loadingAcceptAudioMessageContact,
+    setLoadingAcceptAudioMessageContact,
+  ] = useState(false);
 
-  const [stripeprivatekeyType, setstripeprivatekeyType] = useState('');
-  const [loadingstripeprivatekeyType, setLoadingstripeprivatekeyType] =
-    useState(false);
-
-  const [asaastokenType, setasaastokenType] = useState('');
-  const [loadingasaastokenType, setLoadingasaastokenType] = useState(false);
-
-  //OPENAI API KEY TRANSCRIÇÃO DE ÁUDIO
-  const [openaitokenType, setopenaitokenType] = useState('');
-  const [loadingopenaitokenType, setLoadingopenaitokenType] = useState(false);
-
-  //LGPD
   const [enableLGPD, setEnableLGPD] = useState("disabled");
   const [loadingEnableLGPD, setLoadingEnableLGPD] = useState(false);
 
@@ -147,11 +283,8 @@ export default function Options(props) {
   const [loadingLGPDLink, setLoadingLGPDLink] = useState(false);
 
   const [lgpdDeleteMessage, setLGPDDeleteMessage] = useState("disabled");
-  const [loadingLGPDDeleteMessage, setLoadingLGPDDeleteMessage] = useState(false);
-
-  //LIMITAR DOWNLOAD
-  // const [downloadLimit, setdownloadLimit] = useState("64");
-  // const [loadingDownloadLimit, setLoadingdownloadLimit] = useState(false);
+  const [loadingLGPDDeleteMessage, setLoadingLGPDDeleteMessage] =
+    useState(false);
 
   const [lgpdConsent, setLGPDConsent] = useState("disabled");
   const [loadingLGPDConsent, setLoadingLGPDConsent] = useState(false);
@@ -159,105 +292,58 @@ export default function Options(props) {
   const [lgpdHideNumber, setLGPDHideNumber] = useState("disabled");
   const [loadingLGPDHideNumber, setLoadingLGPDHideNumber] = useState(false);
 
-  // Tag obrigatoria
-  const [requiredTag, setRequiredTag] = useState("enabled")
-  const [loadingRequiredTag, setLoadingRequiredTag] = useState(false)
+  const [requiredTag, setRequiredTag] = useState("enabled");
+  const [loadingRequiredTag, setLoadingRequiredTag] = useState(false);
 
-  // Fechar ticket ao transferir para outro setor
-  const [closeTicketOnTransfer, setCloseTicketOnTransfer] = useState(false)
-  const [loadingCloseTicketOnTransfer, setLoadingCloseTicketOnTransfer] = useState(false)
+  const [closeTicketOnTransfer, setCloseTicketOnTransfer] = useState(false);
+  const [loadingCloseTicketOnTransfer, setLoadingCloseTicketOnTransfer] =
+    useState(false);
 
-  // Usar carteira de clientes
-  const [directTicketsToWallets, setDirectTicketsToWallets] = useState(false)
-  const [loadingDirectTicketsToWallets, setLoadingDirectTicketsToWallets] = useState(false)
+  const [directTicketsToWallets, setDirectTicketsToWallets] = useState(false);
+  const [loadingDirectTicketsToWallets, setLoadingDirectTicketsToWallets] =
+    useState(false);
 
-  // Sigla para inserir no copiar contatos
-  const [copyContactPrefix, setCopyContactPrefix] = useState("");
-const [loadingCopyContactPrefix, setLoadingCopyContactPrefix] = useState(false);
-
-  //MENSAGENS CUSTOMIZADAS
   const [transferMessage, setTransferMessage] = useState("");
   const [loadingTransferMessage, setLoadingTransferMessage] = useState(false);
 
   const [greetingAcceptedMessage, setGreetingAcceptedMessage] = useState("");
-  const [loadingGreetingAcceptedMessage, setLoadingGreetingAcceptedMessage] = useState(false);
+  const [
+    loadingGreetingAcceptedMessage,
+    setLoadingGreetingAcceptedMessage,
+  ] = useState(false);
 
-  const [AcceptCallWhatsappMessage, setAcceptCallWhatsappMessage] = useState("");
-  const [loadingAcceptCallWhatsappMessage, setLoadingAcceptCallWhatsappMessage] = useState(false);
+  const [AcceptCallWhatsappMessage, setAcceptCallWhatsappMessage] =
+    useState("");
+  const [
+    loadingAcceptCallWhatsappMessage,
+    setLoadingAcceptCallWhatsappMessage,
+  ] = useState(false);
 
   const [sendQueuePositionMessage, setSendQueuePositionMessage] = useState("");
-  const [loadingSendQueuePositionMessage, setLoadingSendQueuePositionMessage] = useState(false);
+  const [
+    loadingSendQueuePositionMessage,
+    setLoadingSendQueuePositionMessage,
+  ] = useState(false);
 
   const [showNotificationPending, setShowNotificationPending] = useState(false);
-  const [loadingShowNotificationPending, setLoadingShowNotificationPending] = useState(false);
+  const [loadingShowNotificationPending, setLoadingShowNotificationPending] =
+    useState(false);
 
-  const { update: updateUserCreation, getAll } = useSettings();
-
-  // const { update: updatedownloadLimit } = useSettings();
-
-  const { update: updateeficlientid } = useSettings();
-  const { update: updateeficlientsecret } = useSettings();
-  const { update: updateefichavepix } = useSettings();
-  const { update: updatempaccesstoken } = useSettings();
-  const { update: updatestripeprivatekey } = useSettings();
-  const { update: updateasaastoken } = useSettings();
-
+  const { update: updateUserCreation } = useSettings();
   const { update } = useCompanySettings();
 
   const isSuper = () => {
     return user.super;
   };
 
-
   useEffect(() => {
-
     if (Array.isArray(oldSettings) && oldSettings.length) {
-
       const userPar = oldSettings.find((s) => s.key === "userCreation");
-
       if (userPar) {
         setUserCreation(userPar.value);
       }
-
-      // const downloadLimit = oldSettings.find((s) => s.key === "downloadLimit");
-
-      // if (downloadLimit) {
-      //  setdownloadLimit(downloadLimit.value);
-      // }
-
-      const copyContactPrefix = oldSettings.find((s) => s.key === 'copyContactPrefix');
-      if (copyContactPrefix) {
-        setCopyContactPrefix(copyContactPrefix.value);
-      }
-
-      const eficlientidType = oldSettings.find((s) => s.key === 'eficlientid');
-      if (eficlientidType) {
-        setEfiClientidType(eficlientidType.value);
-      }
-
-      const eficlientsecretType = oldSettings.find((s) => s.key === 'eficlientsecret');
-      if (eficlientsecretType) {
-        setEfiClientsecretType(eficlientsecretType.value);
-      }
-
-      const efichavepixType = oldSettings.find((s) => s.key === 'efichavepix');
-      if (efichavepixType) {
-        setEfiChavepixType(efichavepixType.value);
-      }
-
-      const mpaccesstokenType = oldSettings.find((s) => s.key === 'mpaccesstoken');
-      if (mpaccesstokenType) {
-        setmpaccesstokenType(mpaccesstokenType.value);
-      }
-
-      const asaastokenType = oldSettings.find((s) => s.key === 'asaastoken');
-      if (asaastokenType) {
-        setasaastokenType(asaastokenType.value);
-      }
-
     }
-  }, [oldSettings])
-
+  }, [oldSettings]);
 
   useEffect(() => {
     const entries = Object.entries(settings || {});
@@ -267,15 +353,18 @@ const [loadingCopyContactPrefix, setLoadingCopyContactPrefix] = useState(false);
       if (key === "chatBotType") setChatBotType(value);
       if (key === "acceptCallWhatsapp") setAcceptCallWhatsapp(value);
       if (key === "userRandom") setUserRandom(value);
-      if (key === "sendGreetingMessageOneQueues") setSendGreetingMessageOneQueues(value);
+      if (key === "sendGreetingMessageOneQueues")
+        setSendGreetingMessageOneQueues(value);
       if (key === "sendSignMessage") setSendSignMessage(value);
-      if (key === "sendFarewellWaitingTicket") setSendFarewellWaitingTicket(value);
+      if (key === "sendFarewellWaitingTicket")
+        setSendFarewellWaitingTicket(value);
       if (key === "sendGreetingAccepted") setSendGreetingAccepted(value);
       if (key === "sendQueuePosition") setSendQueuePosition(value);
-      if (key === "acceptAudioMessageContact") setAcceptAudioMessageContact(value);
+      if (key === "acceptAudioMessageContact")
+        setAcceptAudioMessageContact(value);
       if (key === "enableLGPD") setEnableLGPD(value);
       if (key === "requiredTag") setRequiredTag(value);
-      if (key === "lgpdDeleteMessage") setLGPDDeleteMessage(value)
+      if (key === "lgpdDeleteMessage") setLGPDDeleteMessage(value);
       if (key === "lgpdHideNumber") setLGPDHideNumber(value);
       if (key === "lgpdConsent") setLGPDConsent(value);
       if (key === "lgpdMessage") setLGPDMessage(value);
@@ -284,13 +373,13 @@ const [loadingCopyContactPrefix, setLoadingCopyContactPrefix] = useState(false);
       if (key === "DirectTicketsToWallets") setDirectTicketsToWallets(value);
       if (key === "closeTicketOnTransfer") setCloseTicketOnTransfer(value);
       if (key === "transferMessage") setTransferMessage(value);
-      if (key === "greetingAcceptedMessage") setGreetingAcceptedMessage(value);
-      if (key === "AcceptCallWhatsappMessage") setAcceptCallWhatsappMessage(value);
-      if (key === "sendQueuePositionMessage") setSendQueuePositionMessage(value);
+      if (key === "greetingAcceptedMessage")
+        setGreetingAcceptedMessage(value);
+      if (key === "AcceptCallWhatsappMessage")
+        setAcceptCallWhatsappMessage(value);
+      if (key === "sendQueuePositionMessage")
+        setSendQueuePositionMessage(value);
       if (key === "showNotificationPending") setShowNotificationPending(value);
-      if (key === "copyContactPrefix") setCopyContactPrefix(value);
-      // SMTP foi movido para a aba Email; ignorar chaves legadas:
-      // emailHost, emailPort, emailUser, emailPassword, emailEncryption
     }
   }, [settings]);
 
@@ -304,98 +393,12 @@ const [loadingCopyContactPrefix, setLoadingCopyContactPrefix] = useState(false);
     setLoadingUserCreation(false);
   }
 
-  // async function handleDownloadLimit(value) {
-  //   setdownloadLimit(value);
-  //   setLoadingdownloadLimit(true);
-  //   await updatedownloadLimit({
-  //     key: "downloadLimit",
-  //     value,
-  //   });
-  //   setLoadingdownloadLimit(false);
-  // }
-
-  async function handleChangeEfiClientid(value) {
-    setEfiClientidType(value);
-    setLoadingEfiClientidType(true);
-    await updateeficlientid({
-      key: 'eficlientid',
-      value,
-    });
-    toast.success('Operação atualizada com sucesso.');
-    setLoadingEfiClientidType(false);
-  }
-
-async function handleCopyContactPrefix(value) {
-  setCopyContactPrefix(value);
-  setLoadingCopyContactPrefix(true);
-  await update({
-    column: "copyContactPrefix",
-    data: value
-  });
-  setLoadingCopyContactPrefix(false);
-}
-
-  async function handleChangeEfiClientsecret(value) {
-    setEfiClientsecretType(value);
-    setLoadingEfiClientsecretType(true);
-    await updateeficlientsecret({
-      key: 'eficlientsecret',
-      value,
-    });
-    toast.success('Operação atualizada com sucesso.');
-    setLoadingEfiClientsecretType(false);
-  }
-
-  async function handleChangeEfiChavepix(value) {
-    setEfiChavepixType(value);
-    setLoadingEfiChavepixType(true);
-    await updateefichavepix({
-      key: 'efichavepix',
-      value,
-    });
-    toast.success('Operação atualizada com sucesso.');
-    setLoadingEfiChavepixType(false);
-  }
-
-  async function handleChangempaccesstoken(value) {
-    setmpaccesstokenType(value);
-    setLoadingmpaccesstokenType(true);
-    await updatempaccesstoken({
-      key: 'mpaccesstoken',
-      value,
-    });
-    toast.success('Operação atualizada com sucesso.');
-    setLoadingmpaccesstokenType(false);
-  }
-
-  async function handleChangestripeprivatekey(value) {
-    setstripeprivatekeyType(value);
-    setLoadingstripeprivatekeyType(true);
-    await updatestripeprivatekey({
-      key: 'stripeprivatekey',
-      value,
-    });
-    toast.success('Operação atualizada com sucesso.');
-    setLoadingstripeprivatekeyType(false);
-  }
-
-  async function handleChangeasaastoken(value) {
-    setasaastokenType(value);
-    setLoadingasaastokenType(true);
-    await updateasaastoken({
-      key: 'asaastoken',
-      value,
-    });
-    toast.success('Operação atualizada com sucesso.');
-    setLoadingasaastokenType(false);
-  }
-
   async function handleChangeUserRating(value) {
     setUserRating(value);
     setLoadingUserRating(true);
     await update({
       column: "userRating",
-      data: value
+      data: value,
     });
     setLoadingUserRating(false);
   }
@@ -405,7 +408,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingScheduleType(true);
     await update({
       column: "scheduleType",
-      data: value
+      data: value,
     });
     setLoadingScheduleType(false);
     if (typeof scheduleTypeChanged === "function") {
@@ -413,25 +416,12 @@ async function handleCopyContactPrefix(value) {
     }
   }
 
-  async function handleCopyContactPrefix(value) {
-    setCopyContactPrefix(value);
-    setLoadingCopyContactPrefix(true);
-    await update({
-      column: "copyContactPrefix",
-      data: value
-    });
-    setLoadingCopyContactPrefix(false);
-  }
-
   async function handleChatBotType(value) {
     setChatBotType(value);
     await update({
       column: "chatBotType",
-      data: value
+      data: value,
     });
-    if (typeof scheduleTypeChanged === "function") {
-      setChatBotType(value);
-    }
   }
 
   async function handleLGPDMessage(value) {
@@ -439,7 +429,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingLGPDMessage(true);
     await update({
       column: "lgpdMessage",
-      data: value
+      data: value,
     });
     setLoadingLGPDMessage(false);
   }
@@ -449,7 +439,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingTransferMessage(true);
     await update({
       column: "transferMessage",
-      data: value
+      data: value,
     });
     setLoadingTransferMessage(false);
   }
@@ -459,7 +449,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingGreetingAcceptedMessage(true);
     await update({
       column: "greetingAcceptedMessage",
-      data: value
+      data: value,
     });
     setLoadingGreetingAcceptedMessage(false);
   }
@@ -469,7 +459,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingAcceptCallWhatsappMessage(true);
     await update({
       column: "AcceptCallWhatsappMessage",
-      data: value
+      data: value,
     });
     setLoadingAcceptCallWhatsappMessage(false);
   }
@@ -479,7 +469,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingSendQueuePositionMessage(true);
     await update({
       column: "sendQueuePositionMessage",
-      data: value
+      data: value,
     });
     setLoadingSendQueuePositionMessage(false);
   }
@@ -489,19 +479,17 @@ async function handleCopyContactPrefix(value) {
     setLoadingShowNotificationPending(true);
     await update({
       column: "showNotificationPending",
-      data: value
+      data: value,
     });
     setLoadingShowNotificationPending(false);
   }
-
-  // SMTP UI movido para a aba 'Email'
 
   async function handleLGPDLink(value) {
     setLGPDLink(value);
     setLoadingLGPDLink(true);
     await update({
       column: "lgpdLink",
-      data: value
+      data: value,
     });
     setLoadingLGPDLink(false);
   }
@@ -511,7 +499,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingLGPDDeleteMessage(true);
     await update({
       column: "lgpdDeleteMessage",
-      data: value
+      data: value,
     });
     setLoadingLGPDDeleteMessage(false);
   }
@@ -521,7 +509,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingLGPDConsent(true);
     await update({
       column: "lgpdConsent",
-      data: value
+      data: value,
     });
     setLoadingLGPDConsent(false);
   }
@@ -531,7 +519,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingLGPDHideNumber(true);
     await update({
       column: "lgpdHideNumber",
-      data: value
+      data: value,
     });
     setLoadingLGPDHideNumber(false);
   }
@@ -541,7 +529,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingSendGreetingAccepted(true);
     await update({
       column: "sendGreetingAccepted",
-      data: value
+      data: value,
     });
     setLoadingSendGreetingAccepted(false);
   }
@@ -551,7 +539,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingUserRandom(true);
     await update({
       column: "userRandom",
-      data: value
+      data: value,
     });
     setLoadingUserRandom(false);
   }
@@ -561,7 +549,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingSettingsTransfTicket(true);
     await update({
       column: "sendMsgTransfTicket",
-      data: value
+      data: value,
     });
     setLoadingSettingsTransfTicket(false);
   }
@@ -571,7 +559,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingAcceptCallWhatsapp(true);
     await update({
       column: "acceptCallWhatsapp",
-      data: value
+      data: value,
     });
     setLoadingAcceptCallWhatsapp(false);
   }
@@ -581,9 +569,12 @@ async function handleCopyContactPrefix(value) {
     setLoadingSendSignMessage(true);
     await update({
       column: "sendSignMessage",
-      data: value
+      data: value,
     });
-    localStorage.setItem("sendSignMessage", value === "enabled" ? true : false); //atualiza localstorage para sessão
+    localStorage.setItem(
+      "sendSignMessage",
+      value === "enabled" ? true : false
+    );
     setLoadingSendSignMessage(false);
   }
 
@@ -592,7 +583,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingSendGreetingMessageOneQueues(true);
     await update({
       column: "sendGreetingMessageOneQueues",
-      data: value
+      data: value,
     });
     setLoadingSendGreetingMessageOneQueues(false);
   }
@@ -602,7 +593,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingSendQueuePosition(true);
     await update({
       column: "sendQueuePosition",
-      data: value
+      data: value,
     });
     setLoadingSendQueuePosition(false);
   }
@@ -612,7 +603,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingSendFarewellWaitingTicket(true);
     await update({
       column: "sendFarewellWaitingTicket",
-      data: value
+      data: value,
     });
     setLoadingSendFarewellWaitingTicket(false);
   }
@@ -622,7 +613,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingAcceptAudioMessageContact(true);
     await update({
       column: "acceptAudioMessageContact",
-      data: value
+      data: value,
     });
     setLoadingAcceptAudioMessageContact(false);
   }
@@ -632,7 +623,7 @@ async function handleCopyContactPrefix(value) {
     setLoadingEnableLGPD(true);
     await update({
       column: "enableLGPD",
-      data: value
+      data: value,
     });
     setLoadingEnableLGPD(false);
   }
@@ -668,22 +659,33 @@ async function handleCopyContactPrefix(value) {
   }
 
   return (
-    <>
-      <Grid spacing={3} container>
+    <Box className={classes.root}>
+      <Box className={classes.sheet}>
+        <Box className={classes.sectionBlock}>
+        <Typography className={classes.sectionTitle} component="h2">
+          {i18n.t("settings.settings.options.sectionGeneral")}
+        </Typography>
+        <Typography
+          className={classes.sectionHint}
+          variant="caption"
+          color="textSecondary"
+          component="p"
+        >
+          {i18n.t("settings.settings.options.sectionGeneralHint")}
+        </Typography>
 
-        {/* CRIAÇÃO DE COMPANY/USERS */}
-        {isSuper() ?
-          <Grid xs={12} sm={6} md={4} item>
-            <FormControl className={classes.selectContainer}>
-              <InputLabel id="UserCreation-label">
-                {i18n.t("settings.settings.options.creationCompanyUser")}
-              </InputLabel>
-              <Select
-                labelId="UserCreation-label"
+        <Grid container spacing={3} className={classes.optionsGrid}>
+          {isSuper() ? (
+            <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+              <OptionSelectField
+                classes={classes}
+                label={i18n.t("settings.settings.options.creationCompanyUser")}
                 value={userCreation}
                 onChange={async (e) => {
                   handleChangeUserCreation(e.target.value);
                 }}
+                loading={loadingUserCreation}
+                legend={optLegend("userCreation")}
               >
                 <MenuItem value={"disabled"}>
                   {i18n.t("settings.settings.options.disabled")}
@@ -691,56 +693,20 @@ async function handleCopyContactPrefix(value) {
                 <MenuItem value={"enabled"}>
                   {i18n.t("settings.settings.options.enabled")}
                 </MenuItem>
-              </Select>
-              <FormHelperText>
-                {loadingUserCreation &&
-                  i18n.t("settings.settings.options.updating")}
-              </FormHelperText>
-            </FormControl>
-          </Grid>
-          : null}
+              </OptionSelectField>
+            </Grid>
+          ) : null}
 
-        {/* LIMITAR DOWNLOAD */}
-        {/* {isSuper() ?
-          <Grid xs={12} sm={6} md={4} item>
-            <FormControl className={classes.selectContainer}>
-              <InputLabel id="downloadLimit-label">
-                Limite de Download de Arquivos (MB)
-              </InputLabel>
-              <Select
-                labelId="downloadLimit-label"
-                value={downloadLimit}
-                size="small"
-                onChange={async (e) => {
-                  handleDownloadLimit(e.target.value);
-                }}
-              >
-                <MenuItem value={"32"}>32</MenuItem>
-                <MenuItem value={"64"}>64</MenuItem>
-                <MenuItem value={"128"}>128</MenuItem>
-                <MenuItem value={"256"}>256</MenuItem>
-                <MenuItem value={"512"}>512</MenuItem>
-                <MenuItem value={"1024"}>1024</MenuItem>
-                <MenuItem value={"2048"}>2048</MenuItem>
-              </Select>
-              <FormHelperText>
-                {loadingDownloadLimit && "Atualizando..."}
-              </FormHelperText>
-            </FormControl>
-          </Grid>
-          : null
-        } */}
-
-        {/* AVALIAÇÕES */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="ratings-label">{i18n.t("settings.settings.options.evaluations")}</InputLabel>
-            <Select
-              labelId="ratings-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.evaluations")}
               value={userRating}
               onChange={async (e) => {
                 handleChangeUserRating(e.target.value);
               }}
+              loading={loadingUserRating}
+              legend={optLegend("evaluations")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -748,49 +714,45 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingUserRating && i18n.t("settings.settings.options.evaluations")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* AGENDAMENTO DE EXPEDIENTE */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="schedule-type-label">
-              {i18n.t("settings.settings.options.officeScheduling")}
-            </InputLabel>
-            <Select
-              labelId="schedule-type-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.officeScheduling")}
               value={scheduleType}
               onChange={async (e) => {
                 handleScheduleType(e.target.value);
               }}
+              loading={loadingScheduleType}
+              legend={optLegend("officeScheduling")}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.settings.options.disabled")}</MenuItem>
-              <MenuItem value={"queue"}>{i18n.t("settings.settings.options.queueManagement")}</MenuItem>
-              <MenuItem value={"company"}>{i18n.t("settings.settings.options.companyManagement")}</MenuItem>
-              <MenuItem value={"connection"}>{i18n.t("settings.settings.options.connectionManagement")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingScheduleType && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+              <MenuItem value={"disabled"}>
+                {i18n.t("settings.settings.options.disabled")}
+              </MenuItem>
+              <MenuItem value={"queue"}>
+                {i18n.t("settings.settings.options.queueManagement")}
+              </MenuItem>
+              <MenuItem value={"company"}>
+                {i18n.t("settings.settings.options.companyManagement")}
+              </MenuItem>
+              <MenuItem value={"connection"}>
+                {i18n.t("settings.settings.options.connectionManagement")}
+              </MenuItem>
+            </OptionSelectField>
+          </Grid>
 
-        {/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendGreetingAccepted-label">
-              {i18n.t("settings.settings.options.sendGreetingAccepted")}
-            </InputLabel>
-            <Select
-              labelId="sendGreetingAccepted-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.sendGreetingAccepted")}
               value={SendGreetingAccepted}
               onChange={async (e) => {
                 handleSendGreetingAccepted(e.target.value);
               }}
+              loading={loadingSendGreetingAccepted}
+              legend={optLegend("sendGreetingAccepted")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -798,25 +760,19 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSendGreetingAccepted && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* ESCOLHER OPERADOR ALEATORIO */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="userRandom-label">
-              {i18n.t("settings.settings.options.userRandom")}
-            </InputLabel>
-            <Select
-              labelId="userRandom-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.userRandom")}
               value={UserRandom}
               onChange={async (e) => {
                 handleUserRandom(e.target.value);
               }}
+              loading={loadingUserRandom}
+              legend={optLegend("userRandom")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -824,25 +780,19 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingUserRandom && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* ENVIAR MENSAGEM DE TRANSFERENCIA DE SETOR/ATENDENTE */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendMsgTransfTicket-label">
-              {i18n.t("settings.settings.options.sendMsgTransfTicket")}
-            </InputLabel>
-            <Select
-              labelId="sendMsgTransfTicket-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.sendMsgTransfTicket")}
               value={SettingsTransfTicket}
               onChange={async (e) => {
                 handleSettingsTransfTicket(e.target.value);
               }}
+              loading={loadingSettingsTransfTicket}
+              legend={optLegend("sendMsgTransfTicket")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -850,44 +800,34 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSettingsTransfTicket && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* TIPO DO BOT */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="schedule-type-label">{i18n.t("settings.settings.options.chatBotType")}</InputLabel>
-            <Select
-              labelId="schedule-type-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.chatBotType")}
               value={chatBotType}
               onChange={async (e) => {
                 handleChatBotType(e.target.value);
               }}
+              loading={false}
+              legend={optLegend("chatBotType")}
             >
               <MenuItem value={"text"}>Texto</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingScheduleType && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* AVISO SOBRE LIGAÇÃO DO WHATSAPP */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="acceptCallWhatsapp-label">
-              {i18n.t("settings.settings.options.acceptCallWhatsapp")}
-            </InputLabel>
-            <Select
-              labelId="acceptCallWhatsapp-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.acceptCallWhatsapp")}
               value={AcceptCallWhatsapp}
               onChange={async (e) => {
                 handleAcceptCallWhatsapp(e.target.value);
               }}
+              loading={loadingAcceptCallWhatsapp}
+              legend={optLegend("acceptCallWhatsapp")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -895,25 +835,19 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingAcceptCallWhatsapp && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* HABILITAR PARA O ATENDENTE RETIRAR O ASSINATURA */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendSignMessage-label">
-              {i18n.t("settings.settings.options.sendSignMessage")}
-            </InputLabel>
-            <Select
-              labelId="sendSignMessage-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.sendSignMessage")}
               value={sendSignMessage}
               onChange={async (e) => {
                 handleSendSignMessage(e.target.value);
               }}
+              loading={loadingSendSignMessage}
+              legend={optLegend("sendSignMessage")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -921,25 +855,21 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSendSignMessage && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* ENVIAR SAUDAÇÃO QUANDO HOUVER SOMENTE 1 FILA */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendGreetingMessageOneQueues-label">
-              {i18n.t("settings.settings.options.sendGreetingMessageOneQueues")}
-            </InputLabel>
-            <Select
-              labelId="sendGreetingMessageOneQueues-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t(
+                "settings.settings.options.sendGreetingMessageOneQueues"
+              )}
               value={sendGreetingMessageOneQueues}
               onChange={async (e) => {
                 handleSendGreetingMessageOneQueues(e.target.value);
               }}
+              loading={loadingSendGreetingMessageOneQueues}
+              legend={optLegend("sendGreetingMessageOneQueues")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -947,25 +877,19 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSendGreetingMessageOneQueues && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* ENVIAR MENSAGEM COM A POSIÇÃO DA FILA */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendQueuePosition-label">
-              {i18n.t("settings.settings.options.sendQueuePosition")}
-            </InputLabel>
-            <Select
-              labelId="sendQueuePosition-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.sendQueuePosition")}
               value={sendQueuePosition}
               onChange={async (e) => {
                 handleSendQueuePosition(e.target.value);
               }}
+              loading={loadingSendQueuePosition}
+              legend={optLegend("sendQueuePosition")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -973,25 +897,21 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSendQueuePosition && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        {/* ENVIAR MENSAGEM DE DESPEDIDA NO AGUARDANDO */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendFarewellWaitingTicket-label">
-              {i18n.t("settings.settings.options.sendFarewellWaitingTicket")}
-            </InputLabel>
-            <Select
-              labelId="sendFarewellWaitingTicket-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t(
+                "settings.settings.options.sendFarewellWaitingTicket"
+              )}
               value={sendFarewellWaitingTicket}
               onChange={async (e) => {
                 handleSendFarewellWaitingTicket(e.target.value);
               }}
+              loading={loadingSendFarewellWaitingTicket}
+              legend={optLegend("sendFarewellWaitingTicket")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -999,23 +919,21 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSendFarewellWaitingTicket && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="acceptAudioMessageContact-label">
-              {i18n.t("settings.settings.options.acceptAudioMessageContact")}
-            </InputLabel>
-            <Select
-              labelId="acceptAudioMessageContact-label"
+            </OptionSelectField>
+          </Grid>
+
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t(
+                "settings.settings.options.acceptAudioMessageContact"
+              )}
               value={acceptAudioMessageContact}
               onChange={async (e) => {
                 handleAcceptAudioMessageContact(e.target.value);
               }}
+              loading={loadingAcceptAudioMessageContact}
+              legend={optLegend("acceptAudioMessageContact")}
             >
               <MenuItem value={"disabled"}>
                 {i18n.t("settings.settings.options.disabled")}
@@ -1023,574 +941,381 @@ async function handleCopyContactPrefix(value) {
               <MenuItem value={"enabled"}>
                 {i18n.t("settings.settings.options.enabled")}
               </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingAcceptAudioMessageContact && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+            </OptionSelectField>
+          </Grid>
 
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="enableLGPD-label"> {i18n.t("settings.settings.options.enableLGPD")}</InputLabel>
-            <Select
-              labelId="enableLGPD-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.enableLGPD")}
               value={enableLGPD}
               onChange={async (e) => {
                 handleEnableLGPD(e.target.value);
               }}
+              loading={loadingEnableLGPD}
+              legend={optLegend("enableLGPD")}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.settings.options.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.settings.options.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingEnableLGPD && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+              <MenuItem value={"disabled"}>
+                {i18n.t("settings.settings.options.disabled")}
+              </MenuItem>
+              <MenuItem value={"enabled"}>
+                {i18n.t("settings.settings.options.enabled")}
+              </MenuItem>
+            </OptionSelectField>
+          </Grid>
 
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="requiredTag-label"> {i18n.t("settings.settings.options.requiredTag")}</InputLabel>
-            <Select
-              labelId="requiredTag-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t("settings.settings.options.requiredTag")}
               value={requiredTag}
               onChange={async (e) => {
                 handleRequiredTag(e.target.value);
               }}
+              loading={loadingRequiredTag}
+              legend={optLegend("requiredTag")}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.settings.options.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.settings.options.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingRequiredTag && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="closeTicketOnTransfer-label"> {i18n.t("settings.settings.options.closeTicketOnTransfer")}</InputLabel>
-            <Select
-              labelId="closeTicketOnTransfer-label"
+              <MenuItem value={"disabled"}>
+                {i18n.t("settings.settings.options.disabled")}
+              </MenuItem>
+              <MenuItem value={"enabled"}>
+                {i18n.t("settings.settings.options.enabled")}
+              </MenuItem>
+            </OptionSelectField>
+          </Grid>
+
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t(
+                "settings.settings.options.closeTicketOnTransfer"
+              )}
               value={closeTicketOnTransfer}
               onChange={async (e) => {
                 handleCloseTicketOnTransfer(e.target.value);
               }}
+              loading={loadingCloseTicketOnTransfer}
+              legend={optLegend("closeTicketOnTransfer")}
             >
-              <MenuItem value={false}>{i18n.t("settings.settings.options.disabled")}</MenuItem>
-              <MenuItem value={true}>{i18n.t("settings.settings.options.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingCloseTicketOnTransfer && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+              <MenuItem value={false}>
+                {i18n.t("settings.settings.options.disabled")}
+              </MenuItem>
+              <MenuItem value={true}>
+                {i18n.t("settings.settings.options.enabled")}
+              </MenuItem>
+            </OptionSelectField>
+          </Grid>
 
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="showNotificationPending-label"> {i18n.t("settings.settings.options.showNotificationPending")}</InputLabel>
-            <Select
-              labelId="showNotificationPending-label"
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t(
+                "settings.settings.options.showNotificationPending"
+              )}
               value={showNotificationPending}
               onChange={async (e) => {
                 handleShowNotificationPending(e.target.value);
               }}
+              loading={loadingShowNotificationPending}
+              legend={optLegend("showNotificationPending")}
             >
-              <MenuItem value={false}>{i18n.t("settings.settings.options.disabled")}</MenuItem>
-              <MenuItem value={true}>{i18n.t("settings.settings.options.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingShowNotificationPending && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="DirectTicketsToWallets-label"> {i18n.t("settings.settings.options.DirectTicketsToWallets")}</InputLabel>
-            <Select
-              labelId="DirectTicketsToWallets-label"
+              <MenuItem value={false}>
+                {i18n.t("settings.settings.options.disabled")}
+              </MenuItem>
+              <MenuItem value={true}>
+                {i18n.t("settings.settings.options.enabled")}
+              </MenuItem>
+            </OptionSelectField>
+          </Grid>
+
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
+              label={i18n.t(
+                "settings.settings.options.DirectTicketsToWallets"
+              )}
               value={directTicketsToWallets}
               onChange={async (e) => {
                 handleDirectTicketsToWallets(e.target.value);
               }}
+              loading={loadingDirectTicketsToWallets}
+              legend={optLegend("directTicketsToWallets")}
             >
-              <MenuItem value={false}>{i18n.t("settings.settings.options.disabled")}</MenuItem>
-              <MenuItem value={true}>{i18n.t("settings.settings.options.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingDirectTicketsToWallets && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-      </Grid>
-      <br></br>
-
-
-      
-      <br></br>
-
-      {/* CONFIGURAÇÃO SIGLA PARA CÓPIA DE CONTATOS */}
-      <Grid spacing={3} container style={{ marginBottom: 10 }}>
-                  <Tabs
-            indicatorColor='primary'
-            textColor='primary'
-            scrollButtons='on'
-            variant='scrollable'
-            className={classes.tab}
-            style={{
-              marginBottom: 20,
-              marginTop: 20,
-            }}
-          >
-            <Tab label='Configuração de Sigla para Copia de Contato' />
-          </Tabs>
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="copyContactPrefix"
-              name="copyContactPrefix"
-              margin="dense"
-              label={i18n.t("settings.settings.options.copyContactPrefix")}
-              variant="outlined"
-              value={copyContactPrefix}
-              placeholder={i18n.t("settings.settings.options.copyContactPrefixPlaceholder")}
-              onChange={async (e) => {
-                handleCopyContactPrefix(e.target.value);
-              }}
-                InputLabelProps={{
-    shrink: true,
-  }}
-            />
-            <FormHelperText>
-              {loadingCopyContactPrefix && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-      </Grid>
-
-      
-      {/*-----------------LGPD-----------------*/}
-      {enableLGPD === "enabled" && (
-        <>
-          <Grid spacing={3} container
-            style={{ marginBottom: 10 }}>
-            <Tabs
-              value={0}
-              indicatorColor="primary"
-              textColor="primary"
-              scrollButtons="on"
-              variant="scrollable"
-              className={classes.tab}
-            >
-              <Tab
-
-                label={i18n.t("settings.settings.LGPD.title")} />
-
-            </Tabs>
+              <MenuItem value={false}>
+                {i18n.t("settings.settings.options.disabled")}
+              </MenuItem>
+              <MenuItem value={true}>
+                {i18n.t("settings.settings.options.enabled")}
+              </MenuItem>
+            </OptionSelectField>
           </Grid>
-          <Grid spacing={1} container>
-            <Grid xs={12} sm={6} md={12} item>
-              <FormControl className={classes.selectContainer}>
+        </Grid>
+        </Box>
+
+      {enableLGPD === "enabled" && (
+        <Box className={classes.sectionBlock}>
+          <Typography className={classes.sectionTitle} component="h2">
+            {i18n.t("settings.settings.LGPD.title")}
+          </Typography>
+          <Typography
+            className={classes.sectionHint}
+            variant="caption"
+            color="textSecondary"
+            component="p"
+          >
+            {i18n.t("settings.settings.options.sectionLgpdHint")}
+          </Typography>
+
+          <Grid container spacing={3} className={classes.optionsGrid}>
+            <Grid xs={12} sm={6} md={12} item className={classes.gridItem}>
+              <FieldLegendBlock
+                classes={classes}
+                legend={optLegend("lgpdWelcome")}
+              >
                 <TextField
                   id="lgpdMessage"
                   name="lgpdMessage"
-                  margin="dense"
                   multiline
                   rows={3}
                   label={i18n.t("settings.settings.LGPD.welcome")}
                   variant="outlined"
+                  size="small"
+                  fullWidth
                   value={lgpdMessage}
                   onChange={async (e) => {
                     handleLGPDMessage(e.target.value);
                   }}
-                >
-                </TextField>
-                <FormHelperText>
-                  {loadinglgpdMessage && i18n.t("settings.settings.options.updating")}
-                </FormHelperText>
-              </FormControl>
+                  helperText={
+                    loadinglgpdMessage
+                      ? i18n.t("settings.settings.options.updating")
+                      : undefined
+                  }
+                />
+              </FieldLegendBlock>
             </Grid>
-            <Grid xs={12} sm={6} md={12} item>
-              <FormControl className={classes.selectContainer}>
+            <Grid xs={12} sm={6} md={12} item className={classes.gridItem}>
+              <FieldLegendBlock
+                classes={classes}
+                legend={optLegend("lgpdLink")}
+              >
                 <TextField
                   id="lgpdLink"
                   name="lgpdLink"
-                  margin="dense"
                   label={i18n.t("settings.settings.LGPD.linkLGPD")}
                   variant="outlined"
+                  size="small"
+                  fullWidth
                   value={lgpdLink}
                   onChange={async (e) => {
                     handleLGPDLink(e.target.value);
                   }}
-                >
-                </TextField>
-                <FormHelperText>
-                  {loadingLGPDLink && i18n.t("settings.settings.options.updating")}
-                </FormHelperText>
-              </FormControl>
+                  helperText={
+                    loadingLGPDLink
+                      ? i18n.t("settings.settings.options.updating")
+                      : undefined
+                  }
+                />
+              </FieldLegendBlock>
             </Grid>
-            {/* LGPD Manter ou nao mensagem deletada pelo contato */}
-            <Grid xs={12} sm={6} md={4} item>
-              <FormControl className={classes.selectContainer}>
-                <InputLabel id="lgpdDeleteMessage-label">{i18n.t("settings.settings.LGPD.obfuscateMessageDelete")}</InputLabel>
-                <Select
-                  labelId="lgpdDeleteMessage-label"
-                  value={lgpdDeleteMessage}
-                  onChange={async (e) => {
-                    handleLGPDDeleteMessage(e.target.value);
-                  }}
-                >
-                  <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
-                  <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
-                </Select>
-                <FormHelperText>
-                  {loadingLGPDDeleteMessage && i18n.t("settings.settings.options.updating")}
-                </FormHelperText>
-              </FormControl>
+            <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+              <OptionSelectField
+                classes={classes}
+                label={i18n.t(
+                  "settings.settings.LGPD.obfuscateMessageDelete"
+                )}
+                value={lgpdDeleteMessage}
+                onChange={async (e) => {
+                  handleLGPDDeleteMessage(e.target.value);
+                }}
+                loading={loadingLGPDDeleteMessage}
+                legend={optLegend("lgpdObfuscateDelete")}
+              >
+                <MenuItem value={"disabled"}>
+                  {i18n.t("settings.settings.LGPD.disabled")}
+                </MenuItem>
+                <MenuItem value={"enabled"}>
+                  {i18n.t("settings.settings.LGPD.enabled")}
+                </MenuItem>
+              </OptionSelectField>
             </Grid>
-            {/* LGPD Sempre solicitar confirmaçao / conscentimento dos dados */}
-            <Grid xs={12} sm={6} md={4} item>
-              <FormControl className={classes.selectContainer}>
-                <InputLabel id="lgpdConsent-label">
-                  {i18n.t("settings.settings.LGPD.alwaysConsent")}
-                </InputLabel>
-                <Select
-                  labelId="lgpdConsent-label"
-                  value={lgpdConsent}
-                  onChange={async (e) => {
-                    handleLGPDConsent(e.target.value);
-                  }}
-                >
-                  <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
-                  <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
-                </Select>
-                <FormHelperText>
-                  {loadingLGPDConsent && i18n.t("settings.settings.options.updating")}
-                </FormHelperText>
-              </FormControl>
+            <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+              <OptionSelectField
+                classes={classes}
+                label={i18n.t("settings.settings.LGPD.alwaysConsent")}
+                value={lgpdConsent}
+                onChange={async (e) => {
+                  handleLGPDConsent(e.target.value);
+                }}
+                loading={loadingLGPDConsent}
+                legend={optLegend("lgpdAlwaysConsent")}
+              >
+                <MenuItem value={"disabled"}>
+                  {i18n.t("settings.settings.LGPD.disabled")}
+                </MenuItem>
+                <MenuItem value={"enabled"}>
+                  {i18n.t("settings.settings.LGPD.enabled")}
+                </MenuItem>
+              </OptionSelectField>
             </Grid>
-            {/* LGPD Ofuscar número telefone para usuários */}
-            <Grid xs={12} sm={6} md={4} item>
-              <FormControl className={classes.selectContainer}>
-                <InputLabel id="lgpdHideNumber-label">
-                  {i18n.t("settings.settings.LGPD.obfuscatePhoneUser")}
-                </InputLabel>
-                <Select
-                  labelId="lgpdHideNumber-label"
-                  value={lgpdHideNumber}
-                  onChange={async (e) => {
-                    handleLGPDHideNumber(e.target.value);
-                  }}
-                >
-                  <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
-                  <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
-                </Select>
-                <FormHelperText>
-                  {loadingLGPDHideNumber && i18n.t("settings.settings.options.updating")}
-                </FormHelperText>
-              </FormControl>
+            <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+              <OptionSelectField
+                classes={classes}
+                label={i18n.t("settings.settings.LGPD.obfuscatePhoneUser")}
+                value={lgpdHideNumber}
+                onChange={async (e) => {
+                  handleLGPDHideNumber(e.target.value);
+                }}
+                loading={loadingLGPDHideNumber}
+                legend={optLegend("lgpdObfuscatePhone")}
+              >
+                <MenuItem value={"disabled"}>
+                  {i18n.t("settings.settings.LGPD.disabled")}
+                </MenuItem>
+                <MenuItem value={"enabled"}>
+                  {i18n.t("settings.settings.LGPD.enabled")}
+                </MenuItem>
+              </OptionSelectField>
             </Grid>
           </Grid>
-        </>
+        </Box>
       )}
 
-      <Grid spacing={3} container>
-        {isSuper() ?
-          <Tabs
-            indicatorColor='primary'
-            textColor='primary'
-            scrollButtons='on'
-            variant='scrollable'
-            className={classes.tab}
-            style={{
-              marginBottom: 20,
-              marginTop: 20,
-            }}
-          >
-            <Tab label='Configuração Pix Efí (GerenciaNet)' />
-          </Tabs>
-          : null}
-      </Grid>
+      <Box className={classes.sectionBlock}>
+        <Typography className={classes.sectionTitle} component="h2">
+          {i18n.t("settings.settings.options.sectionMessages")}
+        </Typography>
+        <Typography
+          className={classes.sectionHint}
+          variant="caption"
+          color="textSecondary"
+          component="p"
+        >
+          {i18n.t("settings.settings.options.sectionMessagesHint")}
+        </Typography>
 
-      <Grid spacing={3} container style={{ marginBottom: 10 }}>
-        <Grid xs={12} sm={6} md={6} item>
-          {isSuper() ?
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id='eficlientid'
-                name='eficlientid'
-                margin='dense'
-                label='Client ID'
-                variant='outlined'
-                value={eficlientidType}
-                onChange={async (e) => {
-                  handleChangeEfiClientid(e.target.value);
-                }}
-              ></TextField>
-              <FormHelperText>
-                {loadingEfiClientidType && 'Atualizando...'}
-              </FormHelperText>
-            </FormControl>
-            : null}
-        </Grid>
-        <Grid xs={12} sm={6} md={6} item>
-          {isSuper() ?
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id='eficlientsecret'
-                name='eficlientsecret'
-                margin='dense'
-                label='Client Secret'
-                variant='outlined'
-                value={eficlientsecretType}
-                onChange={async (e) => {
-                  handleChangeEfiClientsecret(e.target.value);
-                }}
-              ></TextField>
-              <FormHelperText>
-                {loadingEfiClientsecretType && 'Atualizando...'}
-              </FormHelperText>
-            </FormControl>
-            : null}
-        </Grid>
-        <Grid xs={12} sm={12} md={12} item>
-          {isSuper() ?
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id='efichavepix'
-                name='efichavepix'
-                margin='dense'
-                label='Chave PIX'
-                variant='outlined'
-                value={efichavepixType}
-                onChange={async (e) => {
-                  handleChangeEfiChavepix(e.target.value);
-                }}
-              ></TextField>
-              <FormHelperText>
-                {loadingEfiChavepixType && 'Atualizando...'}
-              </FormHelperText>
-            </FormControl>
-            : null}
-        </Grid>
-      </Grid>
-
-      <Grid spacing={3} container>
-        {isSuper() ?
-          <Tabs
-            indicatorColor='primary'
-            textColor='primary'
-            scrollButtons='on'
-            variant='scrollable'
-            className={classes.tab}
-            style={{
-              marginBottom: 20,
-              marginTop: 20,
-            }}
-          >
-            <Tab label='Mercado Pago' />
-          </Tabs>
-          : null}
-      </Grid>
-
-      <Grid spacing={3} container style={{ marginBottom: 10 }}>
-        <Grid xs={12} sm={12} md={12} item>
-          {isSuper() ?
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id='mpaccesstoken'
-                name='mpaccesstoken'
-                margin='dense'
-                label='Access Token'
-                variant='outlined'
-                value={mpaccesstokenType}
-                onChange={async (e) => {
-                  handleChangempaccesstoken(e.target.value);
-                }}
-              ></TextField>
-              <FormHelperText>
-                {loadingmpaccesstokenType && 'Atualizando...'}
-              </FormHelperText>
-            </FormControl>
-            : null}
-        </Grid>
-      </Grid>
-
-      <Grid spacing={3} container>
-        {isSuper() ?
-          <Tabs
-            indicatorColor='primary'
-            textColor='primary'
-            scrollButtons='on'
-            variant='scrollable'
-            className={classes.tab}
-            style={{
-              marginBottom: 20,
-              marginTop: 20,
-            }}
-          >
-            <Tab label='Stripe' />
-          </Tabs>
-          : null}
-      </Grid>
-
-      <Grid spacing={3} container style={{ marginBottom: 10 }}>
-        <Grid xs={12} sm={12} md={12} item>
-          {isSuper() ?
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id='stripeprivatekey'
-                name='stripeprivatekey'
-                margin='dense'
-                label='Stripe Private Key'
-                variant='outlined'
-                value={stripeprivatekeyType}
-                onChange={async (e) => {
-                  handleChangestripeprivatekey(e.target.value);
-                }}
-              ></TextField>
-              <FormHelperText>
-                {loadingstripeprivatekeyType && 'Atualizando...'}
-              </FormHelperText>
-            </FormControl>
-            : null}
-        </Grid>
-      </Grid>
-
-      <Grid spacing={3} container>
-        {isSuper() ?
-          <Tabs
-            indicatorColor='primary'
-            textColor='primary'
-            scrollButtons='on'
-            variant='scrollable'
-            className={classes.tab}
-            style={{
-              marginBottom: 20,
-              marginTop: 20,
-            }}
-          >
-            <Tab label='ASAAS' />
-          </Tabs>
-          : null}
-      </Grid>
-
-      <Grid spacing={3} container style={{ marginBottom: 10 }}>
-        <Grid xs={12} sm={12} md={12} item>
-          {isSuper() ?
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id='asaastoken'
-                name='asaastoken'
-                margin='dense'
-                label='Token Asaas'
-                variant='outlined'
-                value={asaastokenType}
-                onChange={async (e) => {
-                  handleChangeasaastoken(e.target.value);
-                }}
-              ></TextField>
-              <FormHelperText>
-                {loadingasaastokenType && 'Atualizando...'}
-              </FormHelperText>
-            </FormControl>
-            : null}
-        </Grid>
-      </Grid>
-
-      <Grid spacing={1} container>
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="transferMessage"
-              name="transferMessage"
-              margin="dense"
-              multiline
-              rows={3}
-              label={i18n.t("settings.settings.customMessages.transferMessage")}
-              variant="outlined"
-              value={transferMessage}
-              required={SettingsTransfTicket === "enabled"}
-              onChange={async (e) => {
-                handletransferMessage(e.target.value);
-              }}
+        <Grid container spacing={3} className={classes.optionsGrid}>
+          <Grid xs={12} sm={6} md={6} item className={classes.gridItem}>
+            <FieldLegendBlock
+              classes={classes}
+              legend={optLegend("transferMessage")}
             >
-            </TextField>
-            <FormHelperText>
-              {loadingTransferMessage && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+              <TextField
+                id="transferMessage"
+                name="transferMessage"
+                multiline
+                rows={3}
+                fullWidth
+                size="small"
+                label={i18n.t(
+                  "settings.settings.customMessages.transferMessage"
+                )}
+                variant="outlined"
+                value={transferMessage}
+                required={SettingsTransfTicket === "enabled"}
+                onChange={async (e) => {
+                  handletransferMessage(e.target.value);
+                }}
+                helperText={
+                  loadingTransferMessage
+                    ? i18n.t("settings.settings.options.updating")
+                    : undefined
+                }
+              />
+            </FieldLegendBlock>
+          </Grid>
 
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="greetingAcceptedMessage"
-              name="greetingAcceptedMessage"
-              margin="dense"
-              multiline
-              rows={3}
-              label={i18n.t("settings.settings.customMessages.greetingAcceptedMessage")}
-              variant="outlined"
-              value={greetingAcceptedMessage}
-              required={SendGreetingAccepted === "enabled"}
-              onChange={async (e) => {
-                handleGreetingAcceptedMessage(e.target.value);
-              }}
+          <Grid xs={12} sm={6} md={6} item className={classes.gridItem}>
+            <FieldLegendBlock
+              classes={classes}
+              legend={optLegend("greetingAcceptedMessage")}
             >
-            </TextField>
-            <FormHelperText>
-              {loadingGreetingAcceptedMessage && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+              <TextField
+                id="greetingAcceptedMessage"
+                name="greetingAcceptedMessage"
+                multiline
+                rows={3}
+                fullWidth
+                size="small"
+                label={i18n.t(
+                  "settings.settings.customMessages.greetingAcceptedMessage"
+                )}
+                variant="outlined"
+                value={greetingAcceptedMessage}
+                required={SendGreetingAccepted === "enabled"}
+                onChange={async (e) => {
+                  handleGreetingAcceptedMessage(e.target.value);
+                }}
+                helperText={
+                  loadingGreetingAcceptedMessage
+                    ? i18n.t("settings.settings.options.updating")
+                    : undefined
+                }
+              />
+            </FieldLegendBlock>
+          </Grid>
 
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="AcceptCallWhatsappMessage"
-              name="AcceptCallWhatsappMessage"
-              margin="dense"
-              multiline
-              rows={3}
-              label={i18n.t("settings.settings.customMessages.AcceptCallWhatsappMessage")}
-              variant="outlined"
-              required={AcceptCallWhatsapp === "disabled"}
-              value={AcceptCallWhatsappMessage}
-              onChange={async (e) => {
-                handleAcceptCallWhatsappMessage(e.target.value);
-              }}
+          <Grid xs={12} sm={6} md={6} item className={classes.gridItem}>
+            <FieldLegendBlock
+              classes={classes}
+              legend={optLegend("acceptCallWhatsappMessage")}
             >
-            </TextField>
-            <FormHelperText>
-              {loadingAcceptCallWhatsappMessage && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
+              <TextField
+                id="AcceptCallWhatsappMessage"
+                name="AcceptCallWhatsappMessage"
+                multiline
+                rows={3}
+                fullWidth
+                size="small"
+                label={i18n.t(
+                  "settings.settings.customMessages.AcceptCallWhatsappMessage"
+                )}
+                variant="outlined"
+                required={AcceptCallWhatsapp === "disabled"}
+                value={AcceptCallWhatsappMessage}
+                onChange={async (e) => {
+                  handleAcceptCallWhatsappMessage(e.target.value);
+                }}
+                helperText={
+                  loadingAcceptCallWhatsappMessage
+                    ? i18n.t("settings.settings.options.updating")
+                    : undefined
+                }
+              />
+            </FieldLegendBlock>
+          </Grid>
 
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="sendQueuePositionMessage"
-              name="sendQueuePositionMessage"
-              margin="dense"
-              multiline
-              required={sendQueuePosition === "enabled"}
-              rows={3}
-              label={i18n.t("settings.settings.customMessages.sendQueuePositionMessage")}
-              variant="outlined"
-              value={sendQueuePositionMessage}
-              onChange={async (e) => {
-                handlesendQueuePositionMessage(e.target.value);
-              }}
+          <Grid xs={12} sm={6} md={6} item className={classes.gridItem}>
+            <FieldLegendBlock
+              classes={classes}
+              legend={optLegend("sendQueuePositionMessage")}
             >
-            </TextField>
-            <FormHelperText>
-              {loadingSendQueuePositionMessage && i18n.t("settings.settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
+              <TextField
+                id="sendQueuePositionMessage"
+                name="sendQueuePositionMessage"
+                multiline
+                required={sendQueuePosition === "enabled"}
+                rows={3}
+                fullWidth
+                size="small"
+                label={i18n.t(
+                  "settings.settings.customMessages.sendQueuePositionMessage"
+                )}
+                variant="outlined"
+                value={sendQueuePositionMessage}
+                onChange={async (e) => {
+                  handlesendQueuePositionMessage(e.target.value);
+                }}
+                helperText={
+                  loadingSendQueuePositionMessage
+                    ? i18n.t("settings.settings.options.updating")
+                    : undefined
+                }
+              />
+            </FieldLegendBlock>
+          </Grid>
         </Grid>
-      </Grid>
-    </>
+      </Box>
+      </Box>
+    </Box>
   );
 }

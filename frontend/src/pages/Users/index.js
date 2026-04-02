@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
+import Tooltip from "@material-ui/core/Tooltip";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -15,6 +16,7 @@ import InputAdornment from "@material-ui/core/InputAdornment";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import AddIcon from "@material-ui/icons/Add";
 import { AccountCircle } from "@material-ui/icons";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -111,9 +113,25 @@ const useStyles = makeStyles((theme) => ({
   loadingText: {
     marginLeft: theme.spacing(2),
   },
+  fab: {
+    position: "fixed",
+    bottom: theme.spacing(3),
+    right: theme.spacing(3),
+    width: 56,
+    height: 56,
+    borderRadius: "50%",
+    backgroundColor: theme.palette.primary.main,
+    color: "#fff",
+    boxShadow: `0 8px 24px ${theme.palette.primary.main}4D`,
+    zIndex: theme.zIndex.snackbar,
+    "&:hover": {
+      backgroundColor: theme.palette.primary.dark,
+      color: "#fff",
+    },
+  },
 }));
 
-const Users = () => {
+const Users = ({ renderAsTab }) => {
   const classes = useStyles();
   const history = useHistory();
 
@@ -320,8 +338,10 @@ const renderProfileImage = (user) => {
     }
   };
 
+  const Container = renderAsTab ? ({ children }) => <>{children}</> : MainContainer;
+
   return (
-    <MainContainer>
+    <Container>
       <ConfirmationModal
         title={
           deletingUser &&
@@ -363,13 +383,6 @@ const renderProfileImage = (user) => {
                   ),
                 }}
               />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleOpenUserModal}
-              >
-                {i18n.t("users.buttons.add")}
-              </Button>
               {loggedInUser.profile === "admin" && showInternalChat && (
                 <Button
                   variant="contained"
@@ -479,9 +492,18 @@ const renderProfileImage = (user) => {
               </div>
             )}
           </Paper>
+          <Tooltip title={i18n.t("users.buttons.add")}>
+            <IconButton
+              className={classes.fab}
+              onClick={handleOpenUserModal}
+              aria-label={i18n.t("users.buttons.add")}
+            >
+              <AddIcon />
+            </IconButton>
+          </Tooltip>
         </>
       )}
-    </MainContainer>
+    </Container>
   );
 };
 

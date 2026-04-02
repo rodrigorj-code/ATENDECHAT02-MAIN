@@ -11,7 +11,7 @@ import { makeStyles } from "@material-ui/core/styles";
 
 import {
   Avatar,
-  Button,
+  Box,
   IconButton,
   InputAdornment,
   Paper,
@@ -24,7 +24,7 @@ import {
   Tooltip,
 } from "@material-ui/core";
 
-import { DeleteOutline, Edit } from "@material-ui/icons";
+import { Add, DeleteOutline, Edit } from "@material-ui/icons";
 
 import SearchIcon from "@material-ui/icons/Search";
 
@@ -98,10 +98,34 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
+  /** Aba Configurações: título um pouco mais à direita */
+  tabTitleOffset: {
+    marginLeft: theme.spacing(2.5),
+    "& .MuiTypography-root": {
+      fontWeight: 400,
+    },
+  },
   avatar: {
     width: "140px",
     height: "40px",
     borderRadius: 4,
+  },
+  /** Mesmo padrão de /activities (ActivitiesStyleLayout.fab) */
+  fab: {
+    position: "fixed",
+    bottom: theme.spacing(3),
+    right: theme.spacing(3),
+    width: 56,
+    height: 56,
+    borderRadius: "50%",
+    backgroundColor: theme.palette.primary.main,
+    color: "#fff",
+    boxShadow: `0 8px 24px ${theme.palette.primary.main}4D`,
+    zIndex: theme.zIndex.snackbar,
+    "&:hover": {
+      backgroundColor: theme.palette.primary.dark,
+      color: "#fff",
+    },
   },
 }));
 
@@ -261,9 +285,13 @@ const QueueIntegration = ({ renderAsTab }) => {
       ) : (
         <>
           <MainHeader>
-            <Title>
-              {i18n.t("queueIntegration.title")} ({queueIntegration.length})
-            </Title>
+            <Box
+              className={renderAsTab ? classes.tabTitleOffset : undefined}
+            >
+              <Title>
+                {i18n.t("queueIntegration.title")} ({queueIntegration.length})
+              </Title>
+            </Box>
             <MainHeaderButtonsWrapper>
               <TextField
                 placeholder={i18n.t("queueIntegration.searchPlaceholder")}
@@ -278,13 +306,6 @@ const QueueIntegration = ({ renderAsTab }) => {
                   ),
                 }}
               />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleOpenUserModal}
-              >
-                {i18n.t("queueIntegration.buttons.add")}
-              </Button>
             </MainHeaderButtonsWrapper>
           </MainHeader>
           <Paper
@@ -356,6 +377,15 @@ const QueueIntegration = ({ renderAsTab }) => {
               </TableBody>
             </Table>
           </Paper>
+          <Tooltip title={i18n.t("queueIntegration.buttons.add")}>
+            <IconButton
+              className={classes.fab}
+              onClick={handleOpenUserModal}
+              aria-label={i18n.t("queueIntegration.buttons.add")}
+            >
+              <Add />
+            </IconButton>
+          </Tooltip>
         </>
       )}
     </Container>

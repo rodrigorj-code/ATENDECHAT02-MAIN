@@ -1852,7 +1852,76 @@ const messages = {
             showNotificationPending:
               "Mostrar notificação para tickets pendentes",
             copyContactPrefix: "Sigla para Cópia de Contatos",
-            copyContactPrefixPlaceholder: "Ex: COPIA_"
+            copyContactPrefixPlaceholder: "Ex: COPIA_",
+            sectionGeneral: "Preferências de atendimento",
+            sectionGeneralHint:
+              "Ajuste o comportamento de filas, mensagens automáticas e privacidade. As alterações são aplicadas na conta assim que você altera cada opção.",
+            sectionLgpdHint:
+              "Textos e regras exibidos ao contato quando o modo LGPD está ativo.",
+            sectionMessages: "Mensagens personalizadas",
+            sectionMessagesHint:
+              "Variáveis como ${queue.name} são preenchidas automaticamente pelo sistema.",
+            hintUserCreation:
+              "Controla se novas empresas e usuários podem ser criados (visível para superusuário).",
+            hintEvaluations:
+              "Permite enviar pesquisa de satisfação ao finalizar o atendimento.",
+            hintScheduleType:
+              "Define onde o horário de expediente se aplica: fila, empresa ou conexão.",
+            hintEnableLGPD:
+              "Ativa fluxos de consentimento e mensagens conforme a LGPD.",
+            legends: {
+              userCreation:
+                "Define se novas empresas e usuários podem ser criados no sistema.",
+              evaluations:
+                "Envia pesquisa de satisfação ao finalizar o atendimento.",
+              officeScheduling:
+                "Define onde o horário de expediente vale: fila, empresa ou conexão.",
+              sendGreetingAccepted:
+                "Envia mensagem automática quando o ticket é aceito.",
+              userRandom:
+                "Distribui novos tickets aleatoriamente entre atendentes.",
+              sendMsgTransfTicket:
+                "Texto enviado ao transferir entre filas ou atendentes.",
+              chatBotType: "Formato de resposta do robô com o contato.",
+              acceptCallWhatsapp:
+                "Avisa o cliente que chamadas de voz pelo WhatsApp não são aceitas.",
+              sendSignMessage:
+                "Permite ao atendente escolher enviar a assinatura no ticket.",
+              sendGreetingMessageOneQueues:
+                "Saudação quando existe apenas uma fila de atendimento.",
+              sendQueuePosition:
+                "Informa a posição do contato na fila de espera.",
+              sendFarewellWaitingTicket:
+                "Mensagem enquanto o ticket permanece aguardando.",
+              acceptAudioMessageContact:
+                "Aceita ou bloqueia áudios recebidos dos contatos.",
+              enableLGPD:
+                "Ativa consentimento e regras de tratamento de dados (LGPD).",
+              requiredTag: "Obriga selecionar uma tag antes de fechar o ticket.",
+              closeTicketOnTransfer:
+                "Encerra o ticket ao transferir para outra fila.",
+              showNotificationPending:
+                "Exibe aviso para tickets que aguardam ação.",
+              directTicketsToWallets:
+                "Move o cliente automaticamente para a carteira configurada.",
+              lgpdWelcome:
+                "Texto de boas-vindas exibido no fluxo LGPD.",
+              lgpdLink: "Endereço da política de privacidade ou termos.",
+              lgpdObfuscateDelete:
+                "Oculta conteúdo de mensagens apagadas para o atendente.",
+              lgpdAlwaysConsent:
+                "Solicita consentimento quando a regra se aplica.",
+              lgpdObfuscatePhone:
+                "Mascara parte do telefone na tela do usuário.",
+              transferMessage:
+                "Enviada na transferência; variáveis como ${queue.name} são preenchidas pelo sistema.",
+              greetingAcceptedMessage:
+                "Mensagem quando o atendimento do ticket começa.",
+              acceptCallWhatsappMessage:
+                "Texto quando ligações por WhatsApp não são aceitas.",
+              sendQueuePositionMessage:
+                "Conteúdo que informa a posição do cliente na fila.",
+            },
           },
           customMessages: {
             sendQueuePositionMessage: "Mensagem de posição na fila",
@@ -2225,6 +2294,23 @@ const messages = {
         },
       },
 whitelabel: {
+        pageTitle: "Identidade Visual",
+        pageSubtitle:
+          "Personalize cores, logos e idiomas para refletir a marca da sua operação.",
+        paletteSuggested: "Paletas sugeridas",
+        paletteHint:
+          "Toque em uma paleta para pré-visualizar. Salve para aplicar no sistema.",
+        saveColors: "Salvar cores",
+        saveLogosSection: "Salvar logos",
+        saveLanguagesSection: "Salvar idiomas",
+        logoSectionSave:
+          "Alterações registradas. Cada arquivo enviado já é salvo automaticamente.",
+        livePreview: "Pré-visualização ao vivo",
+        livePreviewHint:
+          "Simulação com as cores escolhidas e a logo atual antes de salvar.",
+        previewForceLightLogo:
+          "Forçar no preview a logo do tema claro (desative o contraste automático em fundos escuros).",
+        resetPreview: "Restaurar pré-visualização (padrão)",
         primaryColorLight: "Cor Primária (Tema Claro)",
         primaryColorDark: "Cor Primária (Tema Escuro)",
         appName: "Nome da Aplicação",
@@ -2242,6 +2328,8 @@ whitelabel: {
         sections: {
           general: "Configurações Gerais",
           generalDescription: "Configure o nome e informações básicas da aplicação",
+          identityIntro:
+            "Nome da aplicação e identidade da marca (o preview usa as mesmas logos carregadas no app).",
           colors: "Cores e Temas",
           colorsDescription: "Personalize as cores primárias para temas claro e escuro",
           logos: "Logos e Imagens",

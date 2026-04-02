@@ -5,7 +5,7 @@ import { format, parseISO, set } from "date-fns";
 import Menu from "@material-ui/core/Menu";
 import MenuItem from "@material-ui/core/MenuItem";
 import PopupState, { bindTrigger, bindMenu } from "material-ui-popup-state";
-import { Stack } from "@mui/material";
+import { Stack, Box } from "@mui/material";
 import { makeStyles } from "@material-ui/core/styles";
 import { useHistory } from "react-router-dom";
 import { green } from "@material-ui/core/colors";
@@ -64,6 +64,32 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 12px",
     ...theme.scrollbarStyles,
   },
+  /** Configurações: sem card, fundo contínuo com a página */
+  tabOuterPaper: {
+    flex: 1,
+    padding: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    borderRadius: 0,
+    boxShadow: "none",
+    border: "none",
+    backgroundColor: "transparent",
+    ...theme.scrollbarStyles,
+  },
+  tabStack: {
+    overflowY: "auto",
+    padding: 0,
+    backgroundColor: "transparent",
+    borderRadius: 0,
+    height: "auto",
+    minHeight: 0,
+  },
+  tabTablePaper: {
+    borderRadius: 0,
+    boxShadow: "none",
+    backgroundColor: "transparent",
+    border: "none",
+  },
   customTableCell: {
     display: "flex",
     alignItems: "center",
@@ -86,6 +112,16 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.barraSuperior, //"#3d3d3d",
     color: "textSecondary",
     borderRadius: "5px",
+  },
+  /** Configurações (aba): mesmo peso visual dos títulos de Opções / Identidade Visual */
+  connectionsPageTitle: {
+    fontWeight: 400,
+    letterSpacing: "-0.02em",
+    color: theme.palette.text.primary,
+  },
+  connectionsPageSubtitle: {
+    color: theme.palette.text.secondary,
+    marginTop: theme.spacing(0.5),
   },
 }));
 
@@ -402,10 +438,23 @@ const AllConnections = ({ renderAsTab }) => {
       </div>
     );
   };
-  const Container = renderAsTab ? ({ children }) => <>{children}</> : MainContainer;
+  const Container = renderAsTab
+    ? ({ children, className }) => (
+        <Box
+          width="100%"
+          display="flex"
+          flexDirection="column"
+          flex={1}
+          minHeight={0}
+          className={className}
+        >
+          {children}
+        </Box>
+      )
+    : MainContainer;
 
   return (
-    <Container className={classes.mainPaper}>
+    <Container className={renderAsTab ? classes.tabOuterPaper : classes.mainPaper}>
       <ConfirmationModal
         title={confirmModalInfo.title}
         open={confirmModalOpen}
@@ -432,26 +481,30 @@ const AllConnections = ({ renderAsTab }) => {
       ) : (
         <>
           <Paper
-            className={classes.mainPaper}
-            style={{ overflow: "hidden" }}
-            variant="outlined"
+            className={renderAsTab ? classes.tabOuterPaper : classes.mainPaper}
+            style={renderAsTab ? { overflow: "visible" } : { overflow: "hidden" }}
+            variant={renderAsTab ? "elevation" : "outlined"}
+            elevation={renderAsTab ? 0 : undefined}
+            square={renderAsTab}
           >
             <MainHeader>
               <Stack>
                 <Typography
                   variant="h5"
-                  color="black"
+                  className={classes.connectionsPageTitle}
                   style={{
-                    fontWeight: "bold",
-                    marginLeft: "10px",
-                    marginTop: "10px",
+                    marginLeft: renderAsTab ? 0 : "10px",
+                    marginTop: renderAsTab ? 0 : "10px",
                   }}
                   gutterBottom
                 >
                   Gerenciar Conexões
                 </Typography>
                 <Typography
-                  style={{ marginTop: "-10px", marginLeft: "10px" }}
+                  className={classes.connectionsPageSubtitle}
+                  style={{
+                    marginLeft: renderAsTab ? 0 : "10px",
+                  }}
                   variant="caption"
                   color="textSecondary"
                 >
@@ -532,15 +585,24 @@ const AllConnections = ({ renderAsTab }) => {
               </MainHeaderButtonsWrapper>
             </MainHeader>
             <Stack
-              style={{
-                overflowY: "auto",
-                padding: "20px",
-                backgroundColor: "rgb(244 244 244 / 53%)",
-                borderRadius: "5px",
-                height: "93%",
-              }}
+              className={renderAsTab ? classes.tabStack : undefined}
+              style={
+                renderAsTab
+                  ? undefined
+                  : {
+                      overflowY: "auto",
+                      padding: "20px",
+                      backgroundColor: "rgb(244 244 244 / 53%)",
+                      borderRadius: "5px",
+                      height: "93%",
+                    }
+              }
             >
-              <Paper>
+              <Paper
+                className={renderAsTab ? classes.tabTablePaper : undefined}
+                elevation={renderAsTab ? 0 : undefined}
+                variant={renderAsTab ? "elevation" : "elevation"}
+              >
                 <Table size="small">
                   <TableHead className={classes.TableHead}>
                     <TableRow style={{ color: "#fff" }}>
@@ -568,7 +630,6 @@ const AllConnections = ({ renderAsTab }) => {
                       <TableRowSkeleton />
                     ) : (
                       <>
-                        {console.log(companies, whats)}
                         {companies?.length > 0 &&
                           companies.map((company) => (
                             <TableRow key={company.id}>

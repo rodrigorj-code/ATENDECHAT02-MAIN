@@ -1804,6 +1804,58 @@ const messages = {
               "Close Ticket when Transferring to Another Queue",
             DirectTicketsToWallets: "Automatically Move Client to Wallet",
             showNotificationPending: "Show Notification for Pending Tickets",
+            legends: {
+              userCreation:
+                "Controls whether new companies and users can be created.",
+              evaluations:
+                "Sends a satisfaction survey when the ticket is resolved.",
+              officeScheduling:
+                "Where office hours apply: queue, company, or connection.",
+              sendGreetingAccepted:
+                "Sends an automatic message when the ticket is accepted.",
+              userRandom:
+                "Assigns new tickets randomly among available agents.",
+              sendMsgTransfTicket:
+                "Message sent when transferring between queues or agents.",
+              chatBotType: "How the bot replies to the contact.",
+              acceptCallWhatsapp:
+                "Tells the customer that WhatsApp voice calls are not accepted.",
+              sendSignMessage:
+                "Lets the agent choose whether to send the signature.",
+              sendGreetingMessageOneQueues:
+                "Greeting when there is only one service queue.",
+              sendQueuePosition:
+                "Shows the contact’s position in the waiting queue.",
+              sendFarewellWaitingTicket:
+                "Message while the ticket stays in waiting status.",
+              acceptAudioMessageContact:
+                "Allow or block audio messages from contacts.",
+              enableLGPD:
+                "Enables consent flows and data handling rules (LGPD/GDPR-style).",
+              requiredTag: "Requires a tag before closing the ticket.",
+              closeTicketOnTransfer:
+                "Closes the ticket when moving to another queue.",
+              showNotificationPending:
+                "Shows alerts for tickets pending action.",
+              directTicketsToWallets:
+                "Automatically moves the client to the configured wallet.",
+              lgpdWelcome: "Welcome text shown in the LGPD flow.",
+              lgpdLink: "URL of the privacy policy or terms.",
+              lgpdObfuscateDelete:
+                "Hides content of deleted messages for agents.",
+              lgpdAlwaysConsent:
+                "Requests consent whenever the rule applies.",
+              lgpdObfuscatePhone:
+                "Masks part of the phone number in the UI.",
+              transferMessage:
+                "Sent on transfer; variables like ${queue.name} are filled by the system.",
+              greetingAcceptedMessage:
+                "Message when ticket handling starts.",
+              acceptCallWhatsappMessage:
+                "Text when WhatsApp calls are not accepted.",
+              sendQueuePositionMessage:
+                "Content that informs the client’s queue position.",
+            },
           },
           customMessages: {
             sendQueuePositionMessage: "Queue Position Message",
@@ -2161,6 +2213,15 @@ const messages = {
         },
       },
       whitelabel: {
+        pageTitle: "Visual identity",
+        pageSubtitle:
+          "Customize colors, logos, and languages to match your brand.",
+        previewForceLightLogo:
+          "Force the light-theme logo in the preview (turn off automatic contrast on dark backgrounds).",
+        saveLogosSection: "Save logos",
+        saveLanguagesSection: "Save languages",
+        logoSectionSave:
+          "Saved. Each file upload is applied automatically.",
         primaryColorLight: "Primary Color (Light Theme)",
         primaryColorDark: "Primary Color (Dark Theme)",
         appName: "Application Name",
@@ -2178,6 +2239,8 @@ const messages = {
         sections: {
           general: "General Settings",
           generalDescription: "Configure the application name and basic information",
+          identityIntro:
+            "App name and brand identity (the preview uses the same logos loaded in the app).",
           colors: "Colors and Themes",
           colorsDescription: "Customize primary colors for light and dark themes",
           logos: "Logos and Images",

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useContext, useEffect, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
 import {
@@ -52,8 +52,8 @@ import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 import BirthdayModal from "../components/BirthdayModal";
-import logo from "../assets/LOGO VB-PNG.png";
-import logoDark from "../assets/LOGO VB PRETO.png";
+import defaultLogoLight from "../assets/LOGO VB PRETO.png";
+import defaultLogoDark from "../assets/LOGO VB-PNG.png";
 import ChatPopover from "../pages/Chat/ChatPopover";
 import { useDate } from "../hooks/useDate";
 import ColorModeContext from "../layout/themeContext";
@@ -166,7 +166,7 @@ const useStyles = makeStyles((theme) => ({
     top: 10,
     right: 10,
     padding: 2, // Botão ainda menor
-    color: "#000000", // Preto mais vivo
+    color: theme.palette.text.primary,
     "& svg": {
       fontSize: "1rem", // Ícone ainda menor
     },
@@ -263,7 +263,7 @@ const useStyles = makeStyles((theme) => ({
     top: 40,
     right: 0,
     left: theme.spacing(7),
-    backgroundColor: theme.mode === "light" ? "#f5f5f5" : "#333",
+    backgroundColor: theme.palette.background.paper,
     // borderBottom: "1px solid rgba(0, 0, 0, 0.12)", // Removed
     zIndex: theme.zIndex.drawer + 1,
     transition: theme.transitions.create(["width", "margin", "left"], {
@@ -324,7 +324,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     // Melhorias sutis no drawer
-    borderRight: `1px solid ${theme.mode === "light" ? "#e0e0e0" : "#424242"}`,
+    borderRight: `1px solid ${theme.palette.divider}`,
     boxShadow:
       theme.mode === "light"
         ? "2px 0 8px rgba(0, 0, 0, 0.1)"
@@ -387,7 +387,7 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: "90px", // Aumentado um pouco mais
     maxWidth: "100%", // Permite ocupar largura disponível
     objectFit: "contain", // Garante que a imagem caiba sem distorcer
-    content: `url(${theme.mode === "light" ? theme.calculatedLogoDark() : theme.calculatedLogoLight()})`,
+    /* Não usar content:url() aqui: sobrescreve o <img src> e quebra troca de logo / modo escuro */
     transition: "all 0.3s ease",
     cursor: "pointer", // Adicionado cursor pointer
     "&:hover": {
@@ -399,7 +399,6 @@ const useStyles = makeStyles((theme) => ({
   hideLogo: {
     width: "30px", // Reduzido de 35px
     maxWidth: "30px",
-    content: `url(${theme.mode === "light" ? theme.calculatedLogoDark() : theme.calculatedLogoLight()})`,
     margin: "0 auto", // Centraliza
   },
 
@@ -475,16 +474,17 @@ const useStyles = makeStyles((theme) => ({
       position: "absolute",
       top: "45px",
       left: "0",
-      background: "#fff",
+      background: theme.palette.background.paper,
       boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
       borderRadius: "8px",
       padding: "8px",
       zIndex: 1000,
       minWidth: "120px",
+      border: `1px solid ${theme.palette.divider}`,
       "& button": {
         background: "none",
         border: "none",
-        color: "#374151",
+        color: theme.palette.text.primary,
         display: "block",
         width: "100%",
         padding: "8px 12px",
@@ -646,6 +646,41 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
   );
 
   const settings = useSettings();
+  const getPublicSettingRef = useRef(settings.getPublicSetting);
+  getPublicSettingRef.current = settings.getPublicSetting;
+
+  /** Logos públicas são por empresa; GET /public-settings sem companyId usa empresa 1 no backend — recarrega com a empresa do usuário logado. */
+  useEffect(() => {
+    const companyId = user?.companyId;
+    if (!companyId) return;
+    let cancelled = false;
+    const base = (getBackendUrl() || "").replace(/\/+$/, "");
+    const toLogoSrc = (file, fallback) => {
+      if (file == null || String(file).trim() === "") return fallback;
+      const s = String(file).trim();
+      if (/^https?:\/\//i.test(s)) return s;
+      const path = s.replace(/^\/?public\/?/, "");
+      return `${base}/public/${path}`;
+    };
+    (async () => {
+      try {
+        const gp = getPublicSettingRef.current;
+        const [lightFile, darkFile] = await Promise.all([
+          gp("appLogoLight", companyId),
+          gp("appLogoDark", companyId),
+        ]);
+        if (cancelled) return;
+        colorMode.setAppLogoLight(toLogoSrc(lightFile, defaultLogoLight));
+        colorMode.setAppLogoDark(toLogoSrc(darkFile, defaultLogoDark));
+      } catch {
+        /* mantém estado do App */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- colorMode/setters estáveis; evitar loop com value novo do Provider
+  }, [user?.companyId]);
 
   const fetchAnnouncements = useCallback(async () => {
       try {
@@ -950,10 +985,15 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
         >
           <div className={classes.toolbarIcon}>
             <img
-              src={theme.mode === "light" ? theme.calculatedLogoDark() : theme.calculatedLogoLight()}
+              src={
+                theme.palette.type === "light"
+                  ? theme.calculatedLogoLight()
+                  : theme.calculatedLogoDark()
+              }
               alt="VBSolution"
               className={clsx(classes.logo, !drawerOpen && classes.hideLogo)}
               onClick={() => setDrawerOpen(!drawerOpen)}
+              key={`sidebar-logo-${theme.palette.type}-${String(colorMode.appLogoLight)}-${String(colorMode.appLogoDark)}`}
             />
             {drawerOpen && (
               <IconButton onClick={() => setDrawerOpen(!drawerOpen)} className={classes.chevronButton}>
@@ -1056,13 +1096,15 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
                       position: "absolute",
                       top: "32px",
                       left: "0",
-                      background: "#fff",
+                      background: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
                       boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
                       borderRadius: "8px",
                       padding: "8px",
                       zIndex: 1000,
                       minWidth: "120px",
                       maxWidth: "200px",
+                      border: `1px solid ${theme.palette.divider}`,
                     }}
                   >
                     {filteredLanguageOptions.map((lang) => (
@@ -1076,6 +1118,7 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
                           display: "block",
                           width: "100%",
                           padding: "4px",
+                          color: "inherit",
                         }}
                       >
                         {lang.label}
