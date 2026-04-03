@@ -13,7 +13,6 @@ import FinalizacaoAtendimento from "../../components/Settings/FinalizacaoAtendim
 import Users from "../Users";
 import AllConnections from "../AllConnections";
 import QueueIntegration from "../QueueIntegration";
-import Tags from "../Tags";
 import BirthdaySettings from "../BirthdaySettings";
 import EmailSettings from "../../components/Settings/EmailSettings";
 import Connections from "../Connections";
@@ -154,7 +153,9 @@ const SettingsCustom = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const initialTab = params.get("tab");
-    if (initialTab && initialTab !== "financeiro" && initialTab !== "plans") {
+    if (initialTab === "tags") {
+      setTab("options");
+    } else if (initialTab && initialTab !== "financeiro" && initialTab !== "plans") {
       setTab(initialTab);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -241,7 +242,6 @@ const SettingsCustom = () => {
     { value: "connections", label: "Gerenciar Conexões" },
     { value: "integrations", label: "Integrações" },
     { value: "email", label: "Email" },
-    { value: "tags", label: "Tags" },
     ...(isSpecificAdminUI() ? [{ value: "companies", label: "Assinaturas" }] : []),
   ];
   const settingsTabs = baseTabs;
@@ -356,13 +356,6 @@ const SettingsCustom = () => {
                 name={"email"}
               >
                 <EmailSettings renderAsTab={true} />
-              </TabPanel>
-              <TabPanel
-                className={classes.container}
-                value={tab}
-                name={"tags"}
-              >
-                <Tags renderAsTab={true} />
               </TabPanel>
             </Paper>
         </ActivitiesStyleLayout>

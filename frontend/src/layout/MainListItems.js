@@ -95,15 +95,15 @@ const useStyles = makeStyles((theme) => ({
     margin: "2px 8px",
     "&:hover $iconHoverActive": {
       backgroundColor: "transparent",
-      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
+      color: theme.palette.sidebarMenuHoverAccent,
       transform: "scale(1.05)",
     },
     "&:hover $listItemText": {
-      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
+      color: theme.palette.sidebarMenuHoverAccent,
       fontWeight: 400,
     },
     "&:hover": {
-      backgroundColor: theme.mode === "light" ? "#f3f4f6" : "rgba(255,255,255,0.06)",
+      backgroundColor: theme.palette.sidebarMenuItemHoverBg,
     },
     transition: "all 0.2s ease",
     justifyContent: props => props.collapsed ? "center" : "flex-start", // Centraliza o conteúdo se colapsado
@@ -124,19 +124,19 @@ const useStyles = makeStyles((theme) => ({
   },
 
   listItemActive: {
-    backgroundColor: theme.mode === "light" ? "#f3f4f6" : "rgba(255,255,255,0.1)",
+    backgroundColor: theme.palette.sidebarMenuItemActiveBg,
     "& $listItemText": {
-      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
+      color: theme.palette.sidebarMenuHoverAccent,
       fontWeight: 400,
     },
     "& $iconHoverActive": {
-      color: theme.mode === "light" ? theme.palette.primary.main : "#ffffff",
+      color: theme.palette.sidebarMenuHoverAccent,
     },
   },
 
   listItemText: {
     fontSize: "13px",
-    color: theme.mode === "light" ? "#000" : "#FFF",
+    color: theme.palette.sidebarMenuTextPrimary,
     transition: "color 0.3s ease",
     fontWeight: 400,
     "& .MuiTypography-root": {
@@ -160,14 +160,11 @@ const useStyles = makeStyles((theme) => ({
     height: 22,
     width: 22,
     backgroundColor: "transparent",
-    color: theme.mode === "light" ? "#000" : "#ffffff",
+    color: theme.palette.sidebarMenuIcon,
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     "&:hover, &.active": {
       backgroundColor: "transparent",
-      color:
-        theme.mode === "light"
-          ? theme.palette.primary.main
-          : "#ffffff",
+      color: theme.palette.sidebarMenuHoverAccent,
       boxShadow: "none",
     },
     "& .MuiSvgIcon-root": {
@@ -219,7 +216,7 @@ const useStyles = makeStyles((theme) => ({
   versionContainer: {
     textAlign: "center",
     padding: "10px",
-    color: theme.palette.type === "dark" ? theme.palette.text.secondary : theme.palette.primary.main,
+    color: theme.palette.sidebarMenuTextSecondary,
     fontSize: "12px",
     fontWeight: "bold",
     borderTop: `1px solid ${theme.palette.divider}`,
@@ -228,7 +225,7 @@ const useStyles = makeStyles((theme) => ({
 
   adminSection: {
     "& .MuiListSubheader-root": {
-      color: theme.palette.type === "dark" ? "#e4e4e7" : theme.palette.primary.main,
+      color: theme.palette.sidebarMenuTextSecondary,
       fontSize: "0.875rem",
       fontWeight: 600,
       textTransform: "uppercase",
@@ -238,7 +235,7 @@ const useStyles = makeStyles((theme) => ({
 
   expandIcon: {
     transition: "transform 0.3s ease",
-    color: theme.palette.type === "dark" ? "#e4e4e7" : theme.palette.primary.main,
+    color: theme.palette.sidebarMenuTextSecondary,
     "&.expanded": {
       transform: "rotate(180deg)",
     }

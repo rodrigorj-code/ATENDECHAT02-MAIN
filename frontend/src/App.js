@@ -15,6 +15,11 @@ import defaultLogoLight from "./assets/LOGO VB PRETO.png";
 import defaultLogoDark from "./assets/LOGO VB-PNG.png";
 import defaultLogoFavicon from "./assets/favicon.ico";
 import useSettings from "./hooks/useSettings";
+import {
+  getContrastTextForBackground,
+  getSidebarContrast,
+  logosLookSameUrl,
+} from "./utils/colorContrast";
 
 import "./styles/animations.css";
 
@@ -44,6 +49,10 @@ const App = () => {
     localStorage.getItem("primaryColorLight") ||
     localStorage.getItem("primaryColorDark")
   );
+  const btnLightStored = localStorage.getItem("buttonPrimaryColorLight");
+  const btnDarkStored = localStorage.getItem("buttonPrimaryColorDark");
+  const btnSecLightStored = localStorage.getItem("buttonSecondaryColorLight");
+  const btnSecDarkStored = localStorage.getItem("buttonSecondaryColorDark");
   const appNameLocalStorage = localStorage.getItem("appName") || "";
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const preferredTheme = window.localStorage.getItem("preferredTheme");
@@ -54,6 +63,30 @@ const App = () => {
     useState(appColorLocalStorage);
   const [primaryColorDark, setPrimaryColorDark] =
     useState(appColorLocalStorage);
+  const [buttonPrimaryColorLight, setButtonPrimaryColorLight] = useState(
+    btnLightStored && isValidHex(btnLightStored) ? btnLightStored : ""
+  );
+  const [buttonPrimaryColorDark, setButtonPrimaryColorDark] = useState(
+    btnDarkStored && isValidHex(btnDarkStored) ? btnDarkStored : ""
+  );
+  const [buttonSecondaryColorLight, setButtonSecondaryColorLight] = useState(
+    btnSecLightStored && isValidHex(btnSecLightStored) ? btnSecLightStored : ""
+  );
+  const [buttonSecondaryColorDark, setButtonSecondaryColorDark] = useState(
+    btnSecDarkStored && isValidHex(btnSecDarkStored) ? btnSecDarkStored : ""
+  );
+  const [topbarColorLight, setTopbarColorLight] = useState(
+    () => localStorage.getItem("topbarColorLight") || ""
+  );
+  const [topbarColorDark, setTopbarColorDark] = useState(
+    () => localStorage.getItem("topbarColorDark") || ""
+  );
+  const [sidebarColorLight, setSidebarColorLight] = useState(
+    () => localStorage.getItem("sidebarColorLight") || ""
+  );
+  const [sidebarColorDark, setSidebarColorDark] = useState(
+    () => localStorage.getItem("sidebarColorDark") || ""
+  );
   const [appLogoLight, setAppLogoLight] = useState(defaultLogoLight);
   const [appLogoDark, setAppLogoDark] = useState(defaultLogoDark);
   const [appLogoFavicon, setAppLogoFavicon] = useState(defaultLogoFavicon);
@@ -72,6 +105,14 @@ const App = () => {
       },
       setPrimaryColorLight,
       setPrimaryColorDark,
+      setButtonPrimaryColorLight,
+      setButtonPrimaryColorDark,
+      setButtonSecondaryColorLight,
+      setButtonSecondaryColorDark,
+      setTopbarColorLight,
+      setTopbarColorDark,
+      setSidebarColorLight,
+      setSidebarColorDark,
       setAppLogoLight,
       setAppLogoDark,
       setAppLogoFavicon,
@@ -87,9 +128,58 @@ const App = () => {
     [appLogoLight, appLogoDark, appLogoFavicon, appLogoTickets, appName, mode]
   );
 
-  const theme = useMemo(
-    () =>
-      createTheme(
+  const theme = useMemo(() => {
+    const brandLight = getSafeColor(primaryColorLight);
+    const brandDark = getSafeColor(primaryColorDark);
+    const btnMainLight =
+      buttonPrimaryColorLight && isValidHex(buttonPrimaryColorLight)
+        ? getSafeColor(buttonPrimaryColorLight)
+        : brandLight;
+    const btnMainDark =
+      buttonPrimaryColorDark && isValidHex(buttonPrimaryColorDark)
+        ? getSafeColor(buttonPrimaryColorDark)
+        : brandDark;
+
+    /** Topbar sem cor explícita segue a identidade (marca), não os botões principais. */
+    const topbarLightEff =
+      topbarColorLight && isValidHex(topbarColorLight)
+        ? getSafeColor(topbarColorLight)
+        : brandLight;
+    const topbarDarkEff =
+      topbarColorDark && isValidHex(topbarColorDark)
+        ? getSafeColor(topbarColorDark)
+        : brandDark;
+
+    /** Topbar (pesquisa, ícones): só contraste sobre a cor da topbar — não usa botões principais/secundários. */
+    const navbarAccentLight = getContrastTextForBackground(topbarLightEff);
+    const navbarAccentDark = getContrastTextForBackground(topbarDarkEff);
+    const navbarAccent =
+      mode === "light" ? navbarAccentLight : navbarAccentDark;
+
+    /** Abas tipo Settings/Atividades (ActivitiesStyleLayout): só "botões secundários" ou identidade. */
+    const pageTabsLight =
+      buttonSecondaryColorLight && isValidHex(buttonSecondaryColorLight)
+        ? getSafeColor(buttonSecondaryColorLight)
+        : brandLight;
+    const pageTabsDark =
+      buttonSecondaryColorDark && isValidHex(buttonSecondaryColorDark)
+        ? getSafeColor(buttonSecondaryColorDark)
+        : brandDark;
+    const pageTabsAccent = mode === "light" ? pageTabsLight : pageTabsDark;
+    const sidebarLightEff =
+      sidebarColorLight && isValidHex(sidebarColorLight)
+        ? getSafeColor(sidebarColorLight)
+        : LIGHT_BG_PAPER;
+    const sidebarDarkEff =
+      sidebarColorDark && isValidHex(sidebarColorDark)
+        ? getSafeColor(sidebarColorDark)
+        : DARK_BG_PAPER;
+
+    const currentSidebarBg =
+      mode === "light" ? sidebarLightEff : sidebarDarkEff;
+    const sidebarCx = getSidebarContrast(currentSidebarBg);
+
+    return createTheme(
         {
           // Scrollbar styles melhorados mas usando cores do tema
           scrollbarStyles: {
@@ -151,13 +241,13 @@ const App = () => {
             divider:
               mode === "light" ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.08)",
             primary: {
-              main: mode === "light" ? getSafeColor(primaryColorLight) : getSafeColor(primaryColorDark), // Usa cores dinâmicas
+              main: mode === "light" ? btnMainLight : btnMainDark,
               light: mode === "light"
-                ? `${getSafeColor(primaryColorLight)}80`
-                : `${getSafeColor(primaryColorDark)}80`,
+                ? `${btnMainLight}80`
+                : `${btnMainDark}80`,
               dark: mode === "light"
-                ? `${getSafeColor(primaryColorLight)}CC`
-                : `${getSafeColor(primaryColorDark)}CC`,
+                ? `${btnMainLight}CC`
+                : `${btnMainDark}CC`,
               contrastText: "#ffffff",
             },
             textPrimary:
@@ -178,7 +268,35 @@ const App = () => {
             inputBackground:
               mode === "light" ? "#FFFFFF" : DARK_BG_ELEVATED,
             barraSuperior:
-              mode === "light" ? getSafeColor(primaryColorLight) : DARK_BG_ELEVATED,
+              mode === "light" ? topbarLightEff : topbarDarkEff,
+            sidebarMenuBackground:
+              mode === "light" ? sidebarLightEff : sidebarDarkEff,
+            /** Menu lateral: textos/ícones seguem botões principais em fundo claro; fundo escuro = branco. */
+            sidebarMenuTextPrimary: sidebarCx.isDark
+              ? sidebarCx.textPrimary
+              : mode === "light"
+                ? btnMainLight
+                : btnMainDark,
+            sidebarMenuTextSecondary: sidebarCx.isDark
+              ? sidebarCx.textSecondary
+              : mode === "light"
+                ? "rgba(0, 0, 0, 0.65)"
+                : "rgba(255, 255, 255, 0.72)",
+            sidebarMenuIcon: sidebarCx.isDark
+              ? sidebarCx.icon
+              : mode === "light"
+                ? btnMainLight
+                : btnMainDark,
+            sidebarMenuItemHoverBg: sidebarCx.hoverBg,
+            sidebarMenuItemActiveBg: sidebarCx.activeBg,
+            sidebarMenuHoverAccent:
+              sidebarCx.isDark
+                ? "#ffffff"
+                : mode === "light"
+                  ? btnMainLight
+                  : btnMainDark,
+            /** Menu lateral com fundo escuro (cor custom) → logo branca */
+            sidebarMenuIsDarkLogo: sidebarCx.isDark,
           },
 
           typography: {
@@ -390,7 +508,7 @@ const App = () => {
               paper: {
                 border: 'none',
                 backgroundColor:
-                  mode === "light" ? LIGHT_BG_PAPER : DARK_BG_PAPER,
+                  mode === "light" ? sidebarLightEff : sidebarDarkEff,
               }
             },
 
@@ -403,22 +521,29 @@ const App = () => {
           },
 
           mode,
+          /** Ícones da topbar do sistema: só contraste com a cor da topbar. */
+          navbarAccent,
+          /** Cor das abas (nav tabs) em ActivitiesStyleLayout — whitelabel "botões secundários". */
+          pageTabsAccent,
           appLogoLight,
           appLogoDark,
           appLogoFavicon,
           appLogoTickets,
           appName,
           /**
-           * Logo para fundo escuro (sidebar/tema escuro): só appLogoDark ou default branca.
-           * Nunca reutilizar appLogoLight aqui — era isso que mostrava a PNG preta no modo escuro.
+           * Logo para fundo escuro (sidebar/tema escuro): appLogoDark ou PNG branca padrão.
+           * Se claro e escuro apontam para o mesmo arquivo, não reutilizar — usa o bundle branco.
            */
-          calculatedLogoDark: () => appLogoDark,
+          calculatedLogoDark: () =>
+            logosLookSameUrl(appLogoDark, appLogoLight)
+              ? defaultLogoDark
+              : appLogoDark,
           /** Logo para fundo claro: só appLogoLight ou default preta */
           calculatedLogoLight: () => appLogoLight,
         },
         locale
-      ),
-    [
+      );
+  }, [
       appLogoLight,
       appLogoDark,
       appLogoFavicon,
@@ -427,7 +552,15 @@ const App = () => {
       locale,
       mode,
       primaryColorDark,
-      primaryColorLight, // Essas são as cores que vêm do tema dinâmico
+      primaryColorLight,
+      buttonPrimaryColorLight,
+      buttonPrimaryColorDark,
+      buttonSecondaryColorLight,
+      buttonSecondaryColorDark,
+      topbarColorLight,
+      topbarColorDark,
+      sidebarColorLight,
+      sidebarColorDark,
     ]
   );
 
@@ -450,6 +583,58 @@ const App = () => {
       .catch((error) => {
         console.log("Error reading setting", error);
       });
+    getPublicSetting("buttonPrimaryColorLight")
+      .then((color) => {
+        setButtonPrimaryColorLight(
+          color && isValidHex(color) ? color : ""
+        );
+      })
+      .catch(() => {
+        setButtonPrimaryColorLight("");
+      });
+    getPublicSetting("buttonPrimaryColorDark")
+      .then((color) => {
+        setButtonPrimaryColorDark(
+          color && isValidHex(color) ? color : ""
+        );
+      })
+      .catch(() => {
+        setButtonPrimaryColorDark("");
+      });
+    getPublicSetting("buttonSecondaryColorLight")
+      .then((color) => {
+        setButtonSecondaryColorLight(
+          color && isValidHex(color) ? color : ""
+        );
+      })
+      .catch(() => setButtonSecondaryColorLight(""));
+    getPublicSetting("buttonSecondaryColorDark")
+      .then((color) => {
+        setButtonSecondaryColorDark(
+          color && isValidHex(color) ? color : ""
+        );
+      })
+      .catch(() => setButtonSecondaryColorDark(""));
+    getPublicSetting("topbarColorLight")
+      .then((color) => {
+        setTopbarColorLight(color && isValidHex(color) ? color : "");
+      })
+      .catch(() => setTopbarColorLight(""));
+    getPublicSetting("topbarColorDark")
+      .then((color) => {
+        setTopbarColorDark(color && isValidHex(color) ? color : "");
+      })
+      .catch(() => setTopbarColorDark(""));
+    getPublicSetting("sidebarColorLight")
+      .then((color) => {
+        setSidebarColorLight(color && isValidHex(color) ? color : "");
+      })
+      .catch(() => setSidebarColorLight(""));
+    getPublicSetting("sidebarColorDark")
+      .then((color) => {
+        setSidebarColorDark(color && isValidHex(color) ? color : "");
+      })
+      .catch(() => setSidebarColorDark(""));
     getPublicSetting("appLogoLight")
       .then((file) => {
         setAppLogoLight(
@@ -498,12 +683,33 @@ const App = () => {
 
   useEffect(() => {
     const root = document.documentElement;
+    const brandLight = getSafeColor(primaryColorLight);
+    const brandDark = getSafeColor(primaryColorDark);
+    const btn =
+      mode === "light"
+        ? buttonPrimaryColorLight && isValidHex(buttonPrimaryColorLight)
+          ? getSafeColor(buttonPrimaryColorLight)
+          : brandLight
+        : buttonPrimaryColorDark && isValidHex(buttonPrimaryColorDark)
+          ? getSafeColor(buttonPrimaryColorDark)
+          : brandDark;
     root.style.setProperty(
       "--primaryColor",
       mode === "light" ? primaryColorLight : primaryColorDark
     );
+    root.style.setProperty("--buttonPrimaryColor", btn);
     root.style.colorScheme = mode === "dark" ? "dark" : "light";
-  }, [primaryColorLight, primaryColorDark, mode]);
+  }, [
+    primaryColorLight,
+    primaryColorDark,
+    buttonPrimaryColorLight,
+    buttonPrimaryColorDark,
+    topbarColorLight,
+    topbarColorDark,
+    sidebarColorLight,
+    sidebarColorDark,
+    mode,
+  ]);
 
   useEffect(() => {
     async function fetchVersionData() {

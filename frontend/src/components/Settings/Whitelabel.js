@@ -7,7 +7,7 @@ import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
 import useSettings from "../../hooks/useSettings";
 import { toast } from "react-toastify";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import OnlyForSuperUser from "../OnlyForSuperUser";
 import useAuth from "../../hooks/useAuth.js";
 
@@ -31,6 +31,11 @@ import defaultLogoFavicon from "../../assets/favicon.ico";
 import ColorBoxModal from "../ColorBoxModal/index.js";
 import Checkbox from "@material-ui/core/Checkbox";
 import { i18n } from "../../translate/i18n";
+import {
+  getContrastTextForBackground,
+  hexToRgb,
+  relativeLuminance,
+} from "../../utils/colorContrast";
 
 const useStyles = makeStyles((theme) => ({
   container: {
@@ -167,10 +172,41 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     marginTop: theme.spacing(1.5),
     border: "none",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
     boxShadow:
       theme.mode === "light"
         ? "0 8px 32px rgba(15, 23, 42, 0.1)"
         : "0 12px 40px rgba(0, 0, 0, 0.4)",
+  },
+  livePreviewTopbar: {
+    width: "100%",
+    minHeight: 36,
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing(1),
+    borderBottom:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.08)"
+        : "1px solid rgba(15, 23, 42, 0.08)",
+  },
+  livePreviewTabsRow: {
+    width: "100%",
+    flexShrink: 0,
+    padding: theme.spacing(0.75, 1.25),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing(1),
+    backgroundColor:
+      theme.palette.type === "dark" ? "#000000" : "#ffffff",
+    borderBottom:
+      theme.palette.type === "dark"
+        ? "1px solid rgba(255,255,255,0.08)"
+        : "1px solid rgba(15, 23, 42, 0.08)",
   },
   livePreviewSticky: {
     [theme.breakpoints.up("md")]: {
@@ -375,36 +411,24 @@ const LANGUAGE_OPTIONS = [
   { code: "ar", label: "عربي" },
 ];
 
-function hexToRgb(hex) {
-  if (!hex || typeof hex !== "string") return { r: 99, g: 99, b: 99 };
-  let h = hex.replace("#", "").trim();
-  if (h.length === 3) {
-    h = h
-      .split("")
-      .map((c) => c + c)
-      .join("");
-  }
-  if (h.length !== 6) return { r: 99, g: 99, b: 99 };
-  const n = parseInt(h, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+function ensureHexPrefix(hex) {
+  if (!hex || typeof hex !== "string") return "#131B2D";
+  const s = hex.trim();
+  return s.startsWith("#") ? s : `#${s}`;
 }
 
-function relativeLuminance(rgb) {
-  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((x) => {
-    x /= 255;
-    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+function isValidHexColor(color) {
+  if (!color || typeof color !== "string") return false;
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3}|[A-Fa-f0-9]{8})$/.test(color.trim());
 }
 
-/** True when the gradient reads as “dark” — use logo tema escuro (ex.: branca) no preview */
+/** Gradiente escuro → logo tema escuro (PNG branca) no preview */
 function previewGradientIsDark(lightHex, darkHex) {
-  const l1 = relativeLuminance(hexToRgb(lightHex));
-  const l2 = relativeLuminance(hexToRgb(darkHex));
+  const l1 = relativeLuminance(hexToRgb(ensureHexPrefix(lightHex)));
+  const l2 = relativeLuminance(hexToRgb(ensureHexPrefix(darkHex)));
   const minL = Math.min(l1, l2);
   const avg = (l1 + l2) / 2;
-  /* Fundo escuro: média baixa OU qualquer extremo bem escuro (ex.: azul #1e3a8a + claro) */
-  return avg < 0.5 || minL < 0.18;
+  return minL < 0.45 || avg < 0.5;
 }
 
 const COLOR_PALETTES = [
@@ -437,18 +461,34 @@ const COLOR_PALETTES = [
 export default function Whitelabel(props) {
   const { settings } = props;
   const classes = useStyles();
+  const muiTheme = useTheme();
   const [settingsLoaded, setSettingsLoaded] = useState({});
 
   const { getCurrentUserInfo } = useAuth();
   const [currentUser, setCurrentUser] = useState({});
   const [loading, setLoading] = useState(true);
-  const colorMode = useContext(ColorModeContext);
-  const ctxLogoLight = colorMode.appLogoLight;
-  const ctxLogoDark = colorMode.appLogoDark;
+  const { colorMode } = useContext(ColorModeContext);
   const [primaryColorLightModalOpen, setPrimaryColorLightModalOpen] =
     useState(false);
   const [primaryColorDarkModalOpen, setPrimaryColorDarkModalOpen] =
     useState(false);
+  const [buttonColorLightModalOpen, setButtonColorLightModalOpen] =
+    useState(false);
+  const [buttonColorDarkModalOpen, setButtonColorDarkModalOpen] =
+    useState(false);
+  const [buttonSecondaryColorLightModalOpen, setButtonSecondaryColorLightModalOpen] =
+    useState(false);
+  const [buttonSecondaryColorDarkModalOpen, setButtonSecondaryColorDarkModalOpen] =
+    useState(false);
+  const [topbarColorLightModalOpen, setTopbarColorLightModalOpen] =
+    useState(false);
+  const [topbarColorDarkModalOpen, setTopbarColorDarkModalOpen] =
+    useState(false);
+  const [sidebarColorLightModalOpen, setSidebarColorLightModalOpen] =
+    useState(false);
+  const [sidebarColorDarkModalOpen, setSidebarColorDarkModalOpen] =
+    useState(false);
+  const savedPaletteRef = useRef(null);
 
   const logoLightInput = useRef(null);
   const logoDarkInput = useRef(null);
@@ -462,26 +502,124 @@ export default function Whitelabel(props) {
 
   const { update } = useSettings();
 
-  const [draftLight, setDraftLight] = useState("#131B2D");
-  const [draftDark, setDraftDark] = useState("#131B2D");
+  const [draftLight, setDraftLight] = useState(
+    () => localStorage.getItem("primaryColorLight") || "#131B2D"
+  );
+  const [draftDark, setDraftDark] = useState(
+    () => localStorage.getItem("primaryColorDark") || "#131B2D"
+  );
+  /** Vazio = mesma cor da identidade (marca) para botões primários */
+  const [draftButtonLight, setDraftButtonLight] = useState(
+    () => localStorage.getItem("buttonPrimaryColorLight") || ""
+  );
+  const [draftButtonDark, setDraftButtonDark] = useState(
+    () => localStorage.getItem("buttonPrimaryColorDark") || ""
+  );
+  const [draftSecondaryLight, setDraftSecondaryLight] = useState(
+    () => localStorage.getItem("buttonSecondaryColorLight") || ""
+  );
+  const [draftSecondaryDark, setDraftSecondaryDark] = useState(
+    () => localStorage.getItem("buttonSecondaryColorDark") || ""
+  );
+  const [draftTopbarLight, setDraftTopbarLight] = useState(
+    () => localStorage.getItem("topbarColorLight") || ""
+  );
+  const [draftTopbarDark, setDraftTopbarDark] = useState(
+    () => localStorage.getItem("topbarColorDark") || ""
+  );
+  const [draftSidebarLight, setDraftSidebarLight] = useState(
+    () => localStorage.getItem("sidebarColorLight") || ""
+  );
+  const [draftSidebarDark, setDraftSidebarDark] = useState(
+    () => localStorage.getItem("sidebarColorDark") || ""
+  );
   /** Se true, ignora o contraste e mantém sempre a logo do tema claro no preview. */
   const [previewForceLightLogo, setPreviewForceLightLogo] = useState(false);
 
   const previewGradientDark = useMemo(
     () =>
-      previewGradientIsDark(draftLight || "#131B2D", draftDark || "#131B2D"),
+      previewGradientIsDark(
+        ensureHexPrefix(draftLight || "#131B2D"),
+        ensureHexPrefix(draftDark || "#131B2D")
+      ),
     [draftLight, draftDark]
   );
   const useDarkLogoInPreview =
-    previewGradientDark && !previewForceLightLogo;
+    !previewForceLightLogo && previewGradientDark;
 
-  /** Mesmas URLs que o App carrega via getPublicSetting — evita preview com fallback preto enquanto settings só tem filename */
+  /** Mesma regra que theme.calculatedLogoDark/Light (duplicata claro/escuro → PNG branca padrão). */
   const previewLogoSrc = useMemo(() => {
     if (useDarkLogoInPreview) {
-      return ctxLogoDark || defaultLogoDark;
+      return muiTheme.calculatedLogoDark();
     }
-    return ctxLogoLight || defaultLogoLight;
-  }, [useDarkLogoInPreview, ctxLogoDark, ctxLogoLight]);
+    return muiTheme.calculatedLogoLight();
+  }, [
+    useDarkLogoInPreview,
+    muiTheme.appLogoDark,
+    muiTheme.appLogoLight,
+  ]);
+
+  /** Mesma cascata do App: topbar explícita → identidade (não usa cor dos botões principais). */
+  const previewEffectiveTopbarBg = useMemo(() => {
+    const brandL = ensureHexPrefix(draftLight || "#131B2D");
+    const brandD = ensureHexPrefix(draftDark || "#131B2D");
+    const topL = isValidHexColor(draftTopbarLight)
+      ? draftTopbarLight.trim()
+      : brandL;
+    const topD = isValidHexColor(draftTopbarDark)
+      ? draftTopbarDark.trim()
+      : brandD;
+    return ensureHexPrefix(colorMode.mode === "light" ? topL : topD);
+  }, [
+    colorMode.mode,
+    draftLight,
+    draftDark,
+    draftTopbarLight,
+    draftTopbarDark,
+  ]);
+
+  /** Abas das páginas: secundário ou identidade (igual ao App pageTabsAccent). */
+  const previewSecondaryLightSwatch = useMemo(() => {
+    const brandL = ensureHexPrefix(draftLight || "#131B2D");
+    return isValidHexColor(draftSecondaryLight)
+      ? draftSecondaryLight.trim()
+      : brandL;
+  }, [draftLight, draftSecondaryLight]);
+
+  const previewSecondaryDarkSwatch = useMemo(() => {
+    const brandD = ensureHexPrefix(draftDark || "#131B2D");
+    return isValidHexColor(draftSecondaryDark)
+      ? draftSecondaryDark.trim()
+      : brandD;
+  }, [draftDark, draftSecondaryDark]);
+
+  const previewPageTabsAccent = useMemo(() => {
+    return ensureHexPrefix(
+      colorMode.mode === "light"
+        ? previewSecondaryLightSwatch
+        : previewSecondaryDarkSwatch
+    );
+  }, [colorMode.mode, previewSecondaryLightSwatch, previewSecondaryDarkSwatch]);
+
+  /** Topbar do preview: só contraste sobre a cor da topbar (não usa secundário). */
+  const previewNavbarAccent = useMemo(() => {
+    const brandL = ensureHexPrefix(draftLight || "#131B2D");
+    const brandD = ensureHexPrefix(draftDark || "#131B2D");
+    const topL = isValidHexColor(draftTopbarLight)
+      ? draftTopbarLight.trim()
+      : brandL;
+    const topD = isValidHexColor(draftTopbarDark)
+      ? draftTopbarDark.trim()
+      : brandD;
+    const bar = ensureHexPrefix(colorMode.mode === "light" ? topL : topD);
+    return getContrastTextForBackground(bar);
+  }, [
+    colorMode.mode,
+    draftLight,
+    draftDark,
+    draftTopbarLight,
+    draftTopbarDark,
+  ]);
 
   function updateSettingsLoaded(key, value) {
     if (
@@ -490,6 +628,22 @@ export default function Whitelabel(props) {
       key === "appName"
     ) {
       localStorage.setItem(key, value);
+    }
+    if (
+      key === "buttonPrimaryColorLight" ||
+      key === "buttonPrimaryColorDark" ||
+      key === "buttonSecondaryColorLight" ||
+      key === "buttonSecondaryColorDark" ||
+      key === "topbarColorLight" ||
+      key === "topbarColorDark" ||
+      key === "sidebarColorLight" ||
+      key === "sidebarColorDark"
+    ) {
+      if (value) {
+        localStorage.setItem(key, value);
+      } else {
+        localStorage.removeItem(key);
+      }
     }
     const newSettings = { ...settingsLoaded };
     newSettings[key] = value;
@@ -512,6 +666,30 @@ export default function Whitelabel(props) {
       )?.value;
       const primaryColorDark = settings.find(
         (s) => s.key === "primaryColorDark"
+      )?.value;
+      const buttonPrimaryColorLight = settings.find(
+        (s) => s.key === "buttonPrimaryColorLight"
+      )?.value;
+      const buttonPrimaryColorDark = settings.find(
+        (s) => s.key === "buttonPrimaryColorDark"
+      )?.value;
+      const buttonSecondaryColorLight = settings.find(
+        (s) => s.key === "buttonSecondaryColorLight"
+      )?.value;
+      const buttonSecondaryColorDark = settings.find(
+        (s) => s.key === "buttonSecondaryColorDark"
+      )?.value;
+      const topbarColorLight = settings.find(
+        (s) => s.key === "topbarColorLight"
+      )?.value;
+      const topbarColorDark = settings.find(
+        (s) => s.key === "topbarColorDark"
+      )?.value;
+      const sidebarColorLight = settings.find(
+        (s) => s.key === "sidebarColorLight"
+      )?.value;
+      const sidebarColorDark = settings.find(
+        (s) => s.key === "sidebarColorDark"
       )?.value;
       const appLogoLight = settings.find(
         (s) => s.key === "appLogoLight"
@@ -547,6 +725,14 @@ export default function Whitelabel(props) {
           ...settingsLoaded,
           primaryColorLight,
           primaryColorDark,
+          buttonPrimaryColorLight,
+          buttonPrimaryColorDark,
+          buttonSecondaryColorLight,
+          buttonSecondaryColorDark,
+          topbarColorLight,
+          topbarColorDark,
+          sidebarColorLight,
+          sidebarColorDark,
           appLogoLight,
           appLogoDark,
           appLogoFavicon,
@@ -556,10 +742,42 @@ export default function Whitelabel(props) {
           appName,
           enabledLanguages: langs,
         });
+        setDraftButtonLight(buttonPrimaryColorLight || "");
+        setDraftButtonDark(buttonPrimaryColorDark || "");
+        setDraftSecondaryLight(buttonSecondaryColorLight || "");
+        setDraftSecondaryDark(buttonSecondaryColorDark || "");
+        setDraftTopbarLight(topbarColorLight || "");
+        setDraftTopbarDark(topbarColorDark || "");
+        setDraftSidebarLight(sidebarColorLight || "");
+        setDraftSidebarDark(sidebarColorDark || "");
+        savedPaletteRef.current = {
+          light: primaryColorLight || "#131B2D",
+          dark: primaryColorDark || "#131B2D",
+          btnLight: buttonPrimaryColorLight || "",
+          btnDark: buttonPrimaryColorDark || "",
+          secLight: buttonSecondaryColorLight || "",
+          secDark: buttonSecondaryColorDark || "",
+          topbarLight: topbarColorLight || "",
+          topbarDark: topbarColorDark || "",
+          sidebarLight: sidebarColorLight || "",
+          sidebarDark: sidebarColorDark || "",
+        };
         setLoading(false);
       }
     }
     else {
+      savedPaletteRef.current = {
+        light: localStorage.getItem("primaryColorLight") || "#131B2D",
+        dark: localStorage.getItem("primaryColorDark") || "#131B2D",
+        btnLight: localStorage.getItem("buttonPrimaryColorLight") || "",
+        btnDark: localStorage.getItem("buttonPrimaryColorDark") || "",
+        secLight: localStorage.getItem("buttonSecondaryColorLight") || "",
+        secDark: localStorage.getItem("buttonSecondaryColorDark") || "",
+        topbarLight: localStorage.getItem("topbarColorLight") || "",
+        topbarDark: localStorage.getItem("topbarColorDark") || "",
+        sidebarLight: localStorage.getItem("sidebarColorLight") || "",
+        sidebarDark: localStorage.getItem("sidebarColorDark") || "",
+      };
       setLoading(false);
     }
 
@@ -575,6 +793,72 @@ export default function Whitelabel(props) {
     if (d) setDraftDark(d);
   }, [settingsLoaded.primaryColorLight, settingsLoaded.primaryColorDark]);
 
+  useEffect(() => {
+    const l = draftLight || "#131B2D";
+    const d = draftDark || "#131B2D";
+    colorMode.setPrimaryColorLight(l);
+    colorMode.setPrimaryColorDark(d);
+  }, [draftLight, draftDark]);
+
+  useEffect(() => {
+    colorMode.setButtonPrimaryColorLight(draftButtonLight || "");
+    colorMode.setButtonPrimaryColorDark(draftButtonDark || "");
+  }, [draftButtonLight, draftButtonDark]);
+
+  useEffect(() => {
+    colorMode.setButtonSecondaryColorLight(draftSecondaryLight || "");
+    colorMode.setButtonSecondaryColorDark(draftSecondaryDark || "");
+  }, [draftSecondaryLight, draftSecondaryDark]);
+
+  useEffect(() => {
+    colorMode.setTopbarColorLight(draftTopbarLight || "");
+    colorMode.setTopbarColorDark(draftTopbarDark || "");
+  }, [draftTopbarLight, draftTopbarDark]);
+
+  useEffect(() => {
+    colorMode.setSidebarColorLight(draftSidebarLight || "");
+    colorMode.setSidebarColorDark(draftSidebarDark || "");
+  }, [draftSidebarLight, draftSidebarDark]);
+
+  useEffect(() => {
+    return () => {
+      const s = savedPaletteRef.current;
+      if (!s) {
+        const l = localStorage.getItem("primaryColorLight") || "#131B2D";
+        const d = localStorage.getItem("primaryColorDark") || "#131B2D";
+        const bl = localStorage.getItem("buttonPrimaryColorLight") || "";
+        const bd = localStorage.getItem("buttonPrimaryColorDark") || "";
+        const bsl = localStorage.getItem("buttonSecondaryColorLight") || "";
+        const bsd = localStorage.getItem("buttonSecondaryColorDark") || "";
+        const tl = localStorage.getItem("topbarColorLight") || "";
+        const td = localStorage.getItem("topbarColorDark") || "";
+        const sl = localStorage.getItem("sidebarColorLight") || "";
+        const sd = localStorage.getItem("sidebarColorDark") || "";
+        colorMode.setPrimaryColorLight(l);
+        colorMode.setPrimaryColorDark(d);
+        colorMode.setButtonPrimaryColorLight(bl);
+        colorMode.setButtonPrimaryColorDark(bd);
+        colorMode.setButtonSecondaryColorLight(bsl);
+        colorMode.setButtonSecondaryColorDark(bsd);
+        colorMode.setTopbarColorLight(tl);
+        colorMode.setTopbarColorDark(td);
+        colorMode.setSidebarColorLight(sl);
+        colorMode.setSidebarColorDark(sd);
+        return;
+      }
+      colorMode.setPrimaryColorLight(s.light);
+      colorMode.setPrimaryColorDark(s.dark);
+      colorMode.setButtonPrimaryColorLight(s.btnLight ?? "");
+      colorMode.setButtonPrimaryColorDark(s.btnDark ?? "");
+      colorMode.setButtonSecondaryColorLight(s.secLight ?? "");
+      colorMode.setButtonSecondaryColorDark(s.secDark ?? "");
+      colorMode.setTopbarColorLight(s.topbarLight ?? "");
+      colorMode.setTopbarColorDark(s.topbarDark ?? "");
+      colorMode.setSidebarColorLight(s.sidebarLight ?? "");
+      colorMode.setSidebarColorDark(s.sidebarDark ?? "");
+    };
+  }, []);
+
   async function handleSaveSetting(key, value) {
     await update({
       key,
@@ -589,22 +873,147 @@ export default function Whitelabel(props) {
     setEnabledLanguages(newLangs);
   }
 
-  const handleDraftReset = () => {
-    const DEFAULT = "#131B2D";
-    setDraftLight(DEFAULT);
-    setDraftDark(DEFAULT);
+  const handleDraftReset = async () => {
+    const l = "#131B2D";
+    const d = "#131B2D";
+    const bl = "";
+    const bd = "";
+    const bsl = "";
+    const bsd = "";
+    const tl = "";
+    const td = "";
+    const sl = "";
+    const sd = "";
+    setDraftLight(l);
+    setDraftDark(d);
+    setDraftButtonLight(bl);
+    setDraftButtonDark(bd);
+    setDraftSecondaryLight(bsl);
+    setDraftSecondaryDark(bsd);
+    setDraftTopbarLight(tl);
+    setDraftTopbarDark(td);
+    setDraftSidebarLight(sl);
+    setDraftSidebarDark(sd);
+    try {
+      await Promise.all([
+        update({ key: "primaryColorLight", value: l }),
+        update({ key: "primaryColorDark", value: d }),
+        update({ key: "buttonPrimaryColorLight", value: bl }),
+        update({ key: "buttonPrimaryColorDark", value: bd }),
+        update({ key: "buttonSecondaryColorLight", value: bsl }),
+        update({ key: "buttonSecondaryColorDark", value: bsd }),
+        update({ key: "topbarColorLight", value: tl }),
+        update({ key: "topbarColorDark", value: td }),
+        update({ key: "sidebarColorLight", value: sl }),
+        update({ key: "sidebarColorDark", value: sd }),
+      ]);
+      updateSettingsLoaded("primaryColorLight", l);
+      updateSettingsLoaded("primaryColorDark", d);
+      updateSettingsLoaded("buttonPrimaryColorLight", bl);
+      updateSettingsLoaded("buttonPrimaryColorDark", bd);
+      updateSettingsLoaded("buttonSecondaryColorLight", bsl);
+      updateSettingsLoaded("buttonSecondaryColorDark", bsd);
+      updateSettingsLoaded("topbarColorLight", tl);
+      updateSettingsLoaded("topbarColorDark", td);
+      updateSettingsLoaded("sidebarColorLight", sl);
+      updateSettingsLoaded("sidebarColorDark", sd);
+      colorMode.setPrimaryColorLight(l);
+      colorMode.setPrimaryColorDark(d);
+      colorMode.setButtonPrimaryColorLight(bl);
+      colorMode.setButtonPrimaryColorDark(bd);
+      colorMode.setButtonSecondaryColorLight(bsl);
+      colorMode.setButtonSecondaryColorDark(bsd);
+      colorMode.setTopbarColorLight(tl);
+      colorMode.setTopbarColorDark(td);
+      colorMode.setSidebarColorLight(sl);
+      colorMode.setSidebarColorDark(sd);
+      savedPaletteRef.current = {
+        light: l,
+        dark: d,
+        btnLight: bl,
+        btnDark: bd,
+        secLight: bsl,
+        secDark: bsd,
+        topbarLight: tl,
+        topbarDark: td,
+        sidebarLight: sl,
+        sidebarDark: sd,
+      };
+      toast.success(i18n.t("whitelabel.resetPersistedToast"));
+    } catch (e) {
+      toast.error(i18n.t("whitelabel.resetPersistError"));
+    }
   };
 
   async function handleSaveDraftColors() {
     const l = draftLight || "#131B2D";
     const d = draftDark || "#131B2D";
-    await update({ key: "primaryColorLight", value: l });
-    await update({ key: "primaryColorDark", value: d });
+    const bl = (draftButtonLight || "").trim();
+    const bd = (draftButtonDark || "").trim();
+    const bsl = (draftSecondaryLight || "").trim();
+    const bsd = (draftSecondaryDark || "").trim();
+    const tl = (draftTopbarLight || "").trim();
+    const td = (draftTopbarDark || "").trim();
+    const sl = (draftSidebarLight || "").trim();
+    const sd = (draftSidebarDark || "").trim();
+    const savingMsg = i18n.t("whitelabel.savingColors");
+    const doneMsg = i18n.t("whitelabel.colorsSaveSuccessAlert");
+    const toastId =
+      typeof toast.loading === "function"
+        ? toast.loading(savingMsg)
+        : toast.info(savingMsg, { autoClose: false, closeOnClick: false });
+    try {
+      await Promise.all([
+        update({ key: "primaryColorLight", value: l }),
+        update({ key: "primaryColorDark", value: d }),
+        update({ key: "buttonPrimaryColorLight", value: bl }),
+        update({ key: "buttonPrimaryColorDark", value: bd }),
+        update({ key: "buttonSecondaryColorLight", value: bsl }),
+        update({ key: "buttonSecondaryColorDark", value: bsd }),
+        update({ key: "topbarColorLight", value: tl }),
+        update({ key: "topbarColorDark", value: td }),
+        update({ key: "sidebarColorLight", value: sl }),
+        update({ key: "sidebarColorDark", value: sd }),
+      ]);
+    } catch (err) {
+      if (toastId != null) toast.dismiss(toastId);
+      toast.error(i18n.t("whitelabel.colorsSaveError"));
+      return;
+    }
+    if (toastId != null) toast.dismiss(toastId);
     updateSettingsLoaded("primaryColorLight", l);
     updateSettingsLoaded("primaryColorDark", d);
+    updateSettingsLoaded("buttonPrimaryColorLight", bl);
+    updateSettingsLoaded("buttonPrimaryColorDark", bd);
+    updateSettingsLoaded("buttonSecondaryColorLight", bsl);
+    updateSettingsLoaded("buttonSecondaryColorDark", bsd);
+    updateSettingsLoaded("topbarColorLight", tl);
+    updateSettingsLoaded("topbarColorDark", td);
+    updateSettingsLoaded("sidebarColorLight", sl);
+    updateSettingsLoaded("sidebarColorDark", sd);
     colorMode.setPrimaryColorLight(l);
     colorMode.setPrimaryColorDark(d);
-    toast.success("Cores salvas com sucesso.");
+    colorMode.setButtonPrimaryColorLight(bl);
+    colorMode.setButtonPrimaryColorDark(bd);
+    colorMode.setButtonSecondaryColorLight(bsl);
+    colorMode.setButtonSecondaryColorDark(bsd);
+    colorMode.setTopbarColorLight(tl);
+    colorMode.setTopbarColorDark(td);
+    colorMode.setSidebarColorLight(sl);
+    colorMode.setSidebarColorDark(sd);
+    savedPaletteRef.current = {
+      light: l,
+      dark: d,
+      btnLight: bl,
+      btnDark: bd,
+      secLight: bsl,
+      secDark: bsd,
+      topbarLight: tl,
+      topbarDark: td,
+      sidebarLight: sl,
+      sidebarDark: sd,
+    };
+    toast.success(doneMsg, { autoClose: 4000 });
   }
 
   function handleSaveLogosSection() {
@@ -742,26 +1151,205 @@ export default function Whitelabel(props) {
                     variant="subtitle2"
                     className={classes.paletteSuggestedLabel}
                   >
-                    {i18n.t("whitelabel.paletteSuggested")}
+                    {i18n.t("whitelabel.paletteSuggestedTopbar")}
                   </Typography>
                   <div className={classes.paletteGrid}>
                     {COLOR_PALETTES.map((p, idx) => (
                       <button
                         type="button"
-                        key={`${p.name}-${idx}`}
+                        key={`topbar-${p.name}-${idx}`}
                         title={p.name}
                         className={classes.paletteSwatch}
                         style={{
                           background: `linear-gradient(135deg, ${p.light} 0%, ${p.dark} 100%)`,
                         }}
                         onClick={() => {
-                          setDraftLight(p.light);
-                          setDraftDark(p.dark);
+                          setDraftTopbarLight(p.light);
+                          setDraftTopbarDark(p.dark);
                         }}
                         aria-label={p.name}
                       />
                     ))}
                   </div>
+
+                  <Grid container spacing={3} className={classes.colorSection}>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="topbar-color-light-field"
+                          label={i18n.t("whitelabel.topbarColorLight")}
+                          variant="outlined"
+                          value={draftTopbarLight || ""}
+                          placeholder={draftLight || "#131B2D"}
+                          onClick={() => setTopbarColorLightModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor:
+                                      draftTopbarLight || draftLight,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={topbarColorLightModalOpen}
+                        handleClose={() => setTopbarColorLightModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftTopbarLight(`#${color.hex}`);
+                        }}
+                        currentColor={draftTopbarLight || draftLight}
+                      />
+                    </Grid>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="topbar-color-dark-field"
+                          label={i18n.t("whitelabel.topbarColorDark")}
+                          variant="outlined"
+                          value={draftTopbarDark || ""}
+                          placeholder={draftDark || "#131B2D"}
+                          onClick={() => setTopbarColorDarkModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor:
+                                      draftTopbarDark || draftDark,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={topbarColorDarkModalOpen}
+                        handleClose={() => setTopbarColorDarkModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftTopbarDark(`#${color.hex}`);
+                        }}
+                        currentColor={draftTopbarDark || draftDark}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  <Typography
+                    variant="subtitle2"
+                    className={classes.paletteSuggestedLabel}
+                    style={{ marginTop: 16 }}
+                  >
+                    {i18n.t("whitelabel.paletteSuggestedSidebar")}
+                  </Typography>
+                  <div className={classes.paletteGrid}>
+                    {COLOR_PALETTES.map((p, idx) => (
+                      <button
+                        type="button"
+                        key={`sidebar-${p.name}-${idx}`}
+                        title={p.name}
+                        className={classes.paletteSwatch}
+                        style={{
+                          background: `linear-gradient(135deg, ${p.light} 0%, ${p.dark} 100%)`,
+                        }}
+                        onClick={() => {
+                          setDraftSidebarLight(p.light);
+                          setDraftSidebarDark(p.dark);
+                        }}
+                        aria-label={p.name}
+                      />
+                    ))}
+                  </div>
+
+                  <Grid container spacing={3} className={classes.colorSection}>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="sidebar-color-light-field"
+                          label={i18n.t("whitelabel.sidebarColorLight")}
+                          variant="outlined"
+                          value={draftSidebarLight || ""}
+                          placeholder="#ffffff"
+                          onClick={() => setSidebarColorLightModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor:
+                                      draftSidebarLight || "#ffffff",
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={sidebarColorLightModalOpen}
+                        handleClose={() => setSidebarColorLightModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftSidebarLight(`#${color.hex}`);
+                        }}
+                        currentColor={draftSidebarLight || "#ffffff"}
+                      />
+                    </Grid>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="sidebar-color-dark-field"
+                          label={i18n.t("whitelabel.sidebarColorDark")}
+                          variant="outlined"
+                          value={draftSidebarDark || ""}
+                          placeholder="#000000"
+                          onClick={() => setSidebarColorDarkModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor:
+                                      draftSidebarDark || "#000000",
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={sidebarColorDarkModalOpen}
+                        handleClose={() => setSidebarColorDarkModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftSidebarDark(`#${color.hex}`);
+                        }}
+                        currentColor={draftSidebarDark || "#000000"}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  <Typography
+                    variant="subtitle2"
+                    className={classes.paletteSuggestedLabel}
+                    style={{ marginTop: 16 }}
+                  >
+                    {i18n.t("whitelabel.identityColorsSection")}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                    {i18n.t("whitelabel.identityColorsHint")}
+                  </Typography>
 
                   <Grid container spacing={3} className={classes.colorSection}>
                     <Grid xs={12} sm={6} md={6} item>
@@ -830,6 +1418,212 @@ export default function Whitelabel(props) {
                     </Grid>
                   </Grid>
 
+                  <Typography
+                    variant="subtitle2"
+                    className={classes.paletteSuggestedLabel}
+                    style={{ marginTop: 16 }}
+                  >
+                    {i18n.t("whitelabel.buttonPrimaryColorsSection")}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                    {i18n.t("whitelabel.buttonPrimaryColorsHint")}
+                  </Typography>
+                  <Typography
+                    variant="subtitle2"
+                    className={classes.paletteSuggestedLabel}
+                  >
+                    {i18n.t("whitelabel.paletteSuggestedPrimaryButtons")}
+                  </Typography>
+                  <div className={classes.paletteGrid}>
+                    {COLOR_PALETTES.map((p, idx) => (
+                      <button
+                        type="button"
+                        key={`button-primary-${p.name}-${idx}`}
+                        title={p.name}
+                        className={classes.paletteSwatch}
+                        style={{
+                          background: `linear-gradient(135deg, ${p.light} 0%, ${p.dark} 100%)`,
+                        }}
+                        onClick={() => {
+                          setDraftButtonLight(p.light);
+                          setDraftButtonDark(p.dark);
+                        }}
+                        aria-label={p.name}
+                      />
+                    ))}
+                  </div>
+                  <Grid container spacing={3} className={classes.colorSection}>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="button-color-light-field"
+                          label={i18n.t("whitelabel.buttonPrimaryColorLight")}
+                          variant="outlined"
+                          value={draftButtonLight || ""}
+                          placeholder={draftLight || "#131B2D"}
+                          onClick={() => setButtonColorLightModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor: draftButtonLight || draftLight,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={buttonColorLightModalOpen}
+                        handleClose={() => setButtonColorLightModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftButtonLight(`#${color.hex}`);
+                        }}
+                        currentColor={draftButtonLight || draftLight}
+                      />
+                    </Grid>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="button-color-dark-field"
+                          label={i18n.t("whitelabel.buttonPrimaryColorDark")}
+                          variant="outlined"
+                          value={draftButtonDark || ""}
+                          placeholder={draftDark || "#131B2D"}
+                          onClick={() => setButtonColorDarkModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor: draftButtonDark || draftDark,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={buttonColorDarkModalOpen}
+                        handleClose={() => setButtonColorDarkModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftButtonDark(`#${color.hex}`);
+                        }}
+                        currentColor={draftButtonDark || draftDark}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  <Typography
+                    variant="subtitle2"
+                    className={classes.paletteSuggestedLabel}
+                    style={{ marginTop: 16 }}
+                  >
+                    {i18n.t("whitelabel.buttonSecondaryColorsSection")}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                    {i18n.t("whitelabel.buttonSecondaryColorsHint")}
+                  </Typography>
+                  <Typography
+                    variant="subtitle2"
+                    className={classes.paletteSuggestedLabel}
+                  >
+                    {i18n.t("whitelabel.paletteSuggestedSecondaryButtons")}
+                  </Typography>
+                  <div className={classes.paletteGrid}>
+                    {COLOR_PALETTES.map((p, idx) => (
+                      <button
+                        type="button"
+                        key={`button-secondary-${p.name}-${idx}`}
+                        title={p.name}
+                        className={classes.paletteSwatch}
+                        style={{
+                          background: `linear-gradient(135deg, ${p.light} 0%, ${p.dark} 100%)`,
+                        }}
+                        onClick={() => {
+                          setDraftSecondaryLight(p.light);
+                          setDraftSecondaryDark(p.dark);
+                        }}
+                        aria-label={p.name}
+                      />
+                    ))}
+                  </div>
+                  <Grid container spacing={3} className={classes.colorSection}>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="button-secondary-color-light-field"
+                          label={i18n.t("whitelabel.buttonSecondaryColorLight")}
+                          variant="outlined"
+                          value={draftSecondaryLight || ""}
+                          placeholder={i18n.t("whitelabel.buttonSecondaryPlaceholder")}
+                          onClick={() => setButtonSecondaryColorLightModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor: previewSecondaryLightSwatch,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={buttonSecondaryColorLightModalOpen}
+                        handleClose={() => setButtonSecondaryColorLightModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftSecondaryLight(`#${color.hex}`);
+                        }}
+                        currentColor={previewSecondaryLightSwatch}
+                      />
+                    </Grid>
+                    <Grid xs={12} sm={6} md={6} item>
+                      <FormControl className={classes.formField} fullWidth>
+                        <TextField
+                          id="button-secondary-color-dark-field"
+                          label={i18n.t("whitelabel.buttonSecondaryColorDark")}
+                          variant="outlined"
+                          value={draftSecondaryDark || ""}
+                          placeholder={i18n.t("whitelabel.buttonSecondaryPlaceholder")}
+                          onClick={() => setButtonSecondaryColorDarkModalOpen(true)}
+                          size="small"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <div
+                                  style={{
+                                    backgroundColor: previewSecondaryDarkSwatch,
+                                  }}
+                                  className={classes.colorAdorment}
+                                />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </FormControl>
+                      <ColorBoxModal
+                        open={buttonSecondaryColorDarkModalOpen}
+                        handleClose={() => setButtonSecondaryColorDarkModalOpen(false)}
+                        onChange={(color) => {
+                          setDraftSecondaryDark(`#${color.hex}`);
+                        }}
+                        currentColor={previewSecondaryDarkSwatch}
+                      />
+                    </Grid>
+                  </Grid>
+
                   <Box className={classes.paletteActionsRow}>
                     <Button variant="outlined" color="primary" onClick={handleDraftReset}>
                       {i18n.t("whitelabel.resetPreview")}
@@ -869,15 +1663,56 @@ export default function Whitelabel(props) {
                     />
                     <Box className={classes.livePreview}>
                       <div
+                        className={classes.livePreviewTopbar}
+                        style={{
+                          backgroundColor: previewEffectiveTopbarBg,
+                          color: previewNavbarAccent,
+                        }}
+                        aria-hidden
+                      >
+                        <span style={{ fontSize: 8, lineHeight: 1, opacity: 0.95 }}>●</span>
+                        <span style={{ fontSize: 8, lineHeight: 1, opacity: 0.95 }}>●</span>
+                        <span style={{ fontSize: 8, lineHeight: 1, opacity: 0.95 }}>●</span>
+                      </div>
+                      <div className={classes.livePreviewTabsRow} aria-hidden>
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          style={{
+                            color: previewPageTabsAccent,
+                            fontWeight: 600,
+                            padding: "4px 10px",
+                            borderRadius: 8,
+                            backgroundColor: "rgba(0,0,0,0.06)",
+                          }}
+                        >
+                          {i18n.t("whitelabel.previewTabSampleActive")}
+                        </Typography>
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          style={{
+                            color: previewPageTabsAccent,
+                            opacity: 0.55,
+                            fontWeight: 400,
+                          }}
+                        >
+                          {i18n.t("whitelabel.previewTabSampleInactive")}
+                        </Typography>
+                      </div>
+                      <div
                         className={classes.livePreviewInner}
                         style={{
-                          background: `linear-gradient(155deg, ${draftLight} 0%, ${draftDark} 100%)`,
+                          background: `linear-gradient(155deg, ${ensureHexPrefix(
+                            draftLight || "#131B2D"
+                          )} 0%, ${ensureHexPrefix(draftDark || "#131B2D")} 100%)`,
                         }}
                       >
                         <img
                           className={classes.livePreviewLogo}
                           src={previewLogoSrc}
                           alt=""
+                          key={previewLogoSrc}
                           onError={(e) => {
                             const fallback = useDarkLogoInPreview
                               ? defaultLogoDark

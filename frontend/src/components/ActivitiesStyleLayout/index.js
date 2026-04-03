@@ -36,9 +36,11 @@ const useStyles = makeStyles((theme) => {
   const tabHoverBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)';
   const tabActiveBg = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)';
   const scrollHoverBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)';
-  /** Azul escuro da marca (claro); no escuro texto legível + acento na aba ativa */
-  const tabBrand = theme.palette.primary.main;
-  const tabTextDarkInactive = theme.palette.text.primary;
+  /** Abas: whitelabel "botões secundários" (pageTabsAccent), não os botões principais. */
+  const tabBrand =
+    theme.pageTabsAccent != null && theme.pageTabsAccent !== ''
+      ? theme.pageTabsAccent
+      : theme.palette.primary.main;
 
   return {
     root: {
@@ -98,8 +100,7 @@ const useStyles = makeStyles((theme) => {
       fontSize: '0.875rem',
       /* MUI Button usa typography.button (600) */
       '&&': { fontWeight: 400 },
-      /* Claro: azul escuro da identidade (primary); escuro: texto legível (sem “apagado”) */
-      color: isDark ? tabTextDarkInactive : tabBrand,
+      color: tabBrand,
       minWidth: 'auto',
       padding: theme.spacing(1, 2),
       borderRadius: '8px',
@@ -111,7 +112,7 @@ const useStyles = makeStyles((theme) => {
       transition: 'all 0.15s ease',
       '&:hover': {
         backgroundColor: tabHoverBg,
-        color: isDark ? '#ffffff' : tabBrand,
+        color: tabBrand,
       },
     },
     navTabIcon: {
@@ -124,8 +125,7 @@ const useStyles = makeStyles((theme) => {
     },
     navTabActive: {
       '&&': { fontWeight: 400 },
-      /* Escuro: aba ativa em branco (contraste no pill); claro: azul da marca */
-      color: isDark ? '#ffffff' : tabBrand,
+      color: tabBrand,
       backgroundColor: tabActiveBg,
       boxShadow: isDark
         ? '0 2px 4px rgba(0, 0, 0, 0.35)'
@@ -133,7 +133,7 @@ const useStyles = makeStyles((theme) => {
       border: 'none',
       '&:hover': {
         backgroundColor: tabActiveBg,
-        color: isDark ? '#ffffff' : tabBrand,
+        color: tabBrand,
       },
     },
     createButton: {

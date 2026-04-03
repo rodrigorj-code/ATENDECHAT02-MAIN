@@ -2180,6 +2180,45 @@ const messages = {
         pageTitle: "Identidad visual",
         pageSubtitle:
           "Personaliza colores, logos y idiomas para reflejar tu marca.",
+        paletteSuggested: "Paletas sugeridas",
+        paletteSuggestedTopbar: "Paletas sugeridas de la barra superior",
+        paletteSuggestedSidebar: "Paletas sugeridas del menú lateral",
+        paletteSuggestedPrimaryButtons: "Paletas sugeridas (botones principales)",
+        paletteSuggestedSecondaryButtons: "Paletas sugeridas (pestañas)",
+        buttonPrimaryColorsSection: "Botones principales",
+        buttonPrimaryColorsHint:
+          "Texto e iconos del menú lateral y botones primarios (Guardar, modales, color=\"primary\"). No cambia la barra superior del sistema ni las pestañas.",
+        buttonSecondaryColorsSection: "Pestañas de las páginas",
+        buttonSecondaryColorsHint:
+          "Solo la fila de pestañas dentro de las páginas (p. ej. Opciones / Identidad visual). La barra oscura con búsqueda solo se cambia en “Paletas de la barra superior”.",
+        previewTabSampleActive: "Pestaña activa",
+        previewTabSampleInactive: "Pestaña",
+        buttonSecondaryPlaceholder: "Automático",
+        topbarColorLight: "Color de la barra superior (tema claro)",
+        topbarColorDark: "Color de la barra superior (tema oscuro)",
+        sidebarColorLight: "Color del menú lateral (tema claro)",
+        sidebarColorDark: "Color del menú lateral (tema oscuro)",
+        identityColorsSection: "Color de identidad (marca)",
+        identityColorsHint:
+          "Se usa en el gradiente del preview, scrollbar y detalles de marca — aparte de la barra y el menú.",
+        paletteHint:
+          "Los cambios de color se ven al instante. Guarda para persistir en la base y conservarlos al recargar.",
+        saveColors: "Guardar colores",
+        colorsSaveSuccessAlert: "Colores de identidad visual guardados correctamente.",
+        savingColors: "Guardando colores…",
+        colorsSaveError: "No se pudieron guardar los colores. Comprueba la conexión e inténtalo de nuevo.",
+        resetPersistedToast: "Colores restaurados al predeterminado y guardados.",
+        resetPersistError: "No se pudieron restaurar los colores. Inténtalo de nuevo.",
+        resetPreview: "Restablecer vista previa (predeterminado)",
+        livePreview: "Vista previa en vivo",
+        livePreviewHint:
+          "Simulación con los colores elegidos y el logo actual antes de guardar.",
+        buttonPrimaryColorLight: "Color de botones principales (tema claro)",
+        buttonPrimaryColorDark: "Color de botones principales (tema oscuro)",
+        buttonSecondaryColorLight: "Color de pestañas (tema claro)",
+        buttonSecondaryColorDark: "Color de pestañas (tema oscuro)",
+        buttonPreviewLight: "Botón (claro)",
+        buttonPreviewDark: "Botón (oscuro)",
         previewForceLightLogo:
           "Forzar el logo del tema claro en la vista previa (desactiva el contraste automático).",
         saveLogosSection: "Guardar logos",
@@ -2206,7 +2245,8 @@ const messages = {
           identityIntro:
             "Nombre de la app e identidad de marca (la vista previa usa los mismos logos que la app).",
           colors: "Colores y Temas",
-          colorsDescription: "Personaliza los colores primarios para los temas claro y oscuro",
+          colorsDescription:
+            "Personaliza los colores de identidad y, si quieres, los de los botones de acción principal por tema",
           logos: "Logos e Imágenes",
           logosDescription: "Sube los logos e imágenes de fondo de la aplicación",
           languages: "Idiomas Disponibles",

@@ -2298,9 +2298,34 @@ whitelabel: {
         pageSubtitle:
           "Personalize cores, logos e idiomas para refletir a marca da sua operação.",
         paletteSuggested: "Paletas sugeridas",
+        paletteSuggestedTopbar: "Paletas Sugeridas da topbar",
+        paletteSuggestedSidebar: "Paletas sugeridas do Menu Lateral",
+        paletteSuggestedPrimaryButtons: "Paletas sugeridas (botões principais)",
+        paletteSuggestedSecondaryButtons: "Paletas sugeridas (abas das páginas)",
+        buttonPrimaryColorsSection: "Botões principais",
+        buttonPrimaryColorsHint:
+          "Texto e ícones do menu lateral (e botões primários: Salvar, modais, color=\"primary\"). Não altera a topbar nem as abas das páginas.",
+        buttonSecondaryColorsSection: "Abas das páginas (navbar de conteúdo)",
+        buttonSecondaryColorsHint:
+          "Apenas as abas de navegação dentro das páginas (ex.: Opções / Identidade Visual em Configurações). A barra escura com pesquisa só muda em “Paletas da topbar”.",
+        previewTabSampleActive: "Aba ativa",
+        previewTabSampleInactive: "Aba",
+        buttonSecondaryPlaceholder: "Automático",
+        topbarColorLight: "Cor da topbar (tema claro)",
+        topbarColorDark: "Cor da topbar (tema escuro)",
+        sidebarColorLight: "Cor do menu lateral (tema claro)",
+        sidebarColorDark: "Cor do menu lateral (tema escuro)",
+        identityColorsSection: "Cor da identidade (marca)",
+        identityColorsHint:
+          "Usada em gradiente de preview, scrollbar e detalhes da marca — independente da topbar e do menu.",
         paletteHint:
-          "Toque em uma paleta para pré-visualizar. Salve para aplicar no sistema.",
+          "As alterações de cor aparecem na hora na interface. Clique em Salvar para gravar no banco e manter após atualizar a página.",
         saveColors: "Salvar cores",
+        colorsSaveSuccessAlert: "Cores da Identidade Visual salvas com sucesso",
+        savingColors: "Salvando cores…",
+        colorsSaveError: "Não foi possível salvar as cores. Verifique a conexão e tente novamente.",
+        resetPersistedToast: "Cores restauradas ao padrão e salvas.",
+        resetPersistError: "Não foi possível restaurar as cores. Tente novamente.",
         saveLogosSection: "Salvar logos",
         saveLanguagesSection: "Salvar idiomas",
         logoSectionSave:
@@ -2313,6 +2338,12 @@ whitelabel: {
         resetPreview: "Restaurar pré-visualização (padrão)",
         primaryColorLight: "Cor Primária (Tema Claro)",
         primaryColorDark: "Cor Primária (Tema Escuro)",
+        buttonPrimaryColorLight: "Cor dos botões principais (tema claro)",
+        buttonPrimaryColorDark: "Cor dos botões principais (tema escuro)",
+        buttonSecondaryColorLight: "Cor das abas — tema claro",
+        buttonSecondaryColorDark: "Cor das abas — tema escuro",
+        buttonPreviewLight: "Botão (claro)",
+        buttonPreviewDark: "Botão (escuro)",
         appName: "Nome da Aplicação",
         logoLight: "Logo (Tema Claro)",
         logoDark: "Logo (Tema Escuro)",
@@ -2331,7 +2362,8 @@ whitelabel: {
           identityIntro:
             "Nome da aplicação e identidade da marca (o preview usa as mesmas logos carregadas no app).",
           colors: "Cores e Temas",
-          colorsDescription: "Personalize as cores primárias para temas claro e escuro",
+          colorsDescription:
+            "Personalize as cores da identidade e, se quiser, as cores dos botões de ação principal em cada tema",
           logos: "Logos e Imagens",
           logosDescription: "Carregue os logos e imagens de fundo da aplicação",
           languages: "Idiomas Disponíveis",

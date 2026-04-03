@@ -2216,6 +2216,45 @@ const messages = {
         pageTitle: "Visual identity",
         pageSubtitle:
           "Customize colors, logos, and languages to match your brand.",
+        paletteSuggested: "Suggested palettes",
+        paletteSuggestedTopbar: "Suggested palettes for the top bar",
+        paletteSuggestedSidebar: "Suggested palettes for the side menu",
+        paletteSuggestedPrimaryButtons: "Suggested palettes (primary buttons)",
+        paletteSuggestedSecondaryButtons: "Suggested palettes (page tabs)",
+        buttonPrimaryColorsSection: "Primary buttons",
+        buttonPrimaryColorsHint:
+          "Side menu labels/icons and primary actions (Save, modals, color=\"primary\"). Does not change the system top bar or page tabs.",
+        buttonSecondaryColorsSection: "Page tabs (in-page navigation)",
+        buttonSecondaryColorsHint:
+          "Only the tab row under the header (e.g. Options / Visual identity on Settings). The dark bar with search uses “Top bar” palettes only.",
+        previewTabSampleActive: "Active tab",
+        previewTabSampleInactive: "Tab",
+        buttonSecondaryPlaceholder: "Automatic",
+        topbarColorLight: "Top bar color (light theme)",
+        topbarColorDark: "Top bar color (dark theme)",
+        sidebarColorLight: "Side menu color (light theme)",
+        sidebarColorDark: "Side menu color (dark theme)",
+        identityColorsSection: "Brand identity color",
+        identityColorsHint:
+          "Used in the preview gradient, scrollbar, and brand accents — separate from the top bar and menu.",
+        paletteHint:
+          "Color changes apply live. Click Save to persist to the database and keep them after refresh.",
+        saveColors: "Save colors",
+        colorsSaveSuccessAlert: "Visual identity colors saved successfully.",
+        savingColors: "Saving colors…",
+        colorsSaveError: "Could not save colors. Check your connection and try again.",
+        resetPersistedToast: "Colors reset to default and saved.",
+        resetPersistError: "Could not reset colors. Please try again.",
+        resetPreview: "Reset preview (default)",
+        livePreview: "Live preview",
+        livePreviewHint:
+          "Simulation with your colors and the current logo before saving.",
+        buttonPrimaryColorLight: "Primary button color (light theme)",
+        buttonPrimaryColorDark: "Primary button color (dark theme)",
+        buttonSecondaryColorLight: "Tab color (light theme)",
+        buttonSecondaryColorDark: "Tab color (dark theme)",
+        buttonPreviewLight: "Button (light)",
+        buttonPreviewDark: "Button (dark)",
         previewForceLightLogo:
           "Force the light-theme logo in the preview (turn off automatic contrast on dark backgrounds).",
         saveLogosSection: "Save logos",
@@ -2242,7 +2281,8 @@ const messages = {
           identityIntro:
             "App name and brand identity (the preview uses the same logos loaded in the app).",
           colors: "Colors and Themes",
-          colorsDescription: "Customize primary colors for light and dark themes",
+          colorsDescription:
+            "Customize identity colors and, optionally, primary button colors per theme",
           logos: "Logos and Images",
           logosDescription: "Upload application logos and background images",
           languages: "Available Languages",

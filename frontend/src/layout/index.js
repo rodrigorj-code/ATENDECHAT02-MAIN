@@ -71,7 +71,12 @@ import FreemiumTrialBar from "../components/FreemiumTrialBar";
 const backendUrl = getBackendUrl();
 const drawerWidth = 240;
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme) => {
+  const navIcon =
+    theme.navbarAccent != null && theme.navbarAccent !== ""
+      ? theme.navbarAccent
+      : "rgba(255, 255, 255, 0.9)";
+  return {
   root: {
     display: "flex",
     height: "100vh",
@@ -127,7 +132,7 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     paddingRight: 24,
     color: theme.palette.dark.main,
-    background: theme.palette.primary.main,
+    background: theme.palette.barraSuperior,
     boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
     transition: "all 0.3s ease",
     minHeight: "40px", // Reduzido
@@ -135,7 +140,7 @@ const useStyles = makeStyles((theme) => ({
       padding: 8,
       margin: "0 4px",
       borderRadius: 8,
-      color: "rgba(255, 255, 255, 0.9)",
+      color: navIcon,
       transition: "all 0.3s ease",
       "&:hover": {
         backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -154,7 +159,8 @@ const useStyles = makeStyles((theme) => ({
     padding: 0,
     height: "70px", // Reduzido
     minHeight: "70px",
-    backgroundColor: theme.palette.background.paper, // Ajusta ao tema
+    backgroundColor:
+      theme.palette.sidebarMenuBackground || theme.palette.background.paper,
     // borderBottom: `1px solid ${theme.palette.divider}`,
     transition: "all 0.3s ease",
     marginTop: 0,
@@ -166,7 +172,7 @@ const useStyles = makeStyles((theme) => ({
     top: 10,
     right: 10,
     padding: 2, // Botão ainda menor
-    color: theme.palette.text.primary,
+    color: theme.palette.sidebarMenuIcon || theme.palette.text.primary,
     "& svg": {
       fontSize: "1rem", // Ícone ainda menor
     },
@@ -215,7 +221,7 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: "white",
+    color: navIcon,
   },
   inputRoot: {
     color: 'inherit',
@@ -228,10 +234,10 @@ const useStyles = makeStyles((theme) => ({
     paddingLeft: `calc(1em + ${theme.spacing(2)}px)`, // Ajustado padding
     transition: theme.transitions.create('width'),
     width: '100%',
-    color: "white",
+    color: navIcon,
     "&::placeholder": {
-        color: "rgba(255, 255, 255, 0.8)",
-        opacity: 1,
+        color: navIcon,
+        opacity: 0.75,
         fontSize: "0.8rem", // Placeholder menor
     }
   },
@@ -243,6 +249,8 @@ const useStyles = makeStyles((theme) => ({
       duration: theme.transitions.duration.leavingScreen,
     }),
     height: "40px", // Altura fixa
+    backgroundColor: theme.palette.barraSuperior,
+    color: "inherit",
   },
 
   appBarShift: {
@@ -323,6 +331,8 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "hidden",
     display: "flex",
     flexDirection: "column",
+    backgroundColor:
+      theme.palette.sidebarMenuBackground || theme.palette.background.paper,
     // Melhorias sutis no drawer
     borderRight: `1px solid ${theme.palette.divider}`,
     boxShadow:
@@ -424,7 +434,7 @@ const useStyles = makeStyles((theme) => ({
 
   // Botões da toolbar melhorados
   toolbarButton: {
-    color: "rgba(255, 255, 255, 0.9)",
+    color: navIcon,
     borderRadius: "8px",
     padding: "8px",
     margin: "0 2px",
@@ -440,7 +450,7 @@ const useStyles = makeStyles((theme) => ({
 
   // Menu hambúrguer com animação sutil
   menuButton: {
-    color: "white",
+    color: navIcon,
     "&:hover": {
       backgroundColor: "rgba(255, 255, 255, 0.1)",
     },
@@ -460,7 +470,7 @@ const useStyles = makeStyles((theme) => ({
       background: "rgba(255, 255, 255, 0.1)",
       border: "none",
       borderRadius: "8px",
-      color: "rgba(255, 255, 255, 0.9)",
+      color: navIcon,
       fontSize: "18px",
       padding: "8px 12px",
       cursor: "pointer",
@@ -516,7 +526,8 @@ const useStyles = makeStyles((theme) => ({
     "42%": { transform: "scale(1.1)" },
     "70%": { transform: "scale(1)" },
   },
-}));
+};
+});
 
 const StyledBadge = withStyles((theme) => ({
   badge: {
@@ -986,14 +997,14 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
           <div className={classes.toolbarIcon}>
             <img
               src={
-                theme.palette.type === "light"
-                  ? theme.calculatedLogoLight()
-                  : theme.calculatedLogoDark()
+                theme.palette.sidebarMenuIsDarkLogo
+                  ? theme.calculatedLogoDark()
+                  : theme.calculatedLogoLight()
               }
               alt="VBSolution"
               className={clsx(classes.logo, !drawerOpen && classes.hideLogo)}
               onClick={() => setDrawerOpen(!drawerOpen)}
-              key={`sidebar-logo-${theme.palette.type}-${String(colorMode.appLogoLight)}-${String(colorMode.appLogoDark)}`}
+              key={`sidebar-logo-${theme.palette.sidebarMenuIsDarkLogo}-${String(colorMode.appLogoLight)}-${String(colorMode.appLogoDark)}`}
             />
             {drawerOpen && (
               <IconButton onClick={() => setDrawerOpen(!drawerOpen)} className={classes.chevronButton}>
@@ -1014,7 +1025,8 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
       <AppBar
         position="absolute"
         className={clsx(classes.appBar, !hideMenu && drawerOpen && classes.appBarShift)}
-        color="primary"
+        color="transparent"
+        elevation={0}
       >
         <Toolbar variant="dense" className={classes.toolbar}>
           {!hideMenu && (
@@ -1022,7 +1034,6 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
               edge="start"
               variant="contained"
               aria-label="open drawer"
-              style={{ color: "white" }}
               onClick={() => setDrawerOpen(!drawerOpen)}
               className={clsx(
                 (drawerOpen || drawerVariant === "permanent") && classes.menuButtonHidden
@@ -1048,7 +1059,6 @@ const LoggedInLayout = ({ children, themeToggle, hideMenu = false }) => {
               <IconButton
                 component={Link}
                 to="/schedules"
-                style={{ color: "white" }}
               >
                 <EventIcon />
               </IconButton>
