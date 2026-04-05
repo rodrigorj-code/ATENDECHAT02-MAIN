@@ -20,24 +20,33 @@ import axios from "axios";
 import usePlans from "../../hooks/usePlans";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
   mainPaper: {
     flex: 1,
     padding: theme.spacing(2),
     paddingBottom: 100,
-    backgroundColor:
-      theme.palette.type === "dark"
-        ? theme.palette.listScrollArea
-        : "transparent",
+    backgroundColor: isDark ? theme.palette.listScrollArea : "transparent",
     boxShadow: "none",
     color: theme.palette.text.primary,
+    ...(isDark
+      ? {
+          "& h6.MuiTypography-root": {
+            color: `${theme.palette.common.white} !important`,
+          },
+          "& .MuiTypography-colorPrimary": {
+            color: `${theme.palette.common.white} !important`,
+          },
+          "& p, & li, & ul, & ol, & b, & strong": {
+            color: theme.palette.text.primary,
+          },
+        }
+      : {}),
   },
   /** Títulos de seção: no claro mantêm a cor primária (azul marca); no escuro branco para contraste */
   sectionTitle: {
-    color:
-      theme.palette.type === "dark"
-        ? theme.palette.common.white
-        : theme.palette.primary.main,
+    color: isDark ? theme.palette.common.white : theme.palette.primary.main,
   },
   mainHeader: {
     marginTop: theme.spacing(1),
@@ -51,7 +60,8 @@ const useStyles = makeStyles((theme) => ({
   textRight: {
     textAlign: "right",
   },
-}));
+};
+});
 
 const MessagesAPI = ({ renderAsTab }) => {
   const classes = useStyles();

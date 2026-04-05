@@ -251,7 +251,12 @@ const ActivitiesList = ({ activities }) => {
 
 // Sub-component for Calendar View – layout equivalente a /schedules
 const ActivitiesCalendar = ({ activities, onCreate }) => {
+  const theme = useTheme();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const calPaperBg =
+    theme.palette.type === "dark"
+      ? theme.palette.dashboardCard || "#353538"
+      : undefined;
   const MiniMonth = ({ value, onChange }) => {
     const m = moment(value);
     const start = m.clone().startOf("month").startOf("week");
@@ -327,10 +332,14 @@ const ActivitiesCalendar = ({ activities, onCreate }) => {
   const total = activities.length;
   const conclu = activities.filter(a => String(a.status).toLowerCase() === "completed").length;
   return (
-    <div className="schedules-page" style={{ paddingTop: 8 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={9} lg={9}>
-          <Paper style={{ padding: 8 }}>
+    <div
+      className="schedules-page"
+      data-theme={theme.palette.type}
+      style={{ paddingTop: 8, maxWidth: "100%", boxSizing: "border-box" }}
+    >
+      <Grid container spacing={2} style={{ margin: 0, maxWidth: "100%" }}>
+        <Grid item xs={12} md={9} lg={9} style={{ minWidth: 0 }}>
+          <Paper style={{ padding: 8, backgroundColor: calPaperBg }}>
             <Calendar
               localizer={localizer}
               components={{ toolbar: CustomToolbar }}

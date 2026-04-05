@@ -165,7 +165,7 @@ const useStyles = makeStyles((theme) => ({
   columnHeader: {
     background:
       theme.palette.type === "dark"
-        ? theme.palette.background.paper
+        ? theme.palette.dashboardCard || "#353538"
         : "#fff",
     border:
       theme.palette.type === "dark"
@@ -250,7 +250,7 @@ const useStyles = makeStyles((theme) => ({
   card: {
     background:
       theme.palette.type === "dark"
-        ? theme.palette.background.paper
+        ? theme.palette.dashboardCard || "#353538"
         : "#FFFFFF",
     border:
       theme.palette.type === "dark"
@@ -2052,11 +2052,33 @@ const LeadsSales = () => {
               };
               const total = visibleLeads.length;
               const ganho = visibleLeads.filter(l => /(won|converted|fechado)/i.test(String(l.status || ""))).length;
+              const calPaperBg =
+                theme.palette.type === "dark"
+                  ? theme.palette.dashboardCard || "#353538"
+                  : undefined;
               return (
-                <div className="schedules-page" style={{ paddingTop: 8, height: 'calc(100vh - 128px)', overflow: 'hidden' }}>
-                  <Grid container spacing={2} style={{ height: '100%' }}>
-                    <Grid item xs={12} md={9} lg={9} style={{ height: '100%' }}>
-                      <Paper style={{ padding: 8, height: '100%', display: 'flex', overflow: 'visible' }}>
+                <div
+                  className="schedules-page"
+                  data-theme={theme.palette.type}
+                  style={{
+                    paddingTop: 8,
+                    height: "calc(100vh - 128px)",
+                    overflow: "hidden",
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <Grid container spacing={2} style={{ height: "100%", margin: 0, maxWidth: "100%" }}>
+                    <Grid item xs={12} md={9} lg={9} style={{ height: "100%", minWidth: 0 }}>
+                      <Paper
+                        style={{
+                          padding: 8,
+                          height: "100%",
+                          display: "flex",
+                          overflow: "visible",
+                          backgroundColor: calPaperBg,
+                        }}
+                      >
                         <Calendar
                           localizer={localizer}
                           views={["day","week","month"]}

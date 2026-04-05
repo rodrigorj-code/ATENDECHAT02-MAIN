@@ -40,7 +40,7 @@ const listUseStyles = makeStyles((theme) => {
     isDark && theme.palette.dashboardCard
       ? theme.palette.dashboardCard
       : isDark
-        ? "#252526"
+        ? "#353538"
         : "#ffffff";
   return {
     kpiRow: {
@@ -97,7 +97,7 @@ const boardStyles = makeStyles((theme) => ({
         : "0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(2,6,23,0.06)",
     backgroundColor:
       theme.palette.type === "dark"
-        ? theme.palette.background.paper
+        ? theme.palette.dashboardCard || "#353538"
         : undefined,
     "&:hover": {
       transform: "translateY(-3px)",

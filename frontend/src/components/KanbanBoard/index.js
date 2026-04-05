@@ -104,7 +104,10 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    backgroundColor: theme.palette.type === 'dark' ? theme.palette.background.paper : '#fff',
+    backgroundColor:
+      theme.palette.type === 'dark'
+        ? theme.palette.dashboardCard || '#353538'
+        : '#fff',
     '&:hover': {
       boxShadow: theme.palette.type === 'dark' ? '0 4px 14px rgba(0,0,0,0.45)' : '0 3px 8px rgba(0,0,0,0.12)',
       '& $cardDeleteBtn': {

@@ -36,6 +36,8 @@ const LIGHT_BG_PAPER = "#ffffff";
 const DARK_BG_DEFAULT = "#1e1e1e";
 const DARK_BG_PAPER = "#000000";
 const DARK_BG_ELEVATED = "#252526";
+/** Cards de KPI / quadros no escuro: cinza um pouco mais claro que o shell (#1e1e1e), sem preto puro */
+const DARK_DASHBOARD_CARD = "#353538";
 
 const App = () => {
   const [locale, setLocale] = useState();
@@ -305,7 +307,7 @@ const App = () => {
             dashboardCanvas:
               mode === "light" ? LIGHT_BG_DEFAULT : DARK_BG_PAPER,
             dashboardCard:
-              mode === "light" ? LIGHT_BG_PAPER : DARK_BG_ELEVATED,
+              mode === "light" ? LIGHT_BG_PAPER : DARK_DASHBOARD_CARD,
             /** Listagens em tela cheia: no escuro = cinza shell (#1e1e1e), não paper preto */
             listScrollArea:
               mode === "light" ? LIGHT_BG_PAPER : DARK_BG_DEFAULT,
