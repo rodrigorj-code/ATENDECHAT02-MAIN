@@ -19,6 +19,7 @@ const useStyles = makeStyles(theme => ({
     gap: theme.spacing(3),
     padding: theme.spacing(2),
     marginBottom: theme.spacing(3),
+    backgroundColor: theme.palette.listScrollArea,
   },
   helpPaper: {
     position: 'relative',

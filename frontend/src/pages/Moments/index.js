@@ -24,6 +24,7 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
     alignItems: "center",
+    backgroundColor: theme.palette.listScrollArea,
   },
   fixedHeightPaper: {
     padding: theme.spacing(2),

@@ -27,8 +27,11 @@ import {
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark';
   const borderSubtle = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
-  /** Papel do tema (faixas header/filtros); no escuro = #000 no App.js */
-  const chromeSurface = theme.palette.background.paper;
+  /** Cabeçalho de abas + faixa de filtros: no escuro = cinza do menu lateral (palette.chromeSurface) */
+  const chromeSurface =
+    theme.palette.chromeSurface != null
+      ? theme.palette.chromeSurface
+      : theme.palette.background.paper;
   const pageBg = theme.palette.background.default;
   const textPrimary = theme.palette.text.primary;
   const textSecondary = theme.palette.text.secondary;
@@ -41,11 +44,16 @@ const useStyles = makeStyles((theme) => {
     theme.pageTabsAccent != null && theme.pageTabsAccent !== ''
       ? theme.pageTabsAccent
       : theme.palette.primary.main;
+  /** No escuro, azul escuro da marca some no fundo — texto das abas segue cor primária do texto. */
+  const navTabColor = isDark ? textPrimary : tabBrand;
 
   return {
     root: {
       minHeight: '100vh',
+      maxWidth: '100%',
+      overflowX: 'hidden',
       backgroundColor: pageBg,
+      color: textPrimary,
       display: 'flex',
       flexDirection: 'column',
     },
@@ -100,7 +108,7 @@ const useStyles = makeStyles((theme) => {
       fontSize: '0.875rem',
       /* MUI Button usa typography.button (600) */
       '&&': { fontWeight: 400 },
-      color: tabBrand,
+      color: navTabColor,
       minWidth: 'auto',
       padding: theme.spacing(1, 2),
       borderRadius: '8px',
@@ -112,7 +120,7 @@ const useStyles = makeStyles((theme) => {
       transition: 'all 0.15s ease',
       '&:hover': {
         backgroundColor: tabHoverBg,
-        color: tabBrand,
+        color: navTabColor,
       },
     },
     navTabIcon: {
@@ -125,7 +133,7 @@ const useStyles = makeStyles((theme) => {
     },
     navTabActive: {
       '&&': { fontWeight: 400 },
-      color: tabBrand,
+      color: navTabColor,
       backgroundColor: tabActiveBg,
       boxShadow: isDark
         ? '0 2px 4px rgba(0, 0, 0, 0.35)'
@@ -133,7 +141,7 @@ const useStyles = makeStyles((theme) => {
       border: 'none',
       '&:hover': {
         backgroundColor: tabActiveBg,
-        color: tabBrand,
+        color: navTabColor,
       },
     },
     createButton: {
@@ -175,7 +183,8 @@ const useStyles = makeStyles((theme) => {
       maxWidth: 400,
     },
     funnelIcon: {
-      color: mutedIcon,
+      color: isDark ? '#ffffff' : '#000000',
+      opacity: 1,
       fontSize: 20,
     },
     filterInput: {
@@ -207,16 +216,19 @@ const useStyles = makeStyles((theme) => {
     },
     filterLabel: {
       fontSize: '0.75rem',
-      color: textSecondary,
+      color: isDark ? '#ffffff' : '#000000',
       fontWeight: 500,
       lineHeight: '20px',
+      opacity: 1,
     },
     chevronIcon: {
-      color: mutedIcon,
+      color: isDark ? '#ffffff' : '#000000',
+      opacity: 1,
       fontSize: 14,
     },
     calendarIcon: {
-      color: mutedIcon,
+      color: isDark ? '#ffffff' : '#000000',
+      opacity: 1,
       fontSize: 14,
       marginRight: 2,
     },
@@ -242,6 +254,8 @@ const useStyles = makeStyles((theme) => {
       flex: 1,
       padding: theme.spacing(0.5),
       overflowY: 'auto',
+      overflowX: 'hidden',
+      maxWidth: '100%',
       maxHeight: 'calc(100vh - 112px)',
       backgroundColor: pageBg,
     },

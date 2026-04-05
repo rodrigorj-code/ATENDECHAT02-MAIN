@@ -133,7 +133,9 @@ const EmailCalendar = ({ data }) => (
 const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
   const theme = useTheme();
   const isDark = theme.palette.type === "dark";
-  const surface = isDark ? "#161616" : "#FFFFFF";
+  const surface = isDark
+    ? theme.palette.dashboardCard || "#252526"
+    : "#FFFFFF";
   const surfaceBorder = isDark ? "rgba(255,255,255,0.12)" : "#E2E8F0";
   const paperShadow = isDark
     ? "0 4px 16px rgba(0,0,0,0.45)"
@@ -141,7 +143,9 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
   const textMain = isDark ? "#f4f4f5" : "#111827";
   const textMuted = isDark ? "#94a3b8" : "#64748B";
   const heading = isDark ? "#e4e4e7" : "#1E293B";
-  const inactiveBtnBg = isDark ? "#1f1f1f" : "#fff";
+  const inactiveBtnBg = isDark
+    ? theme.palette.inputBackground || "#2d2d2d"
+    : "#fff";
   const activeBtnBg = "#131B2D";
 
   const [totals, setTotals] = useState({ templates: 0, sent: 0, scheduled: 0, success: 0 });
@@ -286,7 +290,7 @@ const EmailDashboard = ({ fetchTotals, fetchSeries }) => {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <div style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: circle, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icon style={{ fontSize: 18, color: "#1E293B" }} />
+                <Icon style={{ fontSize: 18, color: isDark ? textMain : "#1E293B" }} />
               </div>
               <Typography variant="body2" style={{ color: textMain, opacity: 1 }}>{title}</Typography>
             </div>
@@ -497,7 +501,10 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     height: "100%",
     padding: theme.spacing(1.5),
-    backgroundColor: theme.palette.type === "dark" ? "#000000" : "#F8FAFC",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.background.default
+        : "#F8FAFC",
   },
   content: {
     flex: 1,
@@ -515,11 +522,14 @@ const EmailPage = () => {
   const classes = useStyles();
   const theme = useTheme();
   const isDarkPage = theme.palette.type === "dark";
-  const emailSurface = isDarkPage ? "#161616" : "#FFFFFF";
+  const emailSurface = isDarkPage
+    ? theme.palette.dashboardCard || "#252526"
+    : "#FFFFFF";
   const emailBorder = isDarkPage ? "rgba(255,255,255,0.12)" : "#E5E7EB";
   const emailText = isDarkPage ? "#f4f4f5" : "#111827";
   const emailMuted = isDarkPage ? "#94a3b8" : "#6B7280";
   const emailHeading = isDarkPage ? "#e4e4e7" : "#0F172A";
+  const emailLink = isDarkPage ? "#60a5fa" : "#2563EB";
   const { t } = useTranslation();
   const location = useLocation();
   const history = useHistory();
@@ -958,19 +968,19 @@ const EmailPage = () => {
         );
       case "template":
         return (
-          <Paper style={{ padding: 16, borderRadius: 12 }}>
+          <Paper style={{ padding: 16, borderRadius: 12, background: emailSurface, border: `1px solid ${emailBorder}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <Typography variant="h6" style={{ color: "#1E293B", fontWeight: 600 }}>Templates</Typography>
+              <Typography variant="h6" style={{ color: emailHeading, fontWeight: 600 }}>Templates</Typography>
             </div>
             <Grid container spacing={2}>
               {templatesList.map(tpl => (
                 <Grid item xs={12} sm={6} md={4} key={tpl.id}>
-                  <Paper style={{ padding: 12, display: "flex", gap: 12, alignItems: "center", borderRadius: 12 }}>
-                    <div style={{ width: 80, height: 50, borderRadius: 6, border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Typography variant="caption">{tpl.name?.slice(0, 10) || "Template"}</Typography>
+                  <Paper style={{ padding: 12, display: "flex", gap: 12, alignItems: "center", borderRadius: 12, background: emailSurface, border: `1px solid ${emailBorder}` }}>
+                    <div style={{ width: 80, height: 50, borderRadius: 6, border: `1px solid ${emailBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Typography variant="caption" style={{ color: emailText }}>{tpl.name?.slice(0, 10) || "Template"}</Typography>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <Typography variant="subtitle1" style={{ color: "#1E293B", fontWeight: 500 }}>{tpl.name}</Typography>
+                      <Typography variant="subtitle1" style={{ color: emailHeading, fontWeight: 500 }}>{tpl.name}</Typography>
                       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                         <Button size="small" variant="outlined" onClick={() => openEditor(tpl)}>Editar</Button>
                         <Button size="small" variant="outlined" onClick={() => setEditor({ ...editor, ...tpl, id: tpl.id, signatureImageFile: null, attachmentsFiles: [] }) || setEditorOpen(true)}>Pré-visualizar</Button>
@@ -991,8 +1001,8 @@ const EmailPage = () => {
                     <TextField label="Descrição" value={editor.description} onChange={(e) => onChangeEditor("description", e.target.value)} variant="outlined" fullWidth style={{ marginBottom: 12 }} />
                     <TextField label="Assunto" value={editor.subject} onChange={(e) => onChangeEditor("subject", e.target.value)} variant="outlined" fullWidth style={{ marginBottom: 12 }} />
                     <TextField type="number" label="Tamanho da fonte (px)" value={editor.fontSize} onChange={(e) => onChangeEditor("fontSize", e.target.value)} variant="outlined" fullWidth style={{ marginBottom: 12 }} />
-                    <Paper style={{ padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                      <Typography variant="subtitle2" style={{ marginBottom: 8 }}>Variáveis Dinâmicas</Typography>
+                    <Paper style={{ padding: 12, borderRadius: 8, marginBottom: 12, background: emailSurface, border: `1px solid ${emailBorder}` }}>
+                      <Typography variant="subtitle2" style={{ marginBottom: 8, color: emailHeading }}>Variáveis Dinâmicas</Typography>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                         {variables.map(v => (
                           <Chip key={v.token} label={`${v.token}`} onClick={() => insertVariable(v.token)} />
@@ -1008,21 +1018,21 @@ const EmailPage = () => {
                       multiline
                       minRows={8}
                     />
-                    <Typography variant="caption" style={{ display: "block", marginTop: 4 }}>Fonte ativa: {editor.fontSize}px</Typography>
+                    <Typography variant="caption" style={{ display: "block", marginTop: 4, color: emailMuted }}>Fonte ativa: {editor.fontSize}px</Typography>
                     <Divider style={{ margin: "16px 0" }} />
-                    <Typography variant="subtitle2" style={{ marginBottom: 8 }}>Adicionar arquivos anexos (até 50MB cada)</Typography>
+                    <Typography variant="subtitle2" style={{ marginBottom: 8, color: emailHeading }}>Adicionar arquivos anexos (até 50MB cada)</Typography>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <input type="file" multiple onChange={(e) => onFilesSelected(e.target.files)} />
-                      <span style={{ fontSize: 12, color: "#6B7280" }}>
+                      <span style={{ fontSize: 12, color: emailMuted }}>
                         {editor.attachmentsFiles?.length
                           ? `${editor.attachmentsFiles.length} arquivo(s) novo(s) selecionado(s)`
                           : (editorAttachments?.length ? "anexos já salvos listados abaixo" : "Nenhum arquivo selecionado")}
                       </span>
                     </div>
-                    <Typography variant="subtitle2" style={{ marginTop: 16 }}>Assinatura (imagem opcional)</Typography>
+                    <Typography variant="subtitle2" style={{ marginTop: 16, color: emailHeading }}>Assinatura (imagem opcional)</Typography>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <input type="file" accept="image/*" onChange={(e) => onSignatureSelected(e.target.files[0])} />
-                      <span style={{ fontSize: 12, color: "#6B7280" }}>
+                      <span style={{ fontSize: 12, color: emailMuted }}>
                         {editor.signatureImageFile?.name
                           ? editor.signatureImageFile.name
                           : (editor.signatureImagePath ? "assinatura já salva" : "Nenhum arquivo selecionado")}
@@ -1039,13 +1049,13 @@ const EmailPage = () => {
                         }}>Remover assinatura</Button>
                       )}
                     </div>
-                    <Typography variant="subtitle2" style={{ marginTop: 16 }}>Anexos já salvos</Typography>
+                    <Typography variant="subtitle2" style={{ marginTop: 16, color: emailHeading }}>Anexos já salvos</Typography>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {(editorAttachments || []).map(a => {
                         const href = toPublicUrl(a.path || "");
                         return (
                           <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <a href={href} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563EB", flex: 1 }}>
+                            <a href={href} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: emailLink, flex: 1 }}>
                               {a.filename}
                             </a>
                             {editor.id && (
@@ -1063,17 +1073,17 @@ const EmailPage = () => {
                         );
                       })}
                       {(!editorAttachments || editorAttachments.length === 0) && (
-                        <span style={{ fontSize: 12, color: "#6B7280" }}>—</span>
+                        <span style={{ fontSize: 12, color: emailMuted }}>—</span>
                       )}
                     </div>
                   </Grid>
                   <Grid item xs={12} md={4}>
-                    <Paper style={{ padding: 12, borderRadius: 8 }}>
-                      <Typography variant="subtitle2" style={{ marginBottom: 8 }}>Preview ao Vivo</Typography>
-                      <div style={{ border: "1px solid #E5E7EB", borderRadius: 8, padding: 12 }}>
-                        <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>Tamanho da fonte: {editor.fontSize}px</div>
-                        <div style={{ minHeight: 120, fontSize: `${editor.fontSize || 16}px` }} dangerouslySetInnerHTML={{ __html: editor.contentHtml || "<i>Sem conteúdo</i>" }} />
-                        <div style={{ marginTop: 12, color: "#6B7280" }}>Assinatura:</div>
+                    <Paper style={{ padding: 12, borderRadius: 8, background: emailSurface, border: `1px solid ${emailBorder}` }}>
+                      <Typography variant="subtitle2" style={{ marginBottom: 8, color: emailHeading }}>Preview ao Vivo</Typography>
+                      <div style={{ border: `1px solid ${emailBorder}`, borderRadius: 8, padding: 12 }}>
+                        <div style={{ fontSize: 12, color: emailMuted, marginBottom: 8 }}>Tamanho da fonte: {editor.fontSize}px</div>
+                        <div style={{ minHeight: 120, fontSize: `${editor.fontSize || 16}px`, color: emailText }} dangerouslySetInnerHTML={{ __html: editor.contentHtml || "<i>Sem conteúdo</i>" }} />
+                        <div style={{ marginTop: 12, color: emailMuted }}>Assinatura:</div>
                         {signaturePreviewUrl ? (
                           <img alt="assinatura" style={{ maxWidth: "100%", marginTop: 8 }} src={signaturePreviewUrl} />
                         ) : editor.signatureImagePath ? (
@@ -1094,7 +1104,7 @@ const EmailPage = () => {
                             {/* Link removido a pedido: manter apenas preview inline estável */}
                           </>
                         ) : (
-                          <div style={{ fontSize: 12, color: "#9CA3AF" }}>—</div>
+                          <div style={{ fontSize: 12, color: emailMuted }}>—</div>
                         )}
                       </div>
                     </Paper>
@@ -1111,9 +1121,9 @@ const EmailPage = () => {
       case "agendamento":
         return (
           <>
-            <Paper style={{ padding: 16, borderRadius: 12, marginBottom: 16 }}>
+            <Paper style={{ padding: 16, borderRadius: 12, marginBottom: 16, background: emailSurface, border: `1px solid ${emailBorder}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <Typography variant="h6" style={{ fontWeight: 700, color: "#0F172A" }}>Agendamentos</Typography>
+                <Typography variant="h6" style={{ fontWeight: 700, color: emailHeading }}>Agendamentos</Typography>
               </div>
               <TableContainer>
                 <Table size="small">
@@ -1147,7 +1157,7 @@ const EmailPage = () => {
                         <TableCell>{statusPt}</TableCell>
                         <TableCell>
                           <div style={{ fontWeight: 600 }}>{s.contactName || s.contactEmail}</div>
-                          <div style={{ fontSize: 12, color: "#64748B" }}>{s.contactEmail}</div>
+                          <div style={{ fontSize: 12, color: emailMuted }}>{s.contactEmail}</div>
                         </TableCell>
                         <TableCell>{s.campaignName || "-"}</TableCell>
                         <TableCell>{s.subject || "-"}</TableCell>

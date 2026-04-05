@@ -202,7 +202,9 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     gap: theme.spacing(1),
     backgroundColor:
-      theme.palette.type === "dark" ? "#000000" : "#ffffff",
+      theme.palette.type === "dark"
+        ? theme.palette.chromeSurface || theme.palette.background.default
+        : "#ffffff",
     borderBottom:
       theme.palette.type === "dark"
         ? "1px solid rgba(255,255,255,0.08)"
@@ -1311,7 +1313,7 @@ export default function Whitelabel(props) {
                           label={i18n.t("whitelabel.sidebarColorDark")}
                           variant="outlined"
                           value={draftSidebarDark || ""}
-                          placeholder="#000000"
+                          placeholder="#1e1e1e"
                           onClick={() => setSidebarColorDarkModalOpen(true)}
                           size="small"
                           InputProps={{
@@ -1320,7 +1322,7 @@ export default function Whitelabel(props) {
                                 <div
                                   style={{
                                     backgroundColor:
-                                      draftSidebarDark || "#000000",
+                                      draftSidebarDark || "#1e1e1e",
                                   }}
                                   className={classes.colorAdorment}
                                 />
@@ -1335,7 +1337,7 @@ export default function Whitelabel(props) {
                         onChange={(color) => {
                           setDraftSidebarDark(`#${color.hex}`);
                         }}
-                        currentColor={draftSidebarDark || "#000000"}
+                        currentColor={draftSidebarDark || "#1e1e1e"}
                       />
                     </Grid>
                   </Grid>

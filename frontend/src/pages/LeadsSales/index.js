@@ -163,7 +163,10 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: "100%",
   },
   columnHeader: {
-    background: theme.palette.type === "dark" ? "#161616" : "#fff",
+    background:
+      theme.palette.type === "dark"
+        ? theme.palette.background.paper
+        : "#fff",
     border:
       theme.palette.type === "dark"
         ? "1px solid rgba(255,255,255,0.1)"
@@ -231,7 +234,9 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     alignSelf: "flex-start",
     backgroundColor:
-      theme.palette.type === "dark" ? "#0a0a0a" : "#F3F4F6",
+      theme.palette.type === "dark"
+        ? theme.palette.inputBackground
+        : "#F3F4F6",
     border:
       theme.palette.type === "dark"
         ? "1px solid rgba(255,255,255,0.08)"
@@ -243,7 +248,10 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   card: {
-    background: theme.palette.type === "dark" ? "#161616" : "#FFFFFF",
+    background:
+      theme.palette.type === "dark"
+        ? theme.palette.background.paper
+        : "#FFFFFF",
     border:
       theme.palette.type === "dark"
         ? "1px solid rgba(255,255,255,0.1)"
@@ -459,23 +467,43 @@ const useStyles = makeStyles((theme) => ({
     marginTop: 8,
     borderRadius: 12,
     textTransform: "none",
-    color: "rgba(107, 114, 128, 0.85)",
-    borderColor: "rgba(209, 213, 219, 0.7)",
     borderStyle: "dashed",
-    backgroundColor: "rgba(249, 250, 251, 0.45)",
     minHeight: 40,
     padding: "6px 12px",
     fontSize: 13,
     fontWeight: 500,
     letterSpacing: 0,
-    "& .MuiSvgIcon-root": {
-      fontSize: 16,
-      color: "rgba(107, 114, 128, 0.8)",
-    },
-    "&:hover": {
-      backgroundColor: "rgba(243, 244, 246, 0.6)",
-      borderColor: "rgba(209, 213, 219, 1)",
-    },
+    ...(theme.palette.type === "dark"
+      ? {
+          color: "rgba(244, 244, 245, 0.92)",
+          borderColor: "rgba(255, 255, 255, 0.22)",
+          backgroundColor: "rgba(255, 255, 255, 0.05)",
+          "& .MuiSvgIcon-root": {
+            fontSize: 16,
+            color: "rgba(244, 244, 245, 0.85)",
+          },
+          "&:hover": {
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            borderColor: "rgba(255, 255, 255, 0.35)",
+            color: "#ffffff",
+            "& .MuiSvgIcon-root": {
+              color: "#ffffff",
+            },
+          },
+        }
+      : {
+          color: "rgba(107, 114, 128, 0.85)",
+          borderColor: "rgba(209, 213, 219, 0.7)",
+          backgroundColor: "rgba(249, 250, 251, 0.45)",
+          "& .MuiSvgIcon-root": {
+            fontSize: 16,
+            color: "rgba(107, 114, 128, 0.8)",
+          },
+          "&:hover": {
+            backgroundColor: "rgba(243, 244, 246, 0.6)",
+            borderColor: "rgba(209, 213, 219, 1)",
+          },
+        }),
   },
   popoverContent: {
     padding: theme.spacing(2),
@@ -862,7 +890,8 @@ const LeadsList = ({ leads }) => {
 const LeadsSales = () => {
   const classes = useStyles();
   const theme = useTheme();
-  const isDark = (theme && theme.mode === "dark");
+  const isDark =
+    theme.palette.type === "dark" || (theme && theme.mode === "dark");
   const labelColor = isDark ? "#FFFFFF" : "#0F172A";
   const [viewMode, setViewMode] = useState("board");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1384,27 +1413,44 @@ const LeadsSales = () => {
         onViewModeChange={setViewMode}
         rightFilters={rightFilters}
         scrollContent={viewMode !== "calendar" && viewMode !== "dashboard"}
+        contentEdgeToEdge={viewMode === "dashboard"}
       >
         {loading ? (
           <div style={{ padding: 20, textAlign: "center" }}>Carregando...</div>
         ) : (
           <>
             {viewMode === "dashboard" && (() => {
-              const palette = {
-                bg: "#F8FAFC",
-                card: "#FFFFFF",
-                text: "#0F172A",
-                sub: "#64748B",
-                border: "#E2E8F0",
-                shadow: "0 2px 8px rgba(2,6,23,0.06)",
-                blue: "#3B82F6",
-                blueLight: "#60A5FA",
-                blueDark: "#2563EB",
-                green: "#10B981",
-                red: "#EF4444",
-                amber: "#F59E0B",
-                indigo: "#2563EB"
-              };
+              const palette = isDark
+                ? {
+                    bg: theme.palette.dashboardCanvas || "#000000",
+                    card: theme.palette.dashboardCard || "#252526",
+                    text: "#f4f4f5",
+                    sub: "#a1a1aa",
+                    border: "rgba(255,255,255,0.12)",
+                    shadow: "0 4px 16px rgba(0,0,0,0.35)",
+                    blue: "#60a5fa",
+                    blueLight: "#93c5fd",
+                    blueDark: "#3b82f6",
+                    green: "#34d399",
+                    red: "#f87171",
+                    amber: "#fbbf24",
+                    indigo: "#3b82f6",
+                  }
+                : {
+                    bg: "#F8FAFC",
+                    card: "#FFFFFF",
+                    text: "#0F172A",
+                    sub: "#64748B",
+                    border: "#E2E8F0",
+                    shadow: "0 2px 8px rgba(2,6,23,0.06)",
+                    blue: "#3B82F6",
+                    blueLight: "#60A5FA",
+                    blueDark: "#2563EB",
+                    green: "#10B981",
+                    red: "#EF4444",
+                    amber: "#F59E0B",
+                    indigo: "#2563EB",
+                  };
               const fallbackSummary = (() => {
                 const totalLeads = (leadsState || []).length;
                 let leadsWon = 0;
@@ -1592,7 +1638,8 @@ const LeadsSales = () => {
                   datalabels: {
                     display: true,
                     color: labelColor,
-                    backgroundColor: (ctx) => (isDark ? "rgba(17,24,39,0.7)" : "rgba(255,255,255,0.85)"),
+                    backgroundColor: (ctx) =>
+                      isDark ? "rgba(37,37,38,0.92)" : "rgba(255,255,255,0.85)",
                     borderRadius: 4,
                     padding: { left: 4, right: 4, top: 2, bottom: 2 },
                     anchor: "end",
@@ -1613,7 +1660,15 @@ const LeadsSales = () => {
                     }, 
                     grid: { display: false } 
                   },
-                  y: { ticks: { color: palette.sub }, grid: { color: "#E6F0FF" }, beginAtZero: true, grace: "15%", suggestedMax: maxRevenueVal * 1.12 }
+                  y: {
+                    ticks: { color: palette.sub },
+                    grid: {
+                      color: isDark ? "rgba(255,255,255,0.08)" : "#E6F0FF",
+                    },
+                    beginAtZero: true,
+                    grace: "15%",
+                    suggestedMax: maxRevenueVal * 1.12,
+                  },
                 }
               };
               const lineData = {
@@ -1623,7 +1678,9 @@ const LeadsSales = () => {
                   data: dataRevenue,
                   fill: false,
                   borderColor: palette.blueDark,
-                  backgroundColor: "rgba(37,99,235,0.10)",
+                  backgroundColor: isDark
+                    ? "rgba(59,130,246,0.2)"
+                    : "rgba(37,99,235,0.10)",
                   tension: 0.35,
                   borderWidth: 2,
                   pointRadius: 3,
@@ -1634,8 +1691,11 @@ const LeadsSales = () => {
                 responsive: true,
                 maintainAspectRatio: false,
                 layout: { padding: { top: 18, right: 12, left: 4, bottom: 8 } },
-                plugins: { 
-                  legend: { position: "bottom" },
+                plugins: {
+                  legend: {
+                    position: "bottom",
+                    labels: { color: palette.text },
+                  },
                   datalabels: {
                     display: true,
                     color: labelColor,
@@ -1650,7 +1710,15 @@ const LeadsSales = () => {
                 },
                 scales: {
                   x: { stacked: false, ticks: { color: palette.sub }, grid: { display: false }, beginAtZero: true },
-                  y: { stacked: false, position: "left", beginAtZero: true, ticks: { color: palette.sub, padding: 6 }, grid: { color: "#E6F0FF" } },
+                  y: {
+                    stacked: false,
+                    position: "left",
+                    beginAtZero: true,
+                    ticks: { color: palette.sub, padding: 6 },
+                    grid: {
+                      color: isDark ? "rgba(255,255,255,0.08)" : "#E6F0FF",
+                    },
+                  },
                   y1: { position: "right", beginAtZero: true, ticks: { color: palette.sub, padding: 6, callback: (v) => (typeof v === "number" ? v.toLocaleString("pt-BR") : v) }, grid: { drawOnChartArea: false } }
                 }
               };
@@ -1671,20 +1739,36 @@ const LeadsSales = () => {
               };
 
               return (
-                <div style={{ padding: 4, overflowX: "hidden", overflowY: "hidden", width: "100%", height: "auto" }}>
+                <div
+                  style={{
+                    padding: 4,
+                    overflowX: "hidden",
+                    overflowY: "hidden",
+                    width: "100%",
+                    height: "auto",
+                    backgroundColor: palette.bg,
+                    minHeight: "100%",
+                  }}
+                >
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, margin: 0 }}>
                     {kpi.map((c) => (
                       <Paper key={c.label} onMouseEnter={() => setHoveredKpi(c.label)} onMouseLeave={() => setHoveredKpi(null)} style={{
                         borderRadius: 12,
                         padding: 12,
                         border: `1px solid ${palette.border}`,
-                        boxShadow: hoveredKpi === c.label ? "0 12px 24px rgba(2,6,23,0.16)" : palette.shadow,
+                        boxShadow: hoveredKpi === c.label
+                          ? isDark
+                            ? "0 12px 28px rgba(0,0,0,0.55)"
+                            : "0 12px 24px rgba(2,6,23,0.16)"
+                          : palette.shadow,
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
                         gap: 6,
                         minHeight: 110,
-                        background: `linear-gradient(180deg, rgba(99,102,241,0.06) 0%, rgba(255,255,255,0.88) 100%)`,
+                        background: isDark
+                          ? `linear-gradient(180deg, rgba(99,102,241,0.14) 0%, ${palette.card} 100%)`
+                          : `linear-gradient(180deg, rgba(99,102,241,0.06) 0%, rgba(255,255,255,0.88) 100%)`,
                         overflow: "hidden",
                         transition: "transform 150ms ease, box-shadow 150ms ease",
                         transform: hoveredKpi === c.label ? "translateY(-4px) scale(1.01)" : "none",
@@ -1794,21 +1878,21 @@ const LeadsSales = () => {
                       return (
                         <>
                           {/* Gráfico 1 */}
-                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: "#FFFFFF" }}>
+                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: palette.card }}>
                             <div style={titleStyle}>Receita por Dia</div>
                             <div style={{ height: chartH }}>
                               <Line options={lineOptions} data={lineData} />
                             </div>
                           </Paper>
                           {/* Gráfico 2 */}
-                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: "#FFFFFF" }}>
+                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: palette.card }}>
                             <div style={titleStyle}>Clientes x Valor</div>
                             <div style={{ height: chartH }}>
                               <Bar options={barOptions} data={barData} />
                             </div>
                           </Paper>
                           {/* Gráfico 3 */}
-                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: "#FFFFFF" }}>
+                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: palette.card }}>
                             <div style={titleStyle}>Ranking de Responsáveis</div>
                             <div style={{ height: chartH }}>
                               <Bar
@@ -1832,7 +1916,15 @@ const LeadsSales = () => {
                                   },
                                   indexAxis: "y",
                                   scales: {
-                                    x: { ticks: { color: palette.sub }, grid: { display: false }, beginAtZero: true },
+                                    x: {
+                                      ticks: { color: palette.sub },
+                                      grid: {
+                                        color: isDark
+                                          ? "rgba(255,255,255,0.08)"
+                                          : "#E6F0FF",
+                                      },
+                                      beginAtZero: true,
+                                    },
                                     y: { ticks: { color: palette.sub } }
                                   }
                                 }}
@@ -1841,7 +1933,7 @@ const LeadsSales = () => {
                             </div>
                           </Paper>
                           {/* Gráfico 4 */}
-                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: "#FFFFFF" }}>
+                          <Paper style={{ borderRadius: 12, padding: 16, border: `1px solid ${palette.border}`, boxShadow: palette.shadow, height: boxH, background: palette.card }}>
                             <div style={titleStyle}>Funil de Vendas (Barras)</div>
                             <Bar
                               options={{
@@ -1864,7 +1956,15 @@ const LeadsSales = () => {
                                 },
                                 indexAxis: "y",
                                 scales: {
-                                  x: { ticks: { color: palette.sub }, grid: { display: false }, beginAtZero: true },
+                                  x: {
+                                    ticks: { color: palette.sub },
+                                    grid: {
+                                      color: isDark
+                                        ? "rgba(255,255,255,0.08)"
+                                        : "#E6F0FF",
+                                    },
+                                    beginAtZero: true,
+                                  },
                                   y: { ticks: { color: palette.sub } }
                                 }
                               }}

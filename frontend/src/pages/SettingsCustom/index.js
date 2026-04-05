@@ -35,6 +35,23 @@ const useStyles = makeStyles((theme) => ({
   /** Tipografia /settings: Helvetica Neue; títulos como modal Nova Atividade (h6, peso normal) */
   settingsRoot: {
     fontFamily: settingsFontStack,
+    ...(theme.palette.type === "dark"
+      ? {
+          color: theme.palette.text.primary,
+          "& .MuiPaper-outlined": {
+            backgroundColor: theme.palette.listScrollArea,
+            borderColor: "rgba(255, 255, 255, 0.12)",
+          },
+          "& .MuiTableCell-body": {
+            color: theme.palette.text.primary,
+            borderBottomColor: "rgba(255, 255, 255, 0.08)",
+          },
+          "& .MuiTableCell-head": {
+            color: theme.palette.text.secondary,
+            borderBottomColor: "rgba(255, 255, 255, 0.12)",
+          },
+        }
+      : {}),
     "& .MuiTypography-h6": {
       fontFamily: settingsFontStack,
       fontWeight: 400,
@@ -87,7 +104,10 @@ const useStyles = makeStyles((theme) => ({
   },
   root: {
     flex: 1,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.background.default
+        : theme.palette.background.paper,
   },
   mainPaper: {
     overflowY: "hidden",
@@ -107,7 +127,10 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     maxWidth: "100%",
     margin: 0,
-    backgroundColor: "transparent",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.listScrollArea
+        : "transparent",
     boxSizing: "border-box",
     fontFamily: settingsFontStack,
     [theme.breakpoints.up("md")]: {
@@ -263,7 +286,11 @@ const SettingsCustom = () => {
           hideNavDivider={true}
           hideHeaderDivider={true}
           contentEdgeToEdge={true}
-          rootBackground={theme.palette.background.paper}
+          rootBackground={
+            theme.palette.type === "dark"
+              ? theme.palette.background.default
+              : theme.palette.background.paper
+          }
           rootClassName={classes.settingsRoot}
         >
             <Paper className={classes.paper} elevation={0}>

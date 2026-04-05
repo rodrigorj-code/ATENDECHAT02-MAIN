@@ -63,8 +63,9 @@ const useStyles = makeStyles((theme) => ({
     cursor: "unset",
   },
   queueTag: {
-    background: "#FCFCFC",
-    color: "#000",
+    background:
+      theme.mode === "light" ? "#FCFCFC" : theme.palette.dashboardCard || "#252526",
+    color: theme.mode === "light" ? "#000" : theme.palette.text.primary,
     marginRight: 1,
     padding: 1,
     fontWeight: "bold",
@@ -100,7 +101,7 @@ const useStyles = makeStyles((theme) => ({
     position: "absolute",
     right: 8,
     top: -12,
-    color: "#0A84FF",
+    color: theme.palette.type === "dark" ? "#e4e4e7" : "#0A84FF",
     display: "inline-flex",
     alignItems: "center",
     pointerEvents: "none",
@@ -165,13 +166,13 @@ const useStyles = makeStyles((theme) => ({
   contactLastMessage: {
     paddingRight: "0%",
     marginLeft: "5px",
-    color: theme.mode === "light" ? "black" : grey[400],
+    color: theme.mode === "light" ? "black" : theme.palette.text.secondary,
   },
 
   contactLastMessageUnread: {
     paddingRight: 20,
     fontWeight: "bold",
-    color: theme.mode === "light" ? "black" : grey[400],
+    color: theme.mode === "light" ? "black" : theme.palette.text.secondary,
     // width: "50%",
   },
 
@@ -273,13 +274,18 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   aiAgent: {
-    borderLeft: "2px solid #0A84FF",
-  }
+    borderLeft:
+      theme.palette.type === "dark"
+        ? "2px solid #60a5fa"
+        : "2px solid #0A84FF",
+  },
 }));
 
 const TicketListItemCustom = ({ setTabOpen, ticket }) => {
   const classes = useStyles();
   const theme = useTheme();
+  const aiLastMsgColor =
+    theme.palette.type === "dark" ? theme.palette.common.white : "#0A84FF";
   const history = useHistory();
   const backendUrl = getBackendUrl() || "http://localhost:8080";
   const [avatarSrc, setAvatarSrc] = useState("");
@@ -757,7 +763,7 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                     ? classes.contactLastMessageUnread
                     : classes.contactLastMessage
                 }
-                style={isAI ? { color: "#0A84FF" } : undefined}
+                style={isAI ? { color: aiLastMsgColor } : undefined}
                 noWrap
                 component="span"
                 variant="body2"

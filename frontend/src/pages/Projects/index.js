@@ -807,6 +807,7 @@ const Projects = () => {
       onViewModeChange={setViewMode}
       rightFilters={rightFilters}
       scrollContent={viewMode !== "dashboard" && viewMode !== "calendar"}
+      contentEdgeToEdge={viewMode === "dashboard"}
     >
       {loading ? (
         <div style={{ padding: 20, textAlign: "center" }}>Carregando...</div>
@@ -816,8 +817,8 @@ const Projects = () => {
             const isDark = theme.palette.type === "dark";
             const palette = isDark
               ? {
-                  bg: "#000000",
-                  card: "#161616",
+                  bg: theme.palette.dashboardCanvas || "#000000",
+                  card: theme.palette.dashboardCard || "#252526",
                   text: "#f4f4f5",
                   sub: "#94a3b8",
                   border: "rgba(255,255,255,0.12)",
@@ -1208,7 +1209,7 @@ const Projects = () => {
             };
 
             return (
-              <div style={{ padding: 4, overflowX: "hidden", overflowY: "visible", width: "100%", height: "auto" }}>
+              <div style={{ padding: 4, overflowX: "hidden", overflowY: "visible", width: "100%", height: "auto", backgroundColor: palette.bg }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, margin: 0 }}>
                   {kpis.map((c, idx) => {
                     const delta = Math.round(c.delta || 0);

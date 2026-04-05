@@ -84,7 +84,7 @@ const useStyles = makeStyles((theme) => ({
 
   messagesList: {
     backgroundImage: theme.mode === 'light' ? `url(${whatsBackground})` : `url(${whatsBackgroundDark})`,
-    backgroundColor: theme.mode === 'light' ? "transparent" : "#0b0b0d",
+    backgroundColor: theme.mode === 'light' ? "transparent" : theme.palette.background.default,
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
@@ -131,7 +131,7 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: theme.mode === 'light' ? "#ffffff" : "#202c33",
+    backgroundColor: theme.mode === 'light' ? "#ffffff" : theme.palette.background.paper,
     color: theme.mode === 'light' ? "#303030" : "#ffffff",
     alignSelf: "flex-start",
     borderTopLeftRadius: 0,
@@ -148,7 +148,7 @@ const useStyles = makeStyles((theme) => ({
   quotedContainerLeft: {
     margin: "-3px -80px 6px -6px",
     overflow: "hidden",
-    backgroundColor: theme.mode === 'light' ? "#f0f0f0" : "#1d282f",
+    backgroundColor: theme.mode === 'light' ? "#f0f0f0" : theme.palette.inputBackground,
     borderRadius: "7.5px",
     display: "flex",
     position: "relative",

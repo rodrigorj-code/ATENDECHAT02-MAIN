@@ -29,7 +29,10 @@ import ForbiddenPage from "../../components/ForbiddenPage";
 const useStyles = makeStyles((theme) => ({
   root: {
     flex: 1,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.background.default
+        : theme.palette.background.paper,
   },
   mainPaper: {
     ...theme.scrollbarStyles,

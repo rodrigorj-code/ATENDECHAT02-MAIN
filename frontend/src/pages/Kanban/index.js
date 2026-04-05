@@ -26,6 +26,7 @@ const useStyles = makeStyles(theme => ({
     overflowX: 'auto',
     ...theme.scrollbarStyles,
     borderRadius: '10px',
+    backgroundColor: theme.palette.listScrollArea,
     maxWidth: 1200,
     margin: '0 auto',
   },

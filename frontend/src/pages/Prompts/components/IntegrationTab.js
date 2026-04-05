@@ -12,6 +12,7 @@ import {
   TextField,
   Typography
 } from "@material-ui/core";
+import { useTheme } from "@material-ui/core/styles";
 import { Visibility, VisibilityOff } from "@material-ui/icons";
 import { SiOpenai } from "react-icons/si";
 import SectionCard from "./shared/SectionCard";
@@ -27,6 +28,11 @@ export default function IntegrationTab({
   modelInfo,
   handleSaveIntegration
 }) {
+  const theme = useTheme();
+  const isDark = theme.palette.type === "dark";
+  const openAiIconColor = isDark ? "#f4f4f5" : "#111827";
+  const modelMetaColor = isDark ? theme.palette.text.secondary : "#6b7280";
+
   return (
     <div className={`${classes.mainPaper} ${classes.mainPaperTight} ${rootClassName || ""}`}>
       <SectionCard>
@@ -214,13 +220,13 @@ export default function IntegrationTab({
           <Grid item xs={12} md={6}>
             <Paper className={classes.rightModelCard}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                <SiOpenai size={24} color="#111827" />
+                <SiOpenai size={24} color={openAiIconColor} />
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>
                     {(modelInfo[integrationState.model] && modelInfo[integrationState.model].title) ||
                       integrationState.model}
                   </div>
-                  <div style={{ fontSize: 12, color: "#6b7280" }}>
+                  <div style={{ fontSize: 12, color: modelMetaColor }}>
                     {(modelInfo[integrationState.model] && modelInfo[integrationState.model].desc) ||
                       "Modelo selecionado da OpenAI."}{" "}
                     Ideal para: Chat, automação.

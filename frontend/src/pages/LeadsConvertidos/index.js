@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from "react";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import {
   List as ListIcon,
   Edit as EditIcon,
@@ -45,8 +45,16 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const LeadsList = ({ leads, onEdit, onDelete }) => {
+  const theme = useTheme();
   return (
-    <TableContainer component={Paper} style={{ height: '100%', overflow: 'auto' }}>
+    <TableContainer
+      component={Paper}
+      style={{
+        height: "100%",
+        overflow: "auto",
+        backgroundColor: theme.palette.listScrollArea,
+      }}
+    >
       <Table stickyHeader aria-label="converted leads table">
         <TableHead>
           <TableRow>

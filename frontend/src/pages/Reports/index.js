@@ -79,6 +79,7 @@ const useStyles = makeStyles((theme) => ({
     border: "0px !important",
     marginBottom: 40,
     overflow: "hidden",
+    backgroundColor: theme.palette.listScrollArea,
   },
   mainPaperTable: {
     flex: 1,

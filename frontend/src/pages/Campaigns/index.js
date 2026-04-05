@@ -97,6 +97,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.padding,
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.listScrollArea,
   },
   fab: {
     position: 'fixed',
@@ -125,8 +126,27 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
   },
   tableHeader: {
-    fontWeight: 'bold',
-    backgroundColor: theme.palette.grey[100],
+    fontWeight: "bold",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.dashboardCard || "#252526"
+        : theme.palette.grey[100],
+    color: theme.palette.text.primary,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+  recurrenceMeta: {
+    fontSize: "0.75rem",
+    color:
+      theme.palette.type === "dark"
+        ? theme.palette.text.secondary
+        : "#666",
+  },
+  mutedCaption: {
+    fontSize: "0.875rem",
+    color:
+      theme.palette.type === "dark"
+        ? theme.palette.text.secondary
+        : "#666",
   },
 }));
 
@@ -560,7 +580,7 @@ const Campaigns = () => {
                                 className={classes.recurringChip}
                                 size="small"
                               />
-                              <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                              <span className={classes.recurrenceMeta}>
                                 {campaign.executionCount || 0} execuções
                               </span>
                             </div>
@@ -597,7 +617,7 @@ const Campaigns = () => {
                               {datetimeToClient(campaign.nextScheduledAt)}
                             </div>
                           ) : campaign.isRecurring && campaign.status === 'FINALIZADA' ? (
-                            <span style={{ color: '#666', fontSize: '0.875rem' }}>
+                            <span className={classes.mutedCaption}>
                               Recorrência finalizada
                             </span>
                           ) : (

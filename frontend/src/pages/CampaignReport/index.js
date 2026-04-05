@@ -91,6 +91,7 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
     marginBottom: theme.spacing(2),
+    backgroundColor: theme.palette.listScrollArea,
   },
   textRight: {
     textAlign: "right",

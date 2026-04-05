@@ -104,7 +104,9 @@ const useStyles = makeStyles((theme) => ({
   },
   miniTopbar: {
     backgroundColor:
-      theme.palette.type === "dark" ? "#161616" : "#ffffff",
+      theme.palette.type === "dark"
+        ? theme.palette.chromeSurface || theme.palette.background.default
+        : "#ffffff",
     borderRadius: 0,
     padding: theme.spacing(0.3, 2),
     display: "flex",
@@ -160,8 +162,7 @@ const useStyles = makeStyles((theme) => ({
   blockPaper: {
     padding: theme.spacing(1.5),
     borderRadius: 8,
-    backgroundColor:
-      theme.palette.type === "dark" ? "#161616" : theme.palette.background.paper,
+    backgroundColor: theme.palette.background.paper,
     border:
       theme.palette.type === "dark"
         ? "1px solid rgba(255, 255, 255, 0.08)"

@@ -196,9 +196,8 @@ const useStyles = makeStyles((theme) => ({
   },
 
   submenuContainer: {
-    backgroundColor: theme.mode === "light"
-      ? "rgba(0, 0, 0, 0.02)"
-      : "rgba(255, 255, 255, 0.02)",
+    backgroundColor:
+      theme.mode === "light" ? "rgba(0, 0, 0, 0.02)" : "transparent",
   },
 
   customTooltip: {

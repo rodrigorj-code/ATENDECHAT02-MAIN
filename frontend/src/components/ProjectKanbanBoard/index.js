@@ -103,7 +103,7 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    backgroundColor: theme.palette.type === 'dark' ? '#161616' : '#fff',
+    backgroundColor: theme.palette.type === 'dark' ? theme.palette.background.paper : '#fff',
     '&:hover': {
       boxShadow: theme.palette.type === 'dark' ? '0 4px 14px rgba(0,0,0,0.45)' : '0 3px 8px rgba(0,0,0,0.12)',
       '& $cardDeleteBtn': {
@@ -148,7 +148,7 @@ const useStyles = makeStyles((theme) => ({
     height: 22,
     minWidth: 22,
     padding: 0,
-    backgroundColor: theme.palette.type === 'dark' ? 'rgba(22,22,22,0.95)' : '#ffffffEE',
+    backgroundColor: theme.palette.type === 'dark' ? 'rgba(0,0,0,0.92)' : '#ffffffEE',
     border: theme.palette.type === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E5E7EB',
     borderRadius: 6,
     color: theme.palette.type === 'dark' ? '#94a3b8' : '#9CA3AF',
@@ -156,7 +156,7 @@ const useStyles = makeStyles((theme) => ({
     transform: 'scale(0.92)',
     transition: 'all 120ms ease',
     '&:hover': {
-      backgroundColor: theme.palette.type === 'dark' ? '#1f1f1f' : '#fff'
+      backgroundColor: theme.palette.type === 'dark' ? theme.palette.inputBackground : '#fff'
     }
   },
   cardLinkIcon: {

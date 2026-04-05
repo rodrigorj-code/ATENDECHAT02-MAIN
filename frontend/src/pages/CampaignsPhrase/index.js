@@ -84,7 +84,10 @@ const reducer = (state, action) => {
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    backgroundColor: colorBackgroundTable(),
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.listScrollArea
+        : colorBackgroundTable(),
     borderRadius: 12,
     padding: theme.spacing(1),
     overflowY: "scroll",

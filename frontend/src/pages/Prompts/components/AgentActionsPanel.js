@@ -233,23 +233,27 @@ function DestinationFields({
   );
 }
 
-const usePanelStyles = makeStyles((theme) => ({
+const usePanelStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
   intro: {
     padding: theme.spacing(1.5, 2),
     borderRadius: 12,
-    background: "linear-gradient(135deg, #f0f7ff 0%, #f8fafc 100%)",
-    border: "1px solid #dbeafe",
+    background: isDark
+      ? "linear-gradient(135deg, rgba(37,99,235,0.18) 0%, rgba(30,30,30,0.95) 100%)"
+      : "linear-gradient(135deg, #f0f7ff 0%, #f8fafc 100%)",
+    border: isDark ? "1px solid rgba(59,130,246,0.35)" : "1px solid #dbeafe",
     marginBottom: theme.spacing(2)
   },
   introTitle: {
     fontWeight: 600,
     fontSize: 14,
-    color: "#0f172a",
+    color: isDark ? theme.palette.text.primary : "#0f172a",
     marginBottom: 4
   },
   introBody: {
     fontSize: 12,
-    color: "#64748b",
+    color: isDark ? theme.palette.text.secondary : "#64748b",
     lineHeight: 1.5
   },
   toolbar: {
@@ -261,7 +265,7 @@ const usePanelStyles = makeStyles((theme) => ({
   },
   toolbarMeta: {
     fontSize: 12,
-    color: "#64748b",
+    color: isDark ? theme.palette.text.secondary : "#64748b",
     marginRight: "auto"
   },
   toolbarBtn: {
@@ -270,16 +274,21 @@ const usePanelStyles = makeStyles((theme) => ({
     borderRadius: 8
   },
   accordion: {
-    border: "1px solid #e2e8f0",
+    border: isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid #e2e8f0",
     borderRadius: "12px !important",
     marginBottom: theme.spacing(1),
-    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.06)",
+    boxShadow: isDark
+      ? "0 1px 3px rgba(0, 0, 0, 0.4)"
+      : "0 1px 3px rgba(15, 23, 42, 0.06)",
     overflow: "hidden",
+    backgroundColor: isDark ? theme.palette.inputBackground : undefined,
     "&:before": { display: "none" }
   },
   accordionInactive: {
-    background: "#f8fafc",
-    borderColor: "#eef2f6"
+    background: isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
+    borderColor: isDark ? "rgba(255,255,255,0.08)" : "#eef2f6"
   },
   summary: {
     minHeight: 64,
@@ -301,18 +310,18 @@ const usePanelStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
     background: "linear-gradient(145deg, rgba(37,99,235,0.12) 0%, rgba(37,99,235,0.06) 100%)",
-    color: "#1d4ed8",
+    color: isDark ? "#93c5fd" : "#1d4ed8",
     flexShrink: 0
   },
   actionTitle: {
     fontWeight: 600,
     fontSize: 14,
-    color: "#0f172a",
+    color: isDark ? theme.palette.text.primary : "#0f172a",
     letterSpacing: "-0.01em"
   },
   actionDesc: {
     fontSize: 12,
-    color: "#64748b",
+    color: isDark ? theme.palette.text.secondary : "#64748b",
     lineHeight: 1.35,
     marginTop: 2
   },
@@ -324,15 +333,17 @@ const usePanelStyles = makeStyles((theme) => ({
   details: {
     display: "block",
     padding: theme.spacing(0, 2, 2, 2),
-    borderTop: "1px solid #f1f5f9",
-    background: "#fafbfc"
+    borderTop: isDark
+      ? "1px solid rgba(255,255,255,0.1)"
+      : "1px solid #f1f5f9",
+    background: isDark ? theme.palette.background.default : "#fafbfc"
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
-    color: "#64748b",
+    color: isDark ? theme.palette.text.secondary : "#64748b",
     marginBottom: theme.spacing(1),
     marginTop: theme.spacing(1.5),
     "&:first-child": { marginTop: 0 }
@@ -340,14 +351,16 @@ const usePanelStyles = makeStyles((theme) => ({
   destSection: {
     marginTop: theme.spacing(2),
     paddingTop: theme.spacing(2),
-    borderTop: "1px dashed #e2e8f0"
+    borderTop: isDark
+      ? "1px dashed rgba(255,255,255,0.15)"
+      : "1px dashed #e2e8f0"
   },
   destHeading: {
     fontSize: 11,
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
-    color: "#64748b",
+    color: isDark ? theme.palette.text.secondary : "#64748b",
     marginBottom: theme.spacing(1.5)
   },
   chipWrap: {
@@ -373,24 +386,30 @@ const usePanelStyles = makeStyles((theme) => ({
     border: "none"
   },
   chipOff: {
-    borderColor: "#e2e8f0",
-    color: "#475569",
-    background: "#fff"
+    borderColor: isDark ? "rgba(255,255,255,0.2)" : "#e2e8f0",
+    color: isDark ? theme.palette.text.secondary : "#475569",
+    background: isDark ? theme.palette.inputBackground : "#fff"
   },
   transferPaper: {
     padding: theme.spacing(2),
     borderRadius: 12,
-    border: "1px solid #e2e8f0",
+    border: isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid #e2e8f0",
     borderLeft: "4px solid #2563eb",
-    background: "#fff",
-    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.06)",
+    background: isDark ? theme.palette.inputBackground : "#fff",
+    boxShadow: isDark
+      ? "0 1px 3px rgba(0, 0, 0, 0.35)"
+      : "0 1px 3px rgba(15, 23, 42, 0.06)",
     marginTop: theme.spacing(1),
     marginBottom: theme.spacing(2)
   },
   footer: {
     marginTop: theme.spacing(2),
     paddingTop: theme.spacing(2),
-    borderTop: "1px solid #e2e8f0",
+    borderTop: isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid #e2e8f0",
     display: "flex",
     justifyContent: "flex-end",
     alignItems: "center",
@@ -404,7 +423,8 @@ const usePanelStyles = makeStyles((theme) => ({
     padding: "8px 22px",
     boxShadow: "0 1px 2px rgba(37, 99, 235, 0.25)"
   }
-}));
+  };
+});
 
 export default function AgentActionsPanel({
   classes,

@@ -122,14 +122,14 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.listScrollArea,
     borderRadius: 16,
     marginTop: theme.spacing(2),
     border: `1px solid ${theme.palette.divider}`,
   },
   
   header: {
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.listScrollArea,
     boxShadow: theme.shadows[1],
     borderRadius: 16,
     padding: theme.spacing(3),
@@ -151,7 +151,7 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   searchContainer: {
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.listScrollArea,
     borderRadius: 16,
     padding: theme.spacing(2),
     marginBottom: theme.spacing(3),
@@ -174,7 +174,7 @@ const useStyles = makeStyles((theme) => ({
         backgroundColor: theme.palette.type === 'dark' ? theme.palette.grey[700] : theme.palette.grey[100],
       },
       '&.Mui-focused': {
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: theme.palette.listScrollArea,
         boxShadow: theme.palette.type === 'dark' 
           ? '0 0 0 3px rgba(144, 202, 249, 0.16)' 
           : '0 0 0 3px rgba(25, 118, 210, 0.12)',
@@ -186,7 +186,7 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   flowCard: {
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.listScrollArea,
     borderRadius: 16,
     marginBottom: theme.spacing(2),
     border: `1px solid ${theme.palette.divider}`,
@@ -292,7 +292,7 @@ const useStyles = makeStyles((theme) => ({
   emptyState: {
     textAlign: 'center',
     padding: theme.spacing(6),
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.listScrollArea,
     borderRadius: 16,
     border: `1px solid ${theme.palette.divider}`,
     [theme.breakpoints.down('sm')]: {
@@ -363,7 +363,7 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 200,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.listScrollArea,
     borderRadius: 16,
     border: `1px solid ${theme.palette.divider}`,
   },
@@ -373,7 +373,7 @@ const useStyles = makeStyles((theme) => ({
       border: `1px solid ${theme.palette.divider}`,
       boxShadow: theme.shadows[8],
       minWidth: 180,
-      backgroundColor: theme.palette.background.paper,
+      backgroundColor: theme.palette.listScrollArea,
     },
     '& .MuiMenuItem-root': {
       padding: theme.spacing(1.5, 2),

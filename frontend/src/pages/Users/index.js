@@ -94,6 +94,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.listScrollArea,
   },
   userAvatar: {
     width: theme.spacing(6),

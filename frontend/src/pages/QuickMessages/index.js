@@ -87,6 +87,7 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.listScrollArea,
   },
   fab: {
     position: 'fixed',

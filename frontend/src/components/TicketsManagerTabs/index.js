@@ -59,6 +59,10 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.background.default
+        : theme.palette.background.paper,
   },
 
   tabsHeader: {
@@ -166,7 +170,10 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    background: theme.palette.optionsBackground,
+    background:
+      theme.palette.type === "dark"
+        ? theme.palette.chromeSurface || theme.palette.background.default
+        : theme.palette.optionsBackground,
     borderRadius: 8,
     borderColor: "#aaa",
     borderWidth: "1px",
@@ -233,7 +240,10 @@ const useStyles = makeStyles((theme) => ({
   modernTabs: {
     minHeight: 54,
     borderRadius: 8,
-    backgroundColor: theme.mode === "light" ? "rgba(0, 0, 0, 0.02)" : "rgba(255, 255, 255, 0.02)",
+    backgroundColor:
+      theme.mode === "light"
+        ? "rgba(0, 0, 0, 0.02)"
+        : theme.palette.chromeSurface || theme.palette.background.default,
     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
     padding: "8px 4px 4px 4px", // Aumentamos o padding superior para dar espaço ao badge
     margin: "8px 0",
@@ -391,6 +401,9 @@ const TicketsManagerTabs = () => {
   const theme = useTheme();
   const classes = useStyles();
   const history = useHistory();
+  const isDm = theme.palette.type === "dark";
+  const tabSelectedFg = isDm ? theme.palette.common.white : theme.palette.primary.main;
+  const tabUnselectedFg = isDm ? theme.palette.text.secondary : "inherit";
 
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
@@ -916,7 +929,7 @@ const TicketsManagerTabs = () => {
           value={tabOpen}
           onChange={handleChangeTabOpen}
           indicatorColor="primary"
-          textColor="primary"
+          textColor={isDm ? "inherit" : "primary"}
           variant="fullWidth"
           scrollButtons="auto"
           TabIndicatorProps={{ className: classes.tabIndicator }}
@@ -937,7 +950,7 @@ const TicketsManagerTabs = () => {
                     <MessageSharpIcon
                       style={{
                         fontSize: 20,
-                        color: tabOpen === "open" ? theme.palette.primary.main : "inherit",
+                        color: tabOpen === "open" ? tabSelectedFg : tabUnselectedFg,
                       }}
                     />
                   </Badge>
@@ -948,7 +961,7 @@ const TicketsManagerTabs = () => {
                       marginLeft: 8,
                       fontSize: 11,
                       fontWeight: tabOpen === "open" ? 700 : 500,
-                      color: tabOpen === "open" ? theme.palette.primary.main : "inherit",
+                      color: tabOpen === "open" ? tabSelectedFg : tabUnselectedFg,
                       transition: "all 0.2s ease",
                     }}
                   >
@@ -977,7 +990,7 @@ const TicketsManagerTabs = () => {
                     <ClockIcon
                       style={{
                         fontSize: 20,
-                        color: tabOpen === "pending" ? theme.palette.primary.main : "inherit",
+                        color: tabOpen === "pending" ? tabSelectedFg : tabUnselectedFg,
                       }}
                     />
                   </Badge>
@@ -988,7 +1001,7 @@ const TicketsManagerTabs = () => {
                       marginLeft: 8,
                       fontSize: 11,
                       fontWeight: tabOpen === "pending" ? 700 : 500,
-                      color: tabOpen === "pending" ? theme.palette.primary.main : "inherit",
+                      color: tabOpen === "pending" ? tabSelectedFg : tabUnselectedFg,
                       transition: "all 0.2s ease",
                     }}
                   >
@@ -1018,7 +1031,7 @@ const TicketsManagerTabs = () => {
                       <Group
                         style={{
                           fontSize: 20,
-                          color: tabOpen === "group" ? theme.palette.primary.main : "inherit",
+                          color: tabOpen === "group" ? tabSelectedFg : tabUnselectedFg,
                         }}
                       />
                     </Badge>
@@ -1029,7 +1042,7 @@ const TicketsManagerTabs = () => {
                         marginLeft: 8,
                         fontSize: 11,
                         fontWeight: tabOpen === "group" ? 700 : 500,
-                        color: tabOpen === "group" ? theme.palette.primary.main : "inherit",
+                        color: tabOpen === "group" ? tabSelectedFg : tabUnselectedFg,
                         transition: "all 0.2s ease",
                       }}
                     >

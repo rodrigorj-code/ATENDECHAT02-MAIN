@@ -63,6 +63,7 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: "10px",
     boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 12px",
     ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.listScrollArea,
   },
   /** Configurações: sem card, fundo contínuo com a página */
   tabOuterPaper: {

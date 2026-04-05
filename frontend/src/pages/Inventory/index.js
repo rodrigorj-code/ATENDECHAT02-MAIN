@@ -22,6 +22,7 @@ import { toast } from "react-toastify";
 import useInventory from "../../hooks/useInventory";
 
 import { Grid, Paper, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, InputLabel, FormControl, Fab, Avatar, ButtonGroup } from "@material-ui/core";
+import { useTheme } from "@material-ui/core/styles";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import inventoryService from "../../services/inventoryService";
 import KanbanBoard from "../../components/KanbanBoard";
@@ -33,55 +34,89 @@ const columnsDef = [
   { id: "ordered", title: "Pedido Efetuado", color: "#3B82F6" }
 ];
 
-const listUseStyles = makeStyles(() => ({
-  kpiRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(160px, 1fr))",
-    gap: 16,
-    padding: 0,
-    margin: "0 24px 24px",
-    width: "calc(100% - 48px)",
-    "@media (max-width:1280px)": {
-      gridTemplateColumns: "repeat(5, minmax(140px, 1fr))"
+const listUseStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  const cardBg =
+    isDark && theme.palette.dashboardCard
+      ? theme.palette.dashboardCard
+      : isDark
+        ? "#252526"
+        : "#ffffff";
+  return {
+    kpiRow: {
+      display: "grid",
+      gridTemplateColumns: "repeat(5, minmax(160px, 1fr))",
+      gap: 16,
+      padding: 0,
+      margin: "0 24px 24px",
+      width: "calc(100% - 48px)",
+      "@media (max-width:1280px)": {
+        gridTemplateColumns: "repeat(5, minmax(140px, 1fr))"
+      },
+      "@media (max-width:1024px)": {
+        gridTemplateColumns: "repeat(5, minmax(120px, 1fr))"
+      },
+      "@media (max-width:900px)": {
+        gridTemplateColumns: "repeat(5, minmax(110px, 1fr))"
+      }
     },
-    "@media (max-width:1024px)": {
-      gridTemplateColumns: "repeat(5, minmax(120px, 1fr))"
-    },
-    "@media (max-width:900px)": {
-      gridTemplateColumns: "repeat(5, minmax(110px, 1fr))"
+    kpiCard: {
+      borderRadius: 12,
+      padding: 12,
+      border: isDark
+        ? "1px solid rgba(255,255,255,0.12)"
+        : "1px solid #E5EAF1",
+      boxShadow: isDark
+        ? "0 4px 16px rgba(0,0,0,0.35)"
+        : "0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(2,6,23,0.08), inset 0 1px 0 rgba(255,255,255,0.6)",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      gap: 8,
+      minHeight: 110,
+      width: "100%",
+      background: cardBg,
+      transition: "transform 160ms ease, box-shadow 220ms ease",
+      "&:hover": {
+        transform: "translateY(-3px)",
+        boxShadow: isDark
+          ? "0 12px 24px rgba(0,0,0,0.5)"
+          : "0 10px 20px rgba(2,6,23,0.12), 0 3px 6px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6)"
+      }
     }
-  },
-  kpiCard: {
-    borderRadius: 12,
-    padding: 12,
-    border: "1px solid #E5EAF1",
-    boxShadow:
-      "0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(2,6,23,0.08), inset 0 1px 0 rgba(255,255,255,0.6)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    gap: 8,
-    minHeight: 110,
-    width: "100%",
-    background: "#ffffff",
-    transition: "transform 160ms ease, box-shadow 220ms ease",
-    "&:hover": {
-      transform: "translateY(-3px)",
-      boxShadow:
-        "0 10px 20px rgba(2,6,23,0.12), 0 3px 6px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6)"
-    }
-  }
-}));
+  };
+});
 
-const boardStyles = makeStyles(() => ({
+const boardStyles = makeStyles((theme) => ({
   kanbanCard: {
     marginBottom: 8,
     transition: "transform 160ms ease, box-shadow 220ms ease",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(2,6,23,0.06)",
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 2px 8px rgba(0,0,0,0.4)"
+        : "0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(2,6,23,0.06)",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.background.paper
+        : undefined,
     "&:hover": {
       transform: "translateY(-3px)",
-      boxShadow: "0 10px 20px rgba(2,6,23,0.12), 0 3px 6px rgba(0,0,0,0.06)"
+      boxShadow:
+        theme.palette.type === "dark"
+          ? "0 8px 20px rgba(0,0,0,0.5)"
+          : "0 10px 20px rgba(2,6,23,0.12), 0 3px 6px rgba(0,0,0,0.06)"
     }
+  },
+  columnPaper: {
+    height: "100%",
+    padding: 16,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.inputBackground
+        : "#f5f5f5"
+  },
+  columnTitle: {
+    color: theme.palette.text.primary
   }
 }));
 
@@ -100,8 +135,8 @@ const InventoryBoard = ({ data, loading, onMove }) => {
       <Grid container spacing={2} style={{ height: '100%', overflowX: 'auto', flexWrap: 'nowrap' }}>
         {columnsDef.map((col) => (
           <Grid item xs={12} sm={6} md={3} key={col.id} style={{ minWidth: 280 }}>
-            <Paper style={{ height: '100%', padding: 16, backgroundColor: '#f5f5f5' }}>
-              <Typography variant="h6" gutterBottom style={{ color: '#333' }}>
+            <Paper className={bclasses.columnPaper} style={{ height: '100%' }}>
+              <Typography variant="h6" gutterBottom className={bclasses.columnTitle}>
                 {col.title}
               </Typography>
               <Droppable droppableId={col.id}>
@@ -133,6 +168,8 @@ const InventoryBoard = ({ data, loading, onMove }) => {
 
 const InventoryList = ({ data, loading, onEdit, onDelete }) => {
     const lclasses = listUseStyles();
+    const theme = useTheme();
+    const isDark = theme.palette.type === "dark";
     if (loading) return <CircularProgress />;
     const items = Array.isArray(data) ? data : [];
     const totalItens = items.length;
@@ -167,21 +204,38 @@ const InventoryList = ({ data, loading, onEdit, onDelete }) => {
             ].map((c) => (
               <Paper key={c.label} className={lclasses.kpiCard}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: 13, color: "#0F172A", whiteSpace: "nowrap" }}>{c.label}</div>
-                  <div style={{ fontWeight: 700, fontSize: 18, color: "#0F172A", whiteSpace: "nowrap" }}>{c.value}</div>
+                  <div style={{ fontSize: 13, color: theme.palette.text.primary, whiteSpace: "nowrap" }}>{c.label}</div>
+                  <div style={{ fontWeight: 700, fontSize: 18, color: theme.palette.text.primary, whiteSpace: "nowrap" }}>{c.value}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginTop: "auto" }}>
                   <div style={{
-                    width: 28, height: 28, borderRadius: 10, background: "#F3F4F6",
+                    width: 28, height: 28, borderRadius: 10,
+                    background: isDark ? "rgba(255,255,255,0.08)" : "#F3F4F6",
                     display: "grid", placeItems: "center"
                   }}>
-                    {c.icon}
+                    {React.cloneElement(c.icon, {
+                      style: { ...(c.icon.props.style || {}), color: theme.palette.text.primary }
+                    })}
                   </div>
                 </div>
               </Paper>
             ))}
           </div>
-        <TableContainer component={Paper} style={{ width: "calc(100% - 48px)", margin: "0 24px", borderRadius: 12, border: "1px solid #E5EAF1", boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(2,6,23,0.06)" }}>
+        <TableContainer
+          component={Paper}
+          style={{
+            width: "calc(100% - 48px)",
+            margin: "0 24px",
+            borderRadius: 12,
+            border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #E5EAF1",
+            boxShadow: isDark
+              ? "0 4px 16px rgba(0,0,0,0.35)"
+              : "0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(2,6,23,0.06)",
+            backgroundColor: isDark
+              ? theme.palette.dashboardCard || "#252526"
+              : "#ffffff",
+          }}
+        >
             <Table size="small">
             <TableHead>
                 <TableRow>

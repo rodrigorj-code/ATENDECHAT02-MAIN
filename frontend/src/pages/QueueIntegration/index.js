@@ -97,6 +97,7 @@ const useStyles = makeStyles((theme) => ({
     margin: theme.spacing(1),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.listScrollArea,
   },
   /** Aba Configurações: título um pouco mais à direita */
   tabTitleOffset: {

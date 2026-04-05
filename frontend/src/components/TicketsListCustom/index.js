@@ -20,6 +20,10 @@ const useStyles = makeStyles((theme) => ({
         overflow: "hidden",
         borderTopRightRadius: 0,
         borderBottomRightRadius: 0,
+        backgroundColor:
+            theme.palette.type === "dark"
+                ? theme.palette.background.default
+                : "transparent",
     },
 
     ticketsList: {
@@ -27,14 +31,23 @@ const useStyles = makeStyles((theme) => ({
         maxHeight: "100%",
         overflowY: "scroll",
         ...theme.scrollbarStyles,
-        borderTop: "2px solid rgba(0, 0, 0, 0.12)",
+        borderTop:
+            theme.palette.type === "dark"
+                ? `1px solid ${theme.palette.divider}`
+                : "2px solid rgba(0, 0, 0, 0.12)",
     },
 
     ticketsListHeader: {
-        color: "rgb(67, 83, 105)",
+        color:
+            theme.palette.type === "dark"
+                ? theme.palette.text.secondary
+                : "rgb(67, 83, 105)",
         zIndex: 2,
-        backgroundColor: "white",
-        borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+        backgroundColor:
+            theme.palette.type === "dark"
+                ? theme.palette.dashboardCard || theme.palette.background.paper
+                : "white",
+        borderBottom: `1px solid ${theme.palette.divider}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -42,14 +55,20 @@ const useStyles = makeStyles((theme) => ({
 
     ticketsCount: {
         fontWeight: "normal",
-        color: "rgb(104, 121, 146)",
+        color:
+            theme.palette.type === "dark"
+                ? theme.palette.text.secondary
+                : "rgb(104, 121, 146)",
         marginLeft: "8px",
         fontSize: "14px",
     },
 
     noTicketsText: {
         textAlign: "center",
-        color: "rgb(104, 121, 146)",
+        color:
+            theme.palette.type === "dark"
+                ? theme.palette.text.secondary
+                : "rgb(104, 121, 146)",
         fontSize: "14px",
         lineHeight: "1.4",
     },
@@ -59,6 +78,10 @@ const useStyles = makeStyles((theme) => ({
         fontSize: "16px",
         fontWeight: "600",
         margin: "0px",
+        color:
+            theme.palette.type === "dark"
+                ? theme.palette.text.primary
+                : "inherit",
     },
 
     noTicketsDiv: {

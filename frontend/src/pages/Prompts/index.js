@@ -41,11 +41,14 @@ import IntegrationTab from "./components/IntegrationTab";
 import { mergeProactiveFromApi } from "./utils/mergeProactiveFromApi";
 import AgentActionsPanel from "./components/AgentActionsPanel";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
   mainPaper: {
     flex: 1,
     padding: theme.spacing(1, 2),
-    overflow: "visible"
+    overflow: "visible",
+    ...(isDark ? { backgroundColor: theme.palette.listScrollArea } : {}),
   },
   mainPaperTight: {
     paddingTop: theme.spacing(0)
@@ -61,12 +64,12 @@ const useStyles = makeStyles((theme) => ({
   cardTitle: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#374151",
+    color: isDark ? theme.palette.text.primary : "#374151",
     marginBottom: 6
   },
   labelSmall: {
     fontSize: 12,
-    color: "#6b7280",
+    color: isDark ? theme.palette.text.secondary : "#6b7280",
     marginBottom: 4,
     display: "block"
   },
@@ -74,45 +77,75 @@ const useStyles = makeStyles((theme) => ({
     marginTop: 2,
     marginBottom: 4,
     '& .MuiOutlinedInput-root': {
-      backgroundColor: '#fff',
+      backgroundColor: isDark ? theme.palette.inputBackground : "#fff",
       borderRadius: 10
     },
     '& .MuiOutlinedInput-input': {
       padding: '6px 10px',
       fontSize: 13,
-      lineHeight: 1.4
+      lineHeight: 1.4,
+      ...(isDark ? { color: theme.palette.text.primary } : {})
     },
     '& .MuiOutlinedInput-inputMultiline': {
       fontSize: 13,
-      lineHeight: 1.4
+      lineHeight: 1.4,
+      ...(isDark ? { color: theme.palette.text.primary } : {})
     },
+    ...(isDark
+      ? {
+          '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+            borderColor: "rgba(255,255,255,0.2)"
+          },
+          '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: "rgba(255,255,255,0.28)"
+          },
+          '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: "rgba(255,255,255,0.4)"
+          },
+          '& .MuiInputLabel-outlined': {
+            color: theme.palette.text.secondary
+          },
+          '& .MuiInputLabel-outlined.Mui-focused': {
+            color: theme.palette.text.primary
+          }
+        }
+      : {}),
     '& input::placeholder': {
       fontSize: 13,
-      opacity: 0.8
+      opacity: isDark ? 0.55 : 0.8
     },
     '& textarea::placeholder': {
       fontSize: 13,
-      opacity: 0.8
+      opacity: isDark ? 0.55 : 0.8
     }
   },
   selectWhite: {
     '& .MuiOutlinedInput-root': {
-      backgroundColor: '#fff',
-      borderRadius: 10,
+      backgroundColor: isDark ? theme.palette.inputBackground : "#fff",
+      borderRadius: 10
     },
     '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#e5e7eb',
+      borderColor: isDark ? "rgba(255,255,255,0.2)" : "#e5e7eb"
     },
     '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#d1d5db',
+      borderColor: isDark ? "rgba(255,255,255,0.28)" : "#d1d5db"
     },
     '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#cbd5e1',
+      borderColor: isDark ? "rgba(255,255,255,0.4)" : "#cbd5e1"
     },
     '& .MuiSelect-select': {
-      backgroundColor: '#fff',
+      backgroundColor: isDark ? theme.palette.inputBackground : "#fff",
       fontSize: 13,
+      ...(isDark ? { color: theme.palette.text.primary } : {})
     },
+    ...(isDark
+      ? {
+          '& .MuiInputLabel-outlined': { color: theme.palette.text.secondary },
+          '& .MuiInputLabel-outlined.Mui-focused': {
+            color: theme.palette.text.primary
+          }
+        }
+      : {})
   },
   section: {
     marginBottom: theme.spacing(2)
@@ -122,8 +155,10 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 8,
-    backgroundColor: "#fff",
-    border: "1px solid #e5e7eb",
+    backgroundColor: isDark ? theme.palette.inputBackground : "#fff",
+    border: isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid #e5e7eb",
     borderRadius: 10
   },
   customTableCell: {
@@ -160,9 +195,14 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(1)
   },
   tabsContainer: {
-    background: "#fff",
+    background: isDark
+      ? (theme.palette.chromeSurface || theme.palette.background.default)
+      : "#fff",
     borderRadius: 8,
-    marginBottom: theme.spacing(2)
+    marginBottom: theme.spacing(2),
+    ...(isDark
+      ? { border: "1px solid rgba(255,255,255,0.08)" }
+      : {})
   },
   rightModelCard: {
     background: "transparent",
@@ -173,7 +213,9 @@ const useStyles = makeStyles((theme) => ({
     height: "100%"
   },
   rightSection: {
-    borderTop: "1px solid #f1f5f9",
+    borderTop: isDark
+      ? "1px solid rgba(255,255,255,0.1)"
+      : "1px solid #f1f5f9",
     marginTop: 10,
     paddingTop: 10
   },
@@ -183,12 +225,14 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 12
   },
   tipBox: {
-    background: "#F9FAFB",
-    border: "1px dashed #e5e7eb",
+    background: isDark ? "rgba(255,255,255,0.06)" : "#F9FAFB",
+    border: isDark
+      ? "1px dashed rgba(255,255,255,0.2)"
+      : "1px dashed #e5e7eb",
     borderRadius: 10,
     padding: 10,
     fontSize: 12,
-    color: "#4b5563",
+    color: isDark ? theme.palette.text.secondary : "#4b5563",
     marginTop: 10
   },
   brainWrapper: {
@@ -201,8 +245,10 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 14,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid #e5e7eb",
+    background: isDark ? theme.palette.inputBackground : "#fff",
     borderRadius: 12,
     marginBottom: 8,
     cursor: "pointer",
@@ -210,14 +256,16 @@ const useStyles = makeStyles((theme) => ({
     height: "100%"
   },
   uploadBox: {
-    border: "1px dashed #cbd5e1",
-    background: "#F8FAFC",
+    border: isDark
+      ? "1px dashed rgba(255,255,255,0.2)"
+      : "1px dashed #cbd5e1",
+    background: isDark ? "rgba(255,255,255,0.05)" : "#F8FAFC",
     borderRadius: 10,
     padding: 12
   },
   helperText: {
     fontSize: 12,
-    color: "#6b7280"
+    color: isDark ? theme.palette.text.secondary : "#6b7280"
   },
   expandableWrapper: {
     position: "relative"
@@ -258,7 +306,9 @@ const useStyles = makeStyles((theme) => ({
   },
   qaListRow: {
     padding: "8px 0",
-    borderBottom: "1px solid #f1f5f9"
+    borderBottom: isDark
+      ? "1px solid rgba(255,255,255,0.08)"
+      : "1px solid #f1f5f9"
   },
   chatTesterShell: {
     display: "flex",
@@ -270,10 +320,12 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     overflowY: "auto",
     padding: theme.spacing(1),
-    border: "1px solid #e5e7eb",
+    border: isDark
+      ? "1px solid rgba(255,255,255,0.12)"
+      : "1px solid #e5e7eb",
     borderRadius: 10,
     marginBottom: theme.spacing(1),
-    background: "#fafafa"
+    background: isDark ? theme.palette.inputBackground : "#fafafa"
   },
   chatBubbleUser: {
     maxWidth: "80%",
@@ -286,8 +338,8 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: "80%",
     padding: "8px 12px",
     borderRadius: 14,
-    background: "#e5e7eb",
-    color: "#111"
+    background: isDark ? "rgba(255,255,255,0.12)" : "#e5e7eb",
+    color: isDark ? theme.palette.text.primary : "#111"
   },
   sectionCardSpacing: {
     marginBottom: theme.spacing(1)
@@ -300,7 +352,9 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(1),
     background: "transparent",
     border: "none",
-    borderBottom: "1px solid #e5e7eb",
+    borderBottom: isDark
+      ? "1px solid rgba(255,255,255,0.1)"
+      : "1px solid #e5e7eb",
     borderRadius: 0,
     boxShadow: "none",
     "&:before": { display: "none" }
@@ -308,7 +362,8 @@ const useStyles = makeStyles((theme) => ({
   integrationTabRoot: {
     paddingTop: theme.spacing(2)
   },
-}));
+  };
+});
 
 const ExpandableField = ({
   label,

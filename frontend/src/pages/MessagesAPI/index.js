@@ -25,8 +25,19 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(2),
     paddingBottom: 100,
-    backgroundColor: "transparent",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.listScrollArea
+        : "transparent",
     boxShadow: "none",
+    color: theme.palette.text.primary,
+  },
+  /** Títulos de seção: no claro mantêm a cor primária (azul marca); no escuro branco para contraste */
+  sectionTitle: {
+    color:
+      theme.palette.type === "dark"
+        ? theme.palette.common.white
+        : theme.palette.primary.main,
   },
   mainHeader: {
     marginTop: theme.spacing(1),
@@ -384,8 +395,7 @@ const MessagesAPI = ({ renderAsTab }) => {
       </Typography>
       <Typography
         variant="h6"
-        color="primary"
-        className={classes.elementMargin}
+        className={`${classes.elementMargin} ${classes.sectionTitle}`}
       >
         {i18n.t("messagesAPI.API.text.title")}
       </Typography>
@@ -419,8 +429,7 @@ const MessagesAPI = ({ renderAsTab }) => {
       </Grid>
       <Typography
         variant="h6"
-        color="primary"
-        className={classes.elementMargin}
+        className={`${classes.elementMargin} ${classes.sectionTitle}`}
       >
         {i18n.t("messagesAPI.API.media.title")}
       </Typography>

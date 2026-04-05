@@ -13,6 +13,7 @@ const useStyles = makeStyles((theme) => ({
     padding: 0,
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    backgroundColor: theme.palette.listScrollArea,
   },
 }));
 

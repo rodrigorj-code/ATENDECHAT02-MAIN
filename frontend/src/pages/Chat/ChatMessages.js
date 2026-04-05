@@ -81,7 +81,7 @@ const useStyles = makeStyles((theme) => ({
       theme.mode === "light"
         ? `url(${whatsBackground})`
         : `url(${whatsBackgroundDark})`,
-    backgroundColor: theme.mode === "light" ? "transparent" : "#0b0b0d",
+    backgroundColor: theme.mode === "light" ? "transparent" : theme.palette.background.default,
   },
   inputArea: {
     position: "relative",

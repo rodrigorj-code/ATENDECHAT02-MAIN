@@ -177,8 +177,14 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     height: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
+    boxSizing: "border-box",
     overflow: "hidden",
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? theme.palette.dashboardCard || "#252526"
+        : theme.palette.background.paper,
     color: theme.palette.text.primary,
   },
 }));
@@ -411,23 +417,26 @@ const Schedules = () => {
       }
     ]
   };
-  const donutOptions = {
-    cutout: "70%",
-    plugins: {
-      legend: { display: false },
-      tooltip: { enabled: true },
-      datalabels: {
-        display: true,
-        color: "#0F172A",
-        formatter: (v) => (v > 0 ? v : ""),
-        font: { weight: "700", size: 11 },
-        anchor: "center",
-        align: "center",
-      }
-    },
-    responsive: true,
-    maintainAspectRatio: false
-  };
+  const donutOptions = React.useMemo(
+    () => ({
+      cutout: "70%",
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: true },
+        datalabels: {
+          display: true,
+          color: muiTheme.palette.type === "dark" ? "#f4f4f5" : "#0F172A",
+          formatter: (v) => (v > 0 ? v : ""),
+          font: { weight: "700", size: 11 },
+          anchor: "center",
+          align: "center",
+        },
+      },
+      responsive: true,
+      maintainAspectRatio: false,
+    }),
+    [muiTheme.palette.type]
+  );
 
   useEffect(() => {
     (async () => {
@@ -593,8 +602,28 @@ const Schedules = () => {
               Calendário
             </h1>
           </div>
-          <Grid container spacing={2} style={{ margin: 0, width: '100%', overflow: 'hidden' }}>
-            <Grid item xs={12} md={9} lg={9} ref={leftTopRef} style={{ height: panelHeight }}>
+          <Grid
+            container
+            spacing={2}
+            style={{
+              margin: 0,
+              width: "100%",
+              maxWidth: "100%",
+              flex: 1,
+              minHeight: 0,
+              minWidth: 0,
+              boxSizing: "border-box",
+              overflow: "hidden",
+            }}
+          >
+            <Grid
+              item
+              xs={12}
+              md={9}
+              lg={9}
+              ref={leftTopRef}
+              style={{ height: panelHeight, minWidth: 0, maxWidth: "100%" }}
+            >
               <Paper className={classes.mainPaper} style={{ width: '100%', height: '100%' }}>
                 <Calendar
                   messages={defaultMessages}
@@ -651,7 +680,13 @@ const Schedules = () => {
                 />
               </Paper>
             </Grid>
-            <Grid item xs={12} md={3} lg={3} style={{ height: panelHeight }}>
+            <Grid
+              item
+              xs={12}
+              md={3}
+              lg={3}
+              style={{ height: panelHeight, minWidth: 0, maxWidth: "100%" }}
+            >
               <div className="right-aside" style={{ height: '100%', overflowY: 'auto' }}>
                 <div className="aside-top-actions">
                   <button className="aside-action" onClick={handleOpenScheduleModal}>

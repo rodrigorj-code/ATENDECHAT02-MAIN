@@ -27,8 +27,16 @@
   --vb-event-blue-text: #1E40AF;
   --vb-today-bg: #F1F5F9;
   background: var(--vb-page-bg);
-  min-height: 100vh;
-  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .schedules-page .rbc-calendar { background: transparent; border: none; border-radius: 0; box-shadow: none; padding: 0; }
@@ -197,6 +205,9 @@
 /* Aside (direita) */
 .schedules-page .right-aside {
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 .schedules-page .right-aside .aside-card {
@@ -405,13 +416,13 @@
   background: #ffffff !important;
 }
 
-/* Modo escuro: textos claros, painel direito e grade sem “blocos” claros */
+/* Modo escuro: cinza IDE (#1e1e1e / #252526), não preto puro */
 .schedules-page[data-theme="dark"] {
-  --vb-page-bg: #000000;
+  --vb-page-bg: #1e1e1e;
   --vb-text: #f4f4f5;
   --vb-muted: #a1a1aa;
-  --vb-surface: #000000;
-  --vb-surface-2: #0a0a0a;
+  --vb-surface: #252526;
+  --vb-surface-2: #2d2d2d;
   --vb-border: rgba(255, 255, 255, 0.1);
   --vb-border-strong: rgba(255, 255, 255, 0.16);
   --vb-today-bg: rgba(255, 255, 255, 0.08);
@@ -479,4 +490,36 @@
 }
 .schedules-page[data-theme="dark"] .rbc-now .rbc-date-cell {
   color: var(--vb-text);
+}
+
+/* Vista dia/semana: fundos alinhados ao cinza escuro */
+.schedules-page[data-theme="dark"] .rbc-time-view,
+.schedules-page[data-theme="dark"] .rbc-time-header {
+  background: var(--vb-surface);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .rbc-time-content {
+  border-top-color: var(--vb-border);
+}
+.schedules-page[data-theme="dark"] .rbc-time-header-content {
+  border-left-color: var(--vb-border);
+}
+.schedules-page[data-theme="dark"] .rbc-label {
+  color: var(--vb-muted);
+}
+.schedules-page[data-theme="dark"] .rbc-time-slot {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+.schedules-page[data-theme="dark"] .rbc-day-slot .rbc-time-slot {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+.schedules-page[data-theme="dark"] .rbc-current-time-indicator {
+  background-color: #60a5fa;
+}
+.schedules-page[data-theme="dark"] .rbc-agenda-view table {
+  background: var(--vb-surface);
+  color: var(--vb-text);
+}
+.schedules-page[data-theme="dark"] .rbc-agenda-view tbody > tr > td {
+  border-color: var(--vb-border);
 }

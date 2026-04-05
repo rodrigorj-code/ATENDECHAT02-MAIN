@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Box, Typography } from "@material-ui/core";
+import { useTheme } from "@material-ui/core/styles";
 import {
   Scale,
   TrendingUp,
@@ -136,6 +137,8 @@ export const PROACTIVE_PLAYBOOK_OPTIONS = [
 ];
 
 function StyleCard({ selected, onClick, title, subtitle, Icon }) {
+  const theme = useTheme();
+  const isDark = theme.palette.type === "dark";
   const [hover, setHover] = useState(false);
   const [pressed, setPressed] = useState(false);
 
@@ -145,10 +148,17 @@ function StyleCard({ selected, onClick, title, subtitle, Icon }) {
     <div
       style={{
         ...cardBase,
-        borderColor: selected ? "#2563eb" : "#e5e7eb",
+        background: isDark ? theme.palette.inputBackground : cardBase.background,
+        borderColor: selected
+          ? "#2563eb"
+          : isDark
+            ? "rgba(255,255,255,0.12)"
+            : "#e5e7eb",
         boxShadow: selected
           ? "0 0 0 1px rgba(37,99,235,0.25), 0 8px 24px rgba(37,99,235,0.12)"
-          : "0 1px 2px rgba(0,0,0,0.04)",
+          : isDark
+            ? "0 1px 2px rgba(0,0,0,0.35)"
+            : "0 1px 2px rgba(0,0,0,0.04)",
         transform: `scale(${scale})`,
         transition: "transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease"
       }}
@@ -175,20 +185,42 @@ function StyleCard({ selected, onClick, title, subtitle, Icon }) {
             width: 36,
             height: 36,
             borderRadius: 10,
-            background: selected ? "rgba(37,99,235,0.1)" : "#f3f4f6",
+            background: selected
+              ? "rgba(37,99,235,0.1)"
+              : isDark
+                ? "rgba(255,255,255,0.08)"
+                : "#f3f4f6",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0
           }}
         >
-          <Icon size={20} color={selected ? "#2563eb" : "#6b7280"} strokeWidth={2} />
+          <Icon
+            size={20}
+            color={selected ? "#2563eb" : isDark ? "#a1a1aa" : "#6b7280"}
+            strokeWidth={2}
+          />
         </Box>
         <Box flex={1} minWidth={0}>
-          <Typography variant="body2" style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>
+          <Typography
+            variant="body2"
+            style={{
+              fontWeight: 600,
+              fontSize: 13,
+              color: theme.palette.text.primary
+            }}
+          >
             {title}
           </Typography>
-          <Typography variant="caption" style={{ display: "block", lineHeight: 1.35, color: "#6b7280" }}>
+          <Typography
+            variant="caption"
+            style={{
+              display: "block",
+              lineHeight: 1.35,
+              color: theme.palette.text.secondary
+            }}
+          >
             {subtitle}
           </Typography>
         </Box>
@@ -203,10 +235,11 @@ function StyleCard({ selected, onClick, title, subtitle, Icon }) {
 }
 
 export function ProactiveMissionPicker({ value, onChange }) {
+  const theme = useTheme();
   const v = value || "balanced";
   return (
     <Box>
-      <Typography className="MuiTypography-root" variant="caption" style={{ display: "block", marginBottom: 10, color: "#4b5563" }}>
+      <Typography className="MuiTypography-root" variant="caption" style={{ display: "block", marginBottom: 10, color: theme.palette.text.secondary }}>
         Missão principal: orienta o follow-up automático e o bloco “Proatividade” no prompt do chat ao vivo (com Cargo e Cérebro).
       </Typography>
       <Box
@@ -232,10 +265,11 @@ export function ProactiveMissionPicker({ value, onChange }) {
 }
 
 export function ProactivePlaybookPicker({ value, onChange }) {
+  const theme = useTheme();
   const v = value === undefined || value === null ? "" : value;
   return (
     <Box>
-      <Typography className="MuiTypography-root" variant="caption" style={{ display: "block", marginBottom: 10, color: "#4b5563" }}>
+      <Typography className="MuiTypography-root" variant="caption" style={{ display: "block", marginBottom: 10, color: theme.palette.text.secondary }}>
         Estilo de estratégia aplicado em cima das instruções (opcional)
       </Typography>
       <Box

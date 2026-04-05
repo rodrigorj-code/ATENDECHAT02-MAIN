@@ -32,10 +32,10 @@ const isValidHex = (color) => {
 /** Fundos neutros (sem tom marrom); primária continua vinda do whitelabel */
 const LIGHT_BG_DEFAULT = "#f5f5f5";
 const LIGHT_BG_PAPER = "#ffffff";
-/** Preto neutro (alinhado à Identidade Visual / Opções em modo escuro) */
-const DARK_BG_DEFAULT = "#000000";
+/** Modo escuro estilo IDE (ex.: Cursor): fundo cinza, superfícies em preto */
+const DARK_BG_DEFAULT = "#1e1e1e";
 const DARK_BG_PAPER = "#000000";
-const DARK_BG_ELEVATED = "#0a0a0a";
+const DARK_BG_ELEVATED = "#252526";
 
 const App = () => {
   const [locale, setLocale] = useState();
@@ -145,10 +145,11 @@ const App = () => {
       topbarColorLight && isValidHex(topbarColorLight)
         ? getSafeColor(topbarColorLight)
         : brandLight;
+    /** Topbar escura padrão = mesmo cinza do menu lateral (Cursor-like); whitelabel sobrescreve. */
     const topbarDarkEff =
       topbarColorDark && isValidHex(topbarColorDark)
         ? getSafeColor(topbarColorDark)
-        : brandDark;
+        : DARK_BG_DEFAULT;
 
     /** Topbar (pesquisa, ícones): só contraste sobre a cor da topbar — não usa botões principais/secundários. */
     const navbarAccentLight = getContrastTextForBackground(topbarLightEff);
@@ -173,7 +174,7 @@ const App = () => {
     const sidebarDarkEff =
       sidebarColorDark && isValidHex(sidebarColorDark)
         ? getSafeColor(sidebarColorDark)
-        : DARK_BG_PAPER;
+        : DARK_BG_DEFAULT;
 
     const currentSidebarBg =
       mode === "light" ? sidebarLightEff : sidebarDarkEff;
@@ -297,6 +298,17 @@ const App = () => {
                   : btnMainDark,
             /** Menu lateral com fundo escuro (cor custom) → logo branca */
             sidebarMenuIsDarkLogo: sidebarCx.isDark,
+            /** Navbar secundária, faixa de filtros e cabeçalho Activities — alinhado ao menu lateral no escuro */
+            chromeSurface:
+              mode === "light" ? LIGHT_BG_PAPER : DARK_BG_DEFAULT,
+            /** Área dos dashboards no escuro: preto; cards usam dashboardCard */
+            dashboardCanvas:
+              mode === "light" ? LIGHT_BG_DEFAULT : DARK_BG_PAPER,
+            dashboardCard:
+              mode === "light" ? LIGHT_BG_PAPER : DARK_BG_ELEVATED,
+            /** Listagens em tela cheia: no escuro = cinza shell (#1e1e1e), não paper preto */
+            listScrollArea:
+              mode === "light" ? LIGHT_BG_PAPER : DARK_BG_DEFAULT,
           },
 
           typography: {
@@ -346,6 +358,10 @@ const App = () => {
                 body: {
                   backgroundColor:
                     mode === "light" ? LIGHT_BG_DEFAULT : DARK_BG_DEFAULT,
+                  color:
+                    mode === "light"
+                      ? "rgba(0, 0, 0, 0.87)"
+                      : "#f4f4f5",
                   overflowX: "hidden",
                   overflowY: "hidden", // Hide native scrollbar
                   fontFamily: [

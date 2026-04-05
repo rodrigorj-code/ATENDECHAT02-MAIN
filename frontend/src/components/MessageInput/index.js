@@ -215,7 +215,7 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: theme.mode === "light" ? "#ffffff" : "#202c33",
+    backgroundColor: theme.mode === "light" ? "#ffffff" : theme.palette.background.paper,
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
   },
   emojiBox: {
@@ -261,7 +261,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     marginRight: 5,
     overflowY: "hidden",
-    backgroundColor: theme.mode === "light" ? "#f0f0f0" : "#1d282f",
+    backgroundColor: theme.mode === "light" ? "#f0f0f0" : theme.palette.inputBackground,
     borderRadius: "7.5px",
     display: "flex",
     position: "relative",
