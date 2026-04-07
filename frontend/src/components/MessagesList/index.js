@@ -198,37 +198,6 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: theme.mode === 'light' ? "0 1px 1px #b3b3b3" : "0 1px 1px #000000"
   },
 
-  /** Saída “humana” no WhatsApp: bolha verde + barra lateral (campanha, atendente, etc.) */
-  messageRightWhatsapp: {
-    marginLeft: 20,
-    marginTop: 2,
-    minWidth: 100,
-    maxWidth: 600,
-    height: "auto",
-    display: "block",
-    position: "relative",
-    "&:hover #messageActionsButton": {
-      display: "flex",
-      position: "absolute",
-      top: 0,
-      right: 0,
-    },
-    whiteSpace: "pre-wrap",
-    backgroundColor: theme.mode === 'light' ? "#dcf8c6" : "#005c4b",
-    color: theme.mode === 'light' ? "#303030" : "#ffffff",
-    alignSelf: "flex-end",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 0,
-    paddingLeft: 8,
-    paddingRight: 5,
-    paddingTop: 5,
-    paddingBottom: 0,
-    boxShadow: theme.mode === 'light' ? "0 1px 1px #b3b3b3" : "0 1px 1px #000000",
-    borderLeft: theme.mode === "light" ? "4px solid #25d366" : "4px solid #20c997"
-  },
-
   messageRightPrivate: {
     marginLeft: 20,
     marginTop: 2,
@@ -1525,9 +1494,7 @@ const MessagesList = ({
                 className={
                   message.isPrivate
                     ? classes.messageRightPrivate
-                    : channel === "whatsapp" || channel === "whatsapp_oficial"
-                      ? classes.messageRightWhatsapp
-                      : classes.messageRight
+                    : classes.messageRight
                 }
                 title={message.queueId && message.queue?.name}
                 onDoubleClick={(e) => hanldeReplyMessage(e, message)}

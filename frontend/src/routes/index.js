@@ -9,6 +9,8 @@ import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
 import Signup from "../pages/Signup";
 import Register from "../pages/Register";
 import RegisterFreemium from "../pages/RegisterFreemium";
+import RegisterWhiteLabel from "../pages/RegisterWhiteLabel";
+import UsersGratis from "../pages/UsersGratis";
 import Login from "../pages/Login/";
 import ResetPassword from "../pages/ResetPassword";
 import Connections from "../pages/Connections/";
@@ -108,6 +110,7 @@ const RoutesContent = () => {
         <Route exact path="/signup" component={Signup} title="Cadastro" allowWhenAuth />
         <Route exact path="/register" component={Register} title="Registrar" allowWhenAuth />
         <Route exact path="/cadastro-gratis" component={RegisterFreemium} title="Nova organização — cadastro grátis" allowWhenAuth />
+        <Route exact path="/white-label" component={RegisterWhiteLabel} title="White Label" allowWhenAuth />
         <Route exact path="/payment" component={Payment} title="Pagamento" allowWhenAuth />
         <WhatsAppsProvider>
           <CampaignSendingProvider>
@@ -134,6 +137,13 @@ const RoutesContent = () => {
                   component={Companies}
                   isPrivate
                   title="Empresas"
+                />
+                <Route
+                  exact
+                  path="/users-gratis"
+                  component={UsersGratis}
+                  isPrivate
+                  title="Cadastros grátis"
                 />
                 <Route
                   exact

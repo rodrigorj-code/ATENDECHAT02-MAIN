@@ -1010,14 +1010,18 @@ const EmailPage = () => {
                       </div>
                     </Paper>
                     <TextField
-                      label="Conteúdo do Template (HTML)"
+                      label="Corpo do e-mail (HTML completo)"
                       value={editor.contentHtml}
                       onChange={(e) => onChangeEditor("contentHtml", e.target.value)}
                       variant="outlined"
                       fullWidth
                       multiline
-                      minRows={8}
+                      minRows={10}
+                      placeholder="<p>Olá {nome},</p><img src='https://...' alt='' />"
                     />
+                    <Typography variant="caption" style={{ display: "block", marginTop: 6, color: emailMuted, lineHeight: 1.4 }}>
+                      Você pode colar HTML completo (tabelas, estilos inline). Imagens no corpo: use URLs públicas em <code>&lt;img src=&quot;https://...&quot;&gt;</code> ou anexe arquivos abaixo; a assinatura com imagem é anexada automaticamente como inline (CID) no envio.
+                    </Typography>
                     <Typography variant="caption" style={{ display: "block", marginTop: 4, color: emailMuted }}>Fonte ativa: {editor.fontSize}px</Typography>
                     <Divider style={{ margin: "16px 0" }} />
                     <Typography variant="subtitle2" style={{ marginBottom: 8, color: emailHeading }}>Adicionar arquivos anexos (até 50MB cada)</Typography>

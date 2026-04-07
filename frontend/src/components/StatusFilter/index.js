@@ -46,9 +46,10 @@ export function StatusFilter({ onFiltered }) {
             <Chip
               variant="outlined"
               style={{
-                backgroundColor: option.color || "#eee",
-                textShadow: "1px 1px 1px #000",
-                color: "white",
+                backgroundColor: option.color || "#eeeeee",
+                borderColor: "#bdbdbd",
+                color: option.color ? "#fff" : "#424242",
+                textShadow: option.color ? "1px 1px 1px #000" : "none",
               }}
               label={option.name}
               {...getTagProps({ index })}

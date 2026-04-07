@@ -63,9 +63,9 @@ export function WhatsappsFilter({ onFiltered, initialWhatsapps }) {
             <Chip
               variant="outlined"
               style={{
-                backgroundColor: "#bfbfbf",
-                textShadow: "1px 1px 1px #000",
-                color: "white",
+                backgroundColor: "#eeeeee",
+                borderColor: "#bdbdbd",
+                color: "#424242",
               }}
               label={option.name}
               {...getWhatsappProps({ index })}

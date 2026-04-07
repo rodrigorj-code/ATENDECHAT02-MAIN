@@ -153,7 +153,7 @@ const useStyles = makeStyles((theme) => ({
     height: 3,
     bottom: 0,
     borderRadius: "3px 3px 0 0",
-    backgroundColor: "#555",
+    backgroundColor: "#9e9e9e",
     transition: "all 0.3s ease",
   },
   tabsBadge: {
@@ -163,7 +163,7 @@ const useStyles = makeStyles((theme) => ({
     whiteSpace: "nowrap",
     borderRadius: "12px",
     padding: "0 8px",
-    backgroundColor: "#555",
+    backgroundColor: "#757575",
     color: "#FFF",
   },
   ticketOptionsBox: {
@@ -173,9 +173,9 @@ const useStyles = makeStyles((theme) => ({
     background:
       theme.palette.type === "dark"
         ? theme.palette.chromeSurface || theme.palette.background.default
-        : theme.palette.optionsBackground,
+        : "#f5f5f5",
     borderRadius: 8,
-    borderColor: "#aaa",
+    borderColor: "#e0e0e0",
     borderWidth: "1px",
     borderStyle: "solid",
     marginTop: theme.spacing(0.5),
@@ -192,13 +192,23 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     borderRadius: 40,
     padding: 4,
-    borderColor: "#aaa",
+    borderColor: "#e0e0e0",
     borderWidth: "1px",
     borderStyle: "solid",
     marginTop: theme.spacing(0.5),
     marginBottom: theme.spacing(0.5),
     marginLeft: theme.spacing(0.5),
     marginRight: theme.spacing(0.5),
+  },
+
+  filtersExpanded: {
+    padding: theme.spacing(0.5, 1, 1),
+    marginLeft: theme.spacing(1),
+    marginRight: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
+    borderRadius: 8,
+    borderLeft: "4px solid #e0e0e0",
+    backgroundColor: theme.mode === "light" ? "#fafafa" : theme.palette.background.default,
   },
 
   searchIcon: {
@@ -329,7 +339,7 @@ const useStyles = makeStyles((theme) => ({
   filterIcon: {
     marginRight: 6,
     alignSelf: "center",
-    color: theme.mode === "light" ? "#0872b9" : "#FFF",
+    color: theme.palette.primary.main,
     cursor: "pointer",
   },
   button: {
@@ -358,13 +368,13 @@ const useStyles = makeStyles((theme) => ({
   standardButton: {
     height: 30,
     width: 30,
-    border: "2px solid #aaa",
+    border: "2px solid #bdbdbd",
     borderRadius: 8,
     marginRight: 8,
     padding: 0,
     minWidth: 'auto',
     "&:hover": {
-      borderColor: "#555",
+      borderColor: "#9e9e9e",
     },
     [theme.breakpoints.down('sm')]: {
       height: 28,
@@ -379,21 +389,21 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   activeButton: {
-    borderColor: "#555",
+    borderColor: theme.palette.primary.main,
     borderWidth: "3px",
   },
   standardIcon: {
-    color: "#aaa",
+    color: "#9e9e9e",
     fontSize: 18,
     "&:hover": {
-      color: "#555",
+      color: "#616161",
     },
     [theme.breakpoints.down('sm')]: {
       fontSize: 16,
     },
   },
   activeIcon: {
-    color: "#555",
+    color: theme.palette.primary.main,
   },
 }));
 
@@ -686,16 +696,14 @@ const TicketsManagerTabs = () => {
       </div>
 
       {filter === true && (
-        <>
+        <div className={classes.filtersExpanded}>
           <TagsFilter onFiltered={handleSelectedTags} />
           <WhatsappsFilter onFiltered={handleSelectedWhatsapps} />
           <StatusFilter onFiltered={handleSelectedStatus} />
           {profile === "admin" && (
-            <>
-              <UsersFilter onFiltered={handleSelectedUsers} />
-            </>
+            <UsersFilter onFiltered={handleSelectedUsers} />
           )}
-        </>
+        </div>
       )}
 
       <Paper square elevation={0} className={classes.ticketOptionsBox}>

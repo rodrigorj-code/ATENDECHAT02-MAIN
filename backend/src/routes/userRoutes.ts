@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import isAuth from "../middleware/isAuth";
 import * as UserController from "../controllers/UserController";
+import * as UsersGratisController from "../controllers/UsersGratisController";
 import multer from "multer";
 import uploadConfig from "../config/upload";
 import { enforceUserQuota } from "../middleware/planQuota";
@@ -11,6 +12,8 @@ const upload = multer(uploadConfig);
 const userRoutes = Router();
 
 userRoutes.get("/users", isAuth, UserController.index);
+
+userRoutes.get("/users-gratis", isAuth, UsersGratisController.index);
 
 userRoutes.get("/users/list", isAuth, UserController.list);
 

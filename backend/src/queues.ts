@@ -1497,7 +1497,19 @@ export function randomValue(min, max) {
 async function verifyAndFinalizeCampaign(campaign) {
   // Garantir que a campanha tenha os contatos carregados
   const campaignWithContacts = await getCampaign(campaign.id);
+  if (!campaignWithContacts?.contactList?.contacts) {
+    logger.warn(
+      `[VERIFY CAMPAIGN] Campanha ${campaign.id}: contactList/contacts ausente — ignorando finalização por contagem`
+    );
+    return;
+  }
   const { companyId, contacts } = campaignWithContacts.contactList;
+  if (!contacts.length) {
+    logger.warn(
+      `[VERIFY CAMPAIGN] Campanha ${campaign.id}: 0 contatos na lista — ignorando finalização por contagem`
+    );
+    return;
+  }
 
   const deliveredCount = await CampaignShipping.count({
     where: {
@@ -2055,18 +2067,25 @@ async function handleDispatchCampaign(job) {
         } catch (markErr) {
           logger.warn(`[CAMPAIGN] Falha ao marcar contato/ticket com origem campanha: ${markErr}`);
         }
-        await campaignShipping.update({ deliveredAt: moment() });
-        try {
-          const io = getIO();
-          io.of(`/${campaign.companyId}`).emit(`company-${campaign.companyId}-campaign-shipping`, {
-            action: "delivered",
-            campaignId: campaign.id,
-            shippingId: campaignShipping.id,
-            number: campaignShipping.number,
-            contactName: campaignShipping?.contact?.name || null,
-            deliveredAt: campaignShipping.deliveredAt
-          });
-        } catch {}
+        // Só conta como "entregue" o disparo principal — não após só a mensagem de confirmação.
+        // Caso contrário deliveredCount >= contacts.length finaliza a campanha antes da resposta do contato
+        // e verifyRecentCampaign deixa de enfileirar o envio real (campanha já não está EM_ANDAMENTO).
+        const shouldMarkDeliveredOpenTicket =
+          !campaign.confirmation || campaignShipping.confirmation !== null;
+        if (shouldMarkDeliveredOpenTicket) {
+          await campaignShipping.update({ deliveredAt: moment() });
+          try {
+            const io = getIO();
+            io.of(`/${campaign.companyId}`).emit(`company-${campaign.companyId}-campaign-shipping`, {
+              action: "delivered",
+              campaignId: campaign.id,
+              shippingId: campaignShipping.id,
+              number: campaignShipping.number,
+              contactName: campaignShipping?.contact?.name || null,
+              deliveredAt: campaignShipping.deliveredAt
+            });
+          } catch {}
+        }
       }
     } else {
       if (campaign.confirmation && campaignShipping.confirmation === null) {
@@ -2111,18 +2130,22 @@ async function handleDispatchCampaign(job) {
         }
       }
 
-      await campaignShipping.update({ deliveredAt: moment() });
-      try {
-        const io = getIO();
-        io.of(`/${campaign.companyId}`).emit(`company-${campaign.companyId}-campaign-shipping`, {
-          action: "delivered",
-          campaignId: campaign.id,
-          shippingId: campaignShipping.id,
-          number: campaignShipping.number,
-          contactName: campaignShipping?.contact?.name || null,
-          deliveredAt: campaignShipping.deliveredAt
-        });
-      } catch {}
+      const shouldMarkDeliveredNoTicket =
+        !campaign.confirmation || campaignShipping.confirmation !== null;
+      if (shouldMarkDeliveredNoTicket) {
+        await campaignShipping.update({ deliveredAt: moment() });
+        try {
+          const io = getIO();
+          io.of(`/${campaign.companyId}`).emit(`company-${campaign.companyId}-campaign-shipping`, {
+            action: "delivered",
+            campaignId: campaign.id,
+            shippingId: campaignShipping.id,
+            number: campaignShipping.number,
+            contactName: campaignShipping?.contact?.name || null,
+            deliveredAt: campaignShipping.deliveredAt
+          });
+        } catch {}
+      }
     }
 
     await verifyAndFinalizeCampaign(campaign);

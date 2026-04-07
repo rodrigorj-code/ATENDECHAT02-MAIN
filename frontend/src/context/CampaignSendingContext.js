@@ -17,7 +17,7 @@ const CampaignSendingContext = createContext(null);
 const useStyles = makeStyles((theme) => ({
   sendingWidget: {
     position: "fixed",
-    bottom: theme.spacing(2),
+    bottom: theme.spacing(12),
     right: theme.spacing(2),
     zIndex: 1300,
     backgroundColor: theme.palette.background.paper,
@@ -64,11 +64,15 @@ export function CampaignSendingProvider({ children }) {
   const [overlay, setOverlay] = useState(initialState);
   const overlayRef = useRef(overlay);
   overlayRef.current = overlay;
+  const deliveredShippingIdsRef = useRef(new Set());
 
   const setCampaignSending = useCallback((payload) => {
     if (typeof payload === "function") {
       setOverlay(payload);
       return;
+    }
+    if (Number(payload.delivered) === 0) {
+      deliveredShippingIdsRef.current = new Set();
     }
     setOverlay((prev) => ({
       ...prev,
@@ -86,6 +90,12 @@ export function CampaignSendingProvider({ children }) {
       if (data?.action !== "delivered") return;
       if (current.campaignId == null) return;
       if (Number(data?.campaignId) !== Number(current.campaignId)) return;
+      const sid = data?.shippingId;
+      if (sid != null) {
+        const idKey = String(sid);
+        if (deliveredShippingIdsRef.current.has(idKey)) return;
+        deliveredShippingIdsRef.current.add(idKey);
+      }
       setOverlay((prev) => ({
         ...prev,
         delivered: Math.min(prev.delivered + 1, prev.total || prev.delivered + 1),

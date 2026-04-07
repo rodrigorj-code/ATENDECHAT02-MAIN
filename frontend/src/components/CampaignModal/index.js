@@ -543,6 +543,7 @@ const CampaignModal = ({
     delivered: 0,
     campaignId: null
   });
+  const deliveredShippingIdsRef = useRef(new Set());
   const [messageIntervalSeconds, setMessageIntervalSeconds] = useState(30);
   const [contactFilterTagId, setContactFilterTagId] = useState("");
 
@@ -821,13 +822,26 @@ const CampaignModal = ({
   }, [open, activeStep, contactsSearch, contactFilterTagId]);
 
 
+  useEffect(() => {
+    if (sendingProgress.visible && sendingProgress.delivered === 0) {
+      deliveredShippingIdsRef.current = new Set();
+    }
+  }, [sendingProgress.visible, sendingProgress.campaignId, sendingProgress.delivered]);
+
   // Escuta eventos de entrega por contato enquanto a tela de envio está visível
   useEffect(() => {
     if (!sendingProgress.visible || !sendingProgress.campaignId) return;
     const companyId = user.companyId;
     const channel = `company-${companyId}-campaign-shipping`;
+    const campaignIdNum = Number(sendingProgress.campaignId);
     const onShipping = (data) => {
-      if (data?.action === "delivered" && Number(data?.campaignId) === Number(sendingProgress.campaignId)) {
+      if (data?.action === "delivered" && Number(data?.campaignId) === campaignIdNum) {
+        const sid = data?.shippingId;
+        if (sid != null) {
+          const idKey = String(sid);
+          if (deliveredShippingIdsRef.current.has(idKey)) return;
+          deliveredShippingIdsRef.current.add(idKey);
+        }
         setSendingProgress(prev => ({ ...prev, delivered: Math.min(prev.delivered + 1, prev.total || prev.delivered + 1) }));
         const label = data?.contactName || data?.number || "contato";
         toast.info(`Entregue para ${label}`);
@@ -837,7 +851,7 @@ const CampaignModal = ({
     return () => {
       socket.off(channel, onShipping);
     };
-  }, [sendingProgress.visible, sendingProgress.campaignId]);
+  }, [sendingProgress.visible, sendingProgress.campaignId, socket, user.companyId]);
 
   // Fechar automaticamente quando completar
   useEffect(() => {

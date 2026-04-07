@@ -170,6 +170,15 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       );
 
       try {
+        const meta = req.body.metadata;
+        if (meta && typeof meta === "object") {
+          await createdCompanyFreemium.update({ signupMetadata: meta } as any);
+        }
+      } catch (metaErr) {
+        console.warn("signupMetadata freemium:", metaErr);
+      }
+
+      try {
         await Subscriptions.create({
           companyId: createdCompanyFreemium.id,
           isActive: true,
@@ -207,11 +216,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
           const whatsappIdF = whatsappCompanyF.whatsapps[0].id;
           const wbotF = await getWbot(whatsappIdF);
 
-          const bodyF = `Olá ${name}, este é uma mensagem sobre o cadastro da ${companyName}!\n\nSegue os dados da sua empresa:\n\nNome: ${companyName}\nEmail: ${email}\nSenha: ${password}\nData fim do período grátis: ${dateToClient(
-            dateFreemium
-          )}`;
+          const phoneDigits = String(phone || "").replace(/\D/g, "");
+          const jid =
+            phoneDigits.length > 0
+              ? `${phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`}@s.whatsapp.net`
+              : "";
+          const welcomeBody = `Olá *${name}*! 🎉\n\nSeja muito bem-vindo(a) à *${companyName}* — ficamos extremamente felizes em ter você com a gente nesta jornada!\n\nSomos a equipe VB Solution e estamos *100% à sua disposição*: dúvidas, ideias, ajustes ou um simples “oi” — pode nos chamar quando quiser. Queremos que você aproveite cada recurso, ganhe tempo no atendimento e veja resultados reais no dia a dia.\n\n📱 *Seus dados de acesso rápido:*\n• Empresa: ${companyName}\n• E-mail: ${email}\n• Período grátis até: ${dateToClient(dateFreemium)}\n\nLembre-se: sua senha é pessoal — guarde com carinho. Se precisar de treinamento, dicas ou suporte, é só responder esta mensagem. Vamos juntos! 💙`;
 
-          await wbotF.sendMessage(`55${phone}@s.whatsapp.net`, { text: bodyF });
+          if (jid) await wbotF.sendMessage(jid, { text: welcomeBody });
         }
       } catch (error) {
         console.log("Não consegui enviar a mensagem");

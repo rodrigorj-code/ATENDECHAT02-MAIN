@@ -86,6 +86,12 @@ class Company extends Model<Company> {
   @Column
   generateInvoice: boolean;
 
+  @Column(DataType.JSONB)
+  signupMetadata: Record<string, unknown> | null;
+
+  @Column
+  whiteLabelHostDomain: string;
+
   @Column
   numberFileFolder: string;
 

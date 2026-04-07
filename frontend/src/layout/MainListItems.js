@@ -698,7 +698,15 @@ const MainListItems = ({ collapsed, drawerClose, section }) => {
           )}
 
             <ListItemLink to="/api" primary="API" icon={<CodeOutlinedIcon />} tooltip={collapsed} collapsed={collapsed} />
-            
+            {user.profile === "admin" && (
+              <ListItemLink
+                to="/users-gratis"
+                primary="Cadastros grátis"
+                icon={<PeopleIcon />}
+                tooltip={collapsed}
+                collapsed={collapsed}
+              />
+            )}
 
           </Collapse>
 
