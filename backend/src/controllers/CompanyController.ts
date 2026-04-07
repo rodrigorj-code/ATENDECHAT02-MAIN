@@ -270,32 +270,43 @@ function isCompaniesListPrivileged(user: User | null): boolean {
 }
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
-  const authHeader = req.headers.authorization;
-  const [, token] = authHeader.split(" ");
-  const decoded = verify(token, authConfig.secret);
-  const { id: requestUserId, companyId } = decoded as TokenPayload;
-  const requestUser = await User.findByPk(requestUserId);
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "ERR_NO_TOKEN" });
+    }
+    const decoded = verify(token, authConfig.secret);
+    const { id: requestUserId, companyId } = decoded as TokenPayload;
+    const requestUser = await User.findByPk(requestUserId);
 
-  const q = req.query as Record<string, string | undefined>;
-  const natureRaw = q.nature;
-  const filters: ListCompaniesFilters = {
-    nature:
-      natureRaw === "freemium" || natureRaw === "cadastro_gratis"
-        ? natureRaw
-        : "all",
-    dateFrom: q.dateFrom,
-    dateTo: q.dateTo,
-    uf: q.uf
-  };
+    const q = req.query as Record<string, string | undefined>;
+    const natureRaw = q.nature;
+    const filters: ListCompaniesFilters = {
+      nature:
+        natureRaw === "freemium" || natureRaw === "cadastro_gratis"
+          ? natureRaw
+          : "all",
+      dateFrom: q.dateFrom,
+      dateTo: q.dateTo,
+      uf: q.uf
+    };
 
-  if (isCompaniesListPrivileged(requestUser)) {
-    const companies: Company[] = await FindAllCompaniesService(filters);
-    return res.status(200).json(companies);
+    if (isCompaniesListPrivileged(requestUser)) {
+      const companies: Company[] = await FindAllCompaniesService(filters);
+      return res.status(200).json(companies);
+    }
+
+    const companies: Company[] = await FindAllCompaniesService();
+    const row = companies.find((c) => c.id === companyId);
+    return res.status(200).json(row ? [row] : []);
+  } catch (err: any) {
+    console.error("CompanyController.list:", err?.message || err);
+    return res.status(500).json({
+      error: "ERR_COMPANY_LIST",
+      message: err?.message || String(err)
+    });
   }
-
-  const companies: Company[] = await FindAllCompaniesService();
-  const row = companies.find((c) => c.id === companyId);
-  return res.status(200).json(row ? [row] : []);
 };
 
 export const update = async (

@@ -47,6 +47,10 @@ const requireActiveSubscription = async (
   if (exemptPrefixes.some(prefix => p.startsWith(prefix))) {
     return next();
   }
+  /** Lista de empresas (Assinaturas): precisa responder mesmo com licença vencida; o controller restringe o retorno. */
+  if (p === "/companies/list") {
+    return next();
+  }
 
   try {
     const company = await Company.findByPk(companyId, {

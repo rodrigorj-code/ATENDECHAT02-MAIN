@@ -677,9 +677,17 @@ export default function CompaniesManager() {
       if (dateTo) params.dateTo = dateTo;
       if (ufFilter) params.uf = ufFilter;
       const companyList = await list(params);
-      setRecords(companyList);
+      setRecords(Array.isArray(companyList) ? companyList : []);
     } catch (e) {
-      toast.error("Não foi possível carregar a lista de registros");
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        (typeof e?.message === "string" ? e.message : null);
+      toast.error(
+        msg && String(msg).length < 220
+          ? String(msg)
+          : "Não foi possível carregar a lista de registros"
+      );
     }
     setLoading(false);
   }, [list, natureFilter, dateFrom, dateTo, ufFilter]);
@@ -813,12 +821,18 @@ export default function CompaniesManager() {
               label="Origem / assinatura"
               value={natureFilter}
               onChange={(e) => setNatureFilter(e.target.value)}
+              MenuProps={{
+                anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                transformOrigin: { vertical: "top", horizontal: "left" },
+                getContentAnchorEl: null,
+                PaperProps: {
+                  style: { maxWidth: 280, minWidth: 220 }
+                }
+              }}
             >
               <MenuItem value="all">Todas</MenuItem>
-              <MenuItem value="freemium">Teste grátis ativo (recorrência freemium)</MenuItem>
-              <MenuItem value="cadastro_gratis">
-                Cadastro grátis (inclui quem já migrou de plano)
-              </MenuItem>
+              <MenuItem value="freemium">Teste grátis (ativo)</MenuItem>
+              <MenuItem value="cadastro_gratis">Cadastro grátis (+ migrados)</MenuItem>
             </Select>
           </FormControl>
         </Grid>

@@ -4,6 +4,7 @@ import sequelize from "../../database";
 import Company from "../../models/Company";
 import Plan from "../../models/Plan";
 import Setting from "../../models/Setting";
+import Subscriptions from "../../models/Subscriptions";
 
 export type ListCompaniesFilters = {
   nature?: "all" | "freemium" | "cadastro_gratis";
@@ -11,16 +12,6 @@ export type ListCompaniesFilters = {
   dateTo?: string;
   uf?: string;
 };
-
-const cadastroGratisOr = [
-  { recurrence: "freemium" },
-  Sequelize.literal(
-    `(COALESCE("Company"."signupMetadata"->>'signupSource','') = 'freemium')`
-  ),
-  Sequelize.literal(
-    `EXISTS (SELECT 1 FROM "Subscriptions" s WHERE s."companyId" = "Company"."id" AND s."providerSubscriptionId" = 'freemium_starter')`
-  )
-];
 
 const FindAllCompaniesService = async (
   filters?: ListCompaniesFilters
@@ -53,7 +44,30 @@ const FindAllCompaniesService = async (
   if (f.nature === "freemium") {
     conditions.push({ recurrence: "freemium" });
   } else if (f.nature === "cadastro_gratis") {
-    conditions.push({ [Op.or]: cadastroGratisOr });
+    const subRows = await Subscriptions.findAll({
+      attributes: ["companyId"],
+      where: { providerSubscriptionId: "freemium_starter" } as any,
+      raw: true
+    });
+    const fromSubscription = [
+      ...new Set(
+        (subRows as { companyId: number }[]).map((r) => r.companyId).filter(Boolean)
+      )
+    ];
+
+    const orBranches: any[] = [{ recurrence: "freemium" }];
+
+    orBranches.push(
+      Sequelize.literal(
+        `(COALESCE("Company"."signupMetadata"->>'signupSource','') = 'freemium')`
+      )
+    );
+
+    if (fromSubscription.length > 0) {
+      orBranches.push({ id: { [Op.in]: fromSubscription } });
+    }
+
+    conditions.push({ [Op.or]: orBranches });
   }
 
   const where =
