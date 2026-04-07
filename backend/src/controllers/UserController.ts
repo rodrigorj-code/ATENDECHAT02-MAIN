@@ -26,6 +26,7 @@ import ChatUser from "../models/ChatUser";
 import Plan from "../models/Plan";
 import Subscriptions from "../models/Subscriptions";
 import axios from "axios";
+import { getCompanyOptionalColumns } from "../helpers/companyOptionalColumns";
 
 type IndexQuery = {
   searchParam: string;
@@ -175,7 +176,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
           meta && typeof meta === "object"
             ? { ...meta, signupSource: "freemium" }
             : { signupSource: "freemium" };
-        await createdCompanyFreemium.update({ signupMetadata: merged } as any);
+        const cols = await getCompanyOptionalColumns();
+        if (cols.signupMetadata) {
+          await createdCompanyFreemium.update({ signupMetadata: merged } as any);
+        }
       } catch (metaErr) {
         console.warn("signupMetadata freemium:", metaErr);
       }

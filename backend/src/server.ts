@@ -22,7 +22,6 @@ function startServer(portToUse: number) {
 
     (async () => {
       try {
-        await ensureDatabase();
         const companies = await Company.findAll({
           where: { status: true },
           attributes: ["id"],
@@ -76,7 +75,14 @@ function startServer(portToUse: number) {
   });
 }
 
-startServer(preferredPort);
+(async () => {
+  try {
+    await ensureDatabase();
+  } catch (e: any) {
+    logger.error({ msg: "ensureDatabase (pré-boot)", error: e?.message || String(e) });
+  }
+  startServer(preferredPort);
+})();
 
 process.on("uncaughtException", err => {
   logger.error({ msg: "uncaughtException", error: err.message, stack: err.stack?.split("\n")[0] });

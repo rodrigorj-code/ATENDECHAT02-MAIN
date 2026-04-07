@@ -3,6 +3,7 @@ import Company from "../models/Company";
 import User from "../models/User";
 import logger from "../utils/logger";
 import { getCompanyTransporter } from "../helpers/SmtpTransport";
+import { getCompanyOptionalColumns } from "../helpers/companyOptionalColumns";
 import SmtpConfig from "../models/SmtpConfig";
 
 const NOTIFY_TO = "visaobusiniesstech@gmail.com";
@@ -86,15 +87,25 @@ export const notify = async (req: Request, res: Response): Promise<Response> => 
         if (u?.companyId) {
           const comp = await Company.findByPk(u.companyId);
           if (comp) {
-            const prev = (comp.signupMetadata as Record<string, unknown>) || {};
-            await comp.update({
-              signupMetadata: {
-                ...prev,
+            const cols = await getCompanyOptionalColumns();
+            const payload: Record<string, unknown> = {};
+            if (cols.whiteLabelHostDomain) {
+              payload.whiteLabelHostDomain = String(hostingDomain).trim();
+            }
+            if (cols.signupMetadata) {
+              const prev =
+                (comp as any).getDataValue?.("signupMetadata") ||
+                (comp as any).signupMetadata ||
+                {};
+              payload.signupMetadata = {
+                ...(typeof prev === "object" && prev !== null ? prev : {}),
                 whiteLabel: true,
                 signupSource: "whitelabel"
-              },
-              whiteLabelHostDomain: String(hostingDomain).trim()
-            } as any);
+              };
+            }
+            if (Object.keys(payload).length) {
+              await comp.update(payload as any);
+            }
           }
         }
       }
@@ -127,14 +138,24 @@ export const saveDomain = async (req: Request, res: Response): Promise<Response>
   }
   const company = await Company.findByPk(auth.companyId);
   if (!company) return res.status(404).json({ error: "COMPANY_NOT_FOUND" });
-  const prev = (company.signupMetadata as Record<string, unknown>) || {};
-  await company.update({
-    whiteLabelHostDomain: String(hostingDomain).trim(),
-    signupMetadata: {
-      ...prev,
+  const cols = await getCompanyOptionalColumns();
+  const payload: Record<string, unknown> = {};
+  if (cols.whiteLabelHostDomain) {
+    payload.whiteLabelHostDomain = String(hostingDomain).trim();
+  }
+  if (cols.signupMetadata) {
+    const prev =
+      (company as any).getDataValue?.("signupMetadata") ||
+      (company as any).signupMetadata ||
+      {};
+    payload.signupMetadata = {
+      ...(typeof prev === "object" && prev !== null ? prev : {}),
       whiteLabel: true,
       signupSource: "whitelabel"
-    }
-  } as any);
+    };
+  }
+  if (Object.keys(payload).length) {
+    await company.update(payload as any);
+  }
   return res.json({ ok: true });
 };

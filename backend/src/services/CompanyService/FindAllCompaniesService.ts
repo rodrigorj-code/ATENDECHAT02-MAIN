@@ -5,6 +5,7 @@ import Company from "../../models/Company";
 import Plan from "../../models/Plan";
 import Setting from "../../models/Setting";
 import Subscriptions from "../../models/Subscriptions";
+import { getCompanyOptionalColumns } from "../../helpers/companyOptionalColumns";
 
 export type ListCompaniesFilters = {
   nature?: "all" | "freemium" | "cadastro_gratis";
@@ -13,10 +14,28 @@ export type ListCompaniesFilters = {
   uf?: string;
 };
 
+const BASE_ATTRIBUTES = [
+  "id",
+  "name",
+  "email",
+  "phone",
+  "planId",
+  "status",
+  "dueDate",
+  "recurrence",
+  "document",
+  "paymentMethod",
+  "generateInvoice",
+  "createdAt",
+  "lastLogin"
+] as const;
+
 const FindAllCompaniesService = async (
   filters?: ListCompaniesFilters
 ): Promise<Company[]> => {
   const f = filters || {};
+  const cols = await getCompanyOptionalColumns();
+
   const conditions: any[] = [];
 
   if (f.dateFrom || f.dateTo) {
@@ -30,7 +49,11 @@ const FindAllCompaniesService = async (
     conditions.push({ createdAt });
   }
 
-  if (f.uf && /^[A-Za-z]{2}$/.test(String(f.uf).trim())) {
+  if (
+    f.uf &&
+    /^[A-Za-z]{2}$/.test(String(f.uf).trim()) &&
+    cols.signupMetadata
+  ) {
     const uf = String(f.uf).trim().toUpperCase();
     conditions.push(
       Sequelize.literal(
@@ -51,17 +74,21 @@ const FindAllCompaniesService = async (
     });
     const fromSubscription = [
       ...new Set(
-        (subRows as { companyId: number }[]).map((r) => r.companyId).filter(Boolean)
+        (subRows as { companyId: number }[])
+          .map((r) => r.companyId)
+          .filter(Boolean)
       )
     ];
 
     const orBranches: any[] = [{ recurrence: "freemium" }];
 
-    orBranches.push(
-      Sequelize.literal(
-        `(COALESCE("Company"."signupMetadata"->>'signupSource','') = 'freemium')`
-      )
-    );
+    if (cols.signupMetadata) {
+      orBranches.push(
+        Sequelize.literal(
+          `(COALESCE("Company"."signupMetadata"->>'signupSource','') = 'freemium')`
+        )
+      );
+    }
 
     if (fromSubscription.length > 0) {
       orBranches.push({ id: { [Op.in]: fromSubscription } });
@@ -77,31 +104,20 @@ const FindAllCompaniesService = async (
         ? conditions[0]
         : { [Op.and]: conditions };
 
+  const attributes: string[] = [...BASE_ATTRIBUTES];
+  if (cols.signupMetadata) attributes.push("signupMetadata");
+  if (cols.whiteLabelHostDomain) attributes.push("whiteLabelHostDomain");
+
   const companies = await Company.findAll({
     where,
-    attributes: [
-      "id",
-      "name",
-      "email",
-      "phone",
-      "planId",
-      "status",
-      "dueDate",
-      "recurrence",
-      "document",
-      "paymentMethod",
-      "generateInvoice",
-      "createdAt",
-      "lastLogin",
-      "signupMetadata",
-      "whiteLabelHostDomain"
-    ],
+    attributes: attributes as any,
     order: [["name", "ASC"]],
     include: [
       { model: Plan, as: "plan", attributes: ["id", "name", "amount"] },
       { model: Setting, as: "settings" }
     ]
   });
+
   return companies;
 };
 
