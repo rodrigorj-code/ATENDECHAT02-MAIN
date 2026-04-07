@@ -191,6 +191,11 @@ const SettingsCustom = () => {
     }
   }, [tab]);
 
+  /** Mantém o mesmo objeto do login no estado local (evita tabs admin com currentUser vazio). */
+  useEffect(() => {
+    if (user) setCurrentUser(user);
+  }, [user]);
+
   useEffect(() => {
     async function findData() {
       if (!user || !user.companyId) {
@@ -220,8 +225,9 @@ const SettingsCustom = () => {
       setLoading(false);
     }
     findData();
+    // Recarrega dados da empresa quando o usuário logado muda (find/getAll vêm dos hooks).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id, user?.companyId]);
 
   useEffect(() => {
     if (!socket || !user || !user.companyId) return;
@@ -246,12 +252,10 @@ const SettingsCustom = () => {
     setLoading(false);
   };
 
-  const isSuper = () => {
-    return currentUser && currentUser.super;
-  };
-  const isSpecificAdminUI = () => {
-    return currentUser?.email?.toLowerCase() === "admin@admin.com";
-  };
+  /** Usar sempre `user` do AuthContext — `currentUser` podia ficar {} se o primeiro fetch rodasse antes do login hidratar. */
+  const isSuper = () => Boolean(user?.super);
+  const isSpecificAdminUI = () =>
+    user?.email?.toLowerCase() === "admin@admin.com";
 
   /** Identidade visual e planos: super, admin@admin.com ou empresa white label. */
   const canWLSettings = () =>
@@ -353,7 +357,7 @@ const SettingsCustom = () => {
                 <Options
                   settings={settings}
                   oldSettings={oldSettings}
-                  user={currentUser}
+                  user={user || currentUser}
                   scheduleTypeChanged={(value) =>
                     setSchedulesEnabled(value === "company")
                   }
