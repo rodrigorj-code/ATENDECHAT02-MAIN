@@ -79,6 +79,29 @@ export const notify = async (req: Request, res: Response): Promise<Response> => 
       html
     });
 
+    try {
+      const em = email && String(email).trim().toLowerCase();
+      if (em) {
+        const u = await User.findOne({ where: { email: em } as any });
+        if (u?.companyId) {
+          const comp = await Company.findByPk(u.companyId);
+          if (comp) {
+            const prev = (comp.signupMetadata as Record<string, unknown>) || {};
+            await comp.update({
+              signupMetadata: {
+                ...prev,
+                whiteLabel: true,
+                signupSource: "whitelabel"
+              },
+              whiteLabelHostDomain: String(hostingDomain).trim()
+            } as any);
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn({ msg: "WhiteLabel notify company metadata", err: (e as Error)?.message });
+    }
+
     return res.status(200).json({ ok: true });
   } catch (err: any) {
     logger.error({ msg: "WhiteLabel notify failed", err: err?.message });
@@ -104,6 +127,14 @@ export const saveDomain = async (req: Request, res: Response): Promise<Response>
   }
   const company = await Company.findByPk(auth.companyId);
   if (!company) return res.status(404).json({ error: "COMPANY_NOT_FOUND" });
-  await company.update({ whiteLabelHostDomain: String(hostingDomain).trim() } as any);
+  const prev = (company.signupMetadata as Record<string, unknown>) || {};
+  await company.update({
+    whiteLabelHostDomain: String(hostingDomain).trim(),
+    signupMetadata: {
+      ...prev,
+      whiteLabel: true,
+      signupSource: "whitelabel"
+    }
+  } as any);
   return res.json({ ok: true });
 };

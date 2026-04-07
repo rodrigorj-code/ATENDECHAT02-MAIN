@@ -42,6 +42,17 @@ function buildSubscriptionMeta(company: Company | null | undefined) {
   };
 }
 
+function isWhiteLabelCompany(company: Company | null | undefined): boolean {
+  if (!company) return false;
+  const c = company as any;
+  const domain = c.whiteLabelHostDomain && String(c.whiteLabelHostDomain).trim();
+  if (domain) return true;
+  const meta = c.signupMetadata as Record<string, unknown> | null | undefined;
+  if (meta && meta.whiteLabel === true) return true;
+  if (String(meta?.signupSource || "") === "whitelabel") return true;
+  return false;
+}
+
 interface SerializedUser {
   id: number;
   name: string;
@@ -50,6 +61,7 @@ interface SerializedUser {
   companyId: number;
   company: Company | null;
   super: boolean;
+  isWhiteLabelCustomer?: boolean;
   queues: Queue[];
   startWork: string;
   endWork: string;
@@ -117,6 +129,7 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
     showContacts: user.showContacts,
     showCampaign: user.showCampaign,
     showFlow: user.showFlow,
-    subscription: buildSubscriptionMeta(user.company)
+    subscription: buildSubscriptionMeta(user.company),
+    isWhiteLabelCustomer: isWhiteLabelCompany(user.company)
   };
 };

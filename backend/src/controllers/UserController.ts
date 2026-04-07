@@ -171,9 +171,11 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
       try {
         const meta = req.body.metadata;
-        if (meta && typeof meta === "object") {
-          await createdCompanyFreemium.update({ signupMetadata: meta } as any);
-        }
+        const merged =
+          meta && typeof meta === "object"
+            ? { ...meta, signupSource: "freemium" }
+            : { signupSource: "freemium" };
+        await createdCompanyFreemium.update({ signupMetadata: merged } as any);
       } catch (metaErr) {
         console.warn("signupMetadata freemium:", metaErr);
       }

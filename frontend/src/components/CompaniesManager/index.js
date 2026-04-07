@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
   makeStyles,
   Paper,
@@ -14,7 +14,9 @@ import {
   TableRow,
   IconButton,
   Select,
+  Button,
 } from "@material-ui/core";
+import * as XLSX from "xlsx";
 import { Formik, Form, Field } from "formik";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConfirmationModal from "../ConfirmationModal";
@@ -34,6 +36,56 @@ import moment from "moment";
 import { i18n } from "../../translate/i18n";
 import { useTheme } from "@material-ui/core/styles";
 import { Delete as DeleteIcon, PersonAdd as PersonAddIcon } from "@material-ui/icons";
+
+const UFS = [
+  "",
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO"
+];
+
+const campaignTemplateRows = (records) =>
+  records.map((r) => {
+    const meta = r.signupMetadata || {};
+    const addr = meta.address || {};
+    const contacts = meta.contacts || {};
+    const legal = contacts.legal || {};
+    return {
+      nome: legal.name || r.name || "",
+      telefone: String(r.phone || legal.phone || "").replace(/\D/g, ""),
+      email: r.email || legal.email || "",
+      empresa: r.name || "",
+      cidade: addr.cidade || "",
+      uf: addr.uf || "",
+      documento: r.document || "",
+      data_cadastro: r.createdAt ? moment(r.createdAt).format("DD/MM/YYYY HH:mm") : "",
+      recorrencia: r.recurrence || ""
+    };
+  });
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -594,6 +646,10 @@ export default function CompaniesManager() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState([]);
+  const [natureFilter, setNatureFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [ufFilter, setUfFilter] = useState("");
   const [users, setUsers] = useState([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState(undefined);
@@ -612,10 +668,25 @@ export default function CompaniesManager() {
     generateInvoice: true
   });
 
+  const loadPlans = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (natureFilter && natureFilter !== "all") params.nature = natureFilter;
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
+      if (ufFilter) params.uf = ufFilter;
+      const companyList = await list(params);
+      setRecords(companyList);
+    } catch (e) {
+      toast.error("Não foi possível carregar a lista de registros");
+    }
+    setLoading(false);
+  }, [list, natureFilter, dateFrom, dateTo, ufFilter]);
+
   useEffect(() => {
     loadPlans();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadPlans]);
 
   useEffect(() => {
     if (record?.id) {
@@ -626,16 +697,17 @@ export default function CompaniesManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [record.id]);
 
-  const loadPlans = async () => {
-    setLoading(true);
+  const exportExcel = () => {
     try {
-      const companyList = await list();
-      console.log("Lista de empresas carregada:", companyList);
-      setRecords(companyList);
+      const rows = campaignTemplateRows(records);
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Contatos");
+      XLSX.writeFile(wb, `assinaturas_${moment().format("YYYYMMDD_HHmm")}.xlsx`);
+      toast.success("Planilha gerada.");
     } catch (e) {
-      toast.error("Não foi possível carregar a lista de registros");
+      toast.error("Não foi possível exportar a planilha.");
     }
-    setLoading(false);
   };
 
   const loadCompanyUsers = async (companyId) => {
@@ -733,6 +805,69 @@ export default function CompaniesManager() {
 
   return (
     <Paper className={classes.mainPaper} elevation={0}>
+      <Grid container spacing={2} style={{ marginBottom: 16 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl variant="outlined" size="small" fullWidth>
+            <InputLabel>Origem / assinatura</InputLabel>
+            <Select
+              label="Origem / assinatura"
+              value={natureFilter}
+              onChange={(e) => setNatureFilter(e.target.value)}
+            >
+              <MenuItem value="all">Todas</MenuItem>
+              <MenuItem value="freemium">Teste grátis ativo (recorrência freemium)</MenuItem>
+              <MenuItem value="cadastro_gratis">
+                Cadastro grátis (inclui quem já migrou de plano)
+              </MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <TextField
+            label="Data inicial"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            variant="outlined"
+            size="small"
+            fullWidth
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <TextField
+            label="Data final"
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            variant="outlined"
+            size="small"
+            fullWidth
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl variant="outlined" size="small" fullWidth>
+            <InputLabel>UF (região)</InputLabel>
+            <Select label="UF (região)" value={ufFilter} onChange={(e) => setUfFilter(e.target.value)}>
+              {UFS.map((u) => (
+                <MenuItem key={u || "empty"} value={u}>
+                  {u || "—"}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3} style={{ display: "flex", alignItems: "flex-end", gap: 8,
+          flexWrap: "wrap" }}>
+          <Button variant="contained" color="primary" onClick={() => loadPlans()} disabled={loading}>
+            Aplicar filtros
+          </Button>
+          <Button variant="outlined" onClick={exportExcel} disabled={!records.length}>
+            Exportar Excel
+          </Button>
+        </Grid>
+      </Grid>
       <ModalUsers
         open={userModalOpen}
         onClose={() => {

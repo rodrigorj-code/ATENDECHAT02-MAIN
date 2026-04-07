@@ -19,10 +19,11 @@ const useCompanies = () => {
         return data;
     }
 
-    const list = async (id) => {
+    const list = async (params) => {
         const { data } = await api.request({
             url: `/companies/list`,
-            method: 'GET'
+            method: 'GET',
+            params: params || {}
         });
         return data;
     }

@@ -7,6 +7,8 @@ import TabPanel from "../../components/TabPanel/index.js";
 
 import SchedulesForm from "../../components/SchedulesForm";
 import CompaniesManager from "../../components/CompaniesManager";
+import PlansManager from "../../components/PlansManager";
+import SubscriptionSettingsPanel from "../../components/SubscriptionSettingsPanel";
 import Options from "../../components/Settings/Options.js";
 import Whitelabel from "../../components/Settings/Whitelabel.js";
 import FinalizacaoAtendimento from "../../components/Settings/FinalizacaoAtendimento";
@@ -23,7 +25,6 @@ import { toast } from "react-toastify";
 import useCompanies from "../../hooks/useCompanies";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-import OnlyForSuperUser from "../../components/OnlyForSuperUser";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 import useSettings from "../../hooks/useSettings";
 import ForbiddenPage from "../../components/ForbiddenPage/index.js";
@@ -178,18 +179,14 @@ const SettingsCustom = () => {
     const initialTab = params.get("tab");
     if (initialTab === "tags") {
       setTab("options");
-    } else if (initialTab && initialTab !== "financeiro" && initialTab !== "plans") {
+    } else if (initialTab && initialTab !== "financeiro") {
       setTab(initialTab);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (
-      tab === "financeiro" ||
-      tab === "plans" ||
-      tab === "announcements"
-    ) {
+    if (tab === "financeiro" || tab === "announcements") {
       setTab("options");
     }
   }, [tab]);
@@ -256,16 +253,21 @@ const SettingsCustom = () => {
     return currentUser?.email?.toLowerCase() === "admin@admin.com";
   };
 
+  /** Identidade visual e planos: super, admin@admin.com ou empresa white label. */
+  const canWLSettings = () =>
+    isSuper() || isSpecificAdminUI() || Boolean(user?.isWhiteLabelCustomer);
+
   const baseTabs = [
     { value: "options", label: i18n.t("settings.tabs.options") },
     ...(schedulesEnabled ? [{ value: "schedules", label: "Horários" }] : []),
     ...(user.profile === "admin" && user.finalizacaoComValorVendaAtiva ? [{ value: "finalizacao", label: "Finalização do Atendimento" }] : []),
-    ...(isSuper() ? [{ value: "whitelabel", label: "Identidade Visual" }] : []),
     { value: "users", label: "Usuários" },
     { value: "connections", label: "Gerenciar Conexões" },
     { value: "integrations", label: "Integrações" },
     { value: "email", label: "Email" },
     ...(isSpecificAdminUI() ? [{ value: "companies", label: "Assinaturas" }] : []),
+    ...(canWLSettings() ? [{ value: "whitelabel", label: "Identidade Visual" }] : []),
+    ...(canWLSettings() ? [{ value: "plans", label: "Planos e pagamentos" }] : []),
   ];
   const settingsTabs = baseTabs;
 
@@ -314,20 +316,25 @@ const SettingsCustom = () => {
                   <CompaniesManager />
                 </TabPanel>
               )}
-              <OnlyForSuperUser
-                user={currentUser}
-                yes={() => (
-                  <>
-                    <TabPanel
-                      className={classes.container}
-                      value={tab}
-                      name={"whitelabel"}
-                    >
-                      <Whitelabel settings={oldSettings} />
-                    </TabPanel>
-                  </>
-                )}
-              />
+              {canWLSettings() && (
+                <TabPanel
+                  className={classes.container}
+                  value={tab}
+                  name={"whitelabel"}
+                >
+                  <Whitelabel settings={oldSettings} />
+                </TabPanel>
+              )}
+              {canWLSettings() && (
+                <TabPanel
+                  className={classes.container}
+                  value={tab}
+                  name={"plans"}
+                >
+                  {(isSuper() || isSpecificAdminUI()) && <PlansManager />}
+                  <SubscriptionSettingsPanel />
+                </TabPanel>
+              )}
               <TabPanel
                 className={classes.container}
                 value={tab}
