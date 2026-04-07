@@ -500,6 +500,7 @@ export default function Whitelabel(props) {
   const backgroundDarkInput = useRef(null);
   const appNameInput = useRef(null);
   const [appName, setAppName] = useState(settingsLoaded.appName || "");
+  const [savingAppName, setSavingAppName] = useState(false);
   const [enabledLanguages, setEnabledLanguages] = useState(["pt-BR", "en"]);
 
   const { update } = useSettings();
@@ -870,6 +871,23 @@ export default function Whitelabel(props) {
     toast.success("Operação atualizada com sucesso.");
   }
 
+  async function handleSaveAppName() {
+    try {
+      setSavingAppName(true);
+      await update({
+        key: "appName",
+        value: appName
+      });
+      updateSettingsLoaded("appName", appName);
+      colorMode.setAppName(appName || "VBSolution");
+      toast.success("Nome da aplicação salvo com sucesso.");
+    } catch (e) {
+      toast.error("Não foi possível salvar o nome da aplicação.");
+    } finally {
+      setSavingAppName(false);
+    }
+  }
+
   async function handleSaveEnabledLanguages(newLangs) {
     await handleSaveSetting("enabledLanguages", newLangs);
     setEnabledLanguages(newLangs);
@@ -1122,12 +1140,19 @@ export default function Whitelabel(props) {
                       onChange={(e) => {
                         setAppName(e.target.value);
                       }}
-                      onBlur={async (_) => {
-                        await handleSaveSetting("appName", appName);
-                        colorMode.setAppName(appName || "VBSolution");
-                      }}
                       size="small"
                     />
+                    <Box mt={1.5}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        disabled={savingAppName}
+                        onClick={handleSaveAppName}
+                      >
+                        {savingAppName ? "Salvando…" : "Salvar nome da aplicação"}
+                      </Button>
+                    </Box>
                   </FormControl>
                 </Grid>
               </Grid>
