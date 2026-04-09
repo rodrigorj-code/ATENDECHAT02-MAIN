@@ -9,6 +9,7 @@ import formatBody from "../../helpers/Mustache";
 import Contact from "../../models/Contact";
 import { getWbot, Session } from "../../libs/wbot";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
+import CreateMessageService from "../MessageServices/CreateMessageService";
 import logger from "../../utils/logger";
 import { ENABLE_LID_DEBUG } from "../../config/debug";
 import { normalizeJid } from "../../utils";

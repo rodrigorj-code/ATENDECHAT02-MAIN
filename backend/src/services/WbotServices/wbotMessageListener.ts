@@ -1069,7 +1069,7 @@ export const verifyMediaMessage = async (
       });
     }
 
-    return newMessage;
+    return ticket;
   } catch (error) {
     console.log(error);
     logger.warn("Erro ao baixar media: ", JSON.stringify(msg));
