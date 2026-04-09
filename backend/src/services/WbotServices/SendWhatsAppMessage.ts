@@ -11,9 +11,10 @@ import Ticket from "../../models/Ticket";
 import mime from "mime-types";
 import Contact from "../../models/Contact";
 import Message from "../../models/Message";
-import { getWbot } from "../../libs/wbot";
+import { getWbot, Session } from "../../libs/wbot";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 import formatBody from "../../helpers/Mustache";
+import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import logger from "../../utils/logger";
 import { ENABLE_LID_DEBUG } from "../../config/debug";
 import { normalizeJid } from "../../utils";
@@ -304,7 +305,20 @@ const SendWhatsAppMedia = async ({
   quotedMsg = null
 }: Request): Promise<WAMessage> => {
   try {
-    const wbot = await getWbot(ticket.whatsappId);
+    let wbot: Session;
+    try {
+      wbot = await getWbot(ticket.whatsappId);
+    } catch (err) {
+      if (err instanceof AppError && err.message === "ERR_WAPP_NOT_INITIALIZED") {
+        console.log("⚠️ WhatsApp do ticket não inicializado, tentando conexão padrão...");
+        const defaultWapp = await GetDefaultWhatsApp(ticket.companyId);
+        wbot = await getWbot(defaultWapp.id);
+        // Atualizar o ticket para usar a nova conexão funcional
+        await ticket.update({ whatsappId: defaultWapp.id });
+      } else {
+        throw err;
+      }
+    }
     const companyId = ticket.companyId.toString();
 
     // ✅ CORREÇÃO: Verificar se body é válido antes de usar
@@ -404,6 +418,22 @@ const SendWhatsAppMedia = async ({
         lastMessage: formattedBody,
         imported: null
       });
+
+      const messageData = {
+        wid: sentMessage.key.id,
+        ticketId: ticket.id,
+        contactId: ticket.contactId,
+        body: formattedBody,
+        fromMe: true,
+        mediaType: "chat",
+        read: true,
+        quotedMsgId: quotedMsg?.id || null,
+        ack: 2,
+        remoteJid: contactNumber.remoteJid,
+        dataJson: JSON.stringify(sentMessage),
+      };
+
+      await CreateMessageService({ messageData, companyId: ticket.companyId });
 
       return sentMessage;
     }
@@ -619,6 +649,23 @@ const SendWhatsAppMedia = async ({
 
     wbot.store(sentMessage);
 
+    const messageData = {
+      wid: sentMessage.key.id,
+      ticketId: ticket.id,
+      contactId: ticket.contactId,
+      body: bodyMedia || bodyTicket,
+      fromMe: true,
+      mediaType: typeMessage,
+      mediaUrl: media.filename,
+      read: true,
+      quotedMsgId: quotedMsg?.id || null,
+      ack: 2,
+      remoteJid: contactNumber.remoteJid,
+      dataJson: JSON.stringify(sentMessage),
+    };
+
+    await CreateMessageService({ messageData, companyId: ticket.companyId });
+
     await ticket.update({
       lastMessage: safeBody !== media.filename ? safeBody : bodyMedia,
       imported: null
@@ -631,6 +678,12 @@ const SendWhatsAppMedia = async ({
       err
     );
     Sentry.captureException(err);
+    
+    // ✅ CORREÇÃO: Não mascarar erro de sessão não inicializada
+    if (err instanceof AppError) {
+      throw err;
+    }
+    
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

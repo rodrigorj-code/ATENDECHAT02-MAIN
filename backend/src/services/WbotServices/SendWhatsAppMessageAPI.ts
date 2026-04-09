@@ -7,7 +7,8 @@ import Ticket from "../../models/Ticket";
 
 import formatBody from "../../helpers/Mustache";
 import Contact from "../../models/Contact";
-import { getWbot } from "../../libs/wbot";
+import { getWbot, Session } from "../../libs/wbot";
+import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import logger from "../../utils/logger";
 import { ENABLE_LID_DEBUG } from "../../config/debug";
 import { normalizeJid } from "../../utils";
@@ -113,12 +114,33 @@ const SendWhatsAppMessage = async ({
       );
     }
 
+    const messageData = {
+      wid: sentMessage.key.id,
+      ticketId: undefined, // API não tem ticketId fixo no envio
+      contactId: contact.id,
+      body: body,
+      fromMe: true,
+      mediaType: "chat",
+      read: true,
+      quotedMsgId: quotedMsg?.id || null,
+      ack: 2,
+      remoteJid: jid,
+      dataJson: JSON.stringify(sentMessage),
+    };
+
+    await CreateMessageService({ messageData, companyId: contact.companyId });
+
     // ✅ CORREÇÃO: Removido wbot.store duplicado
 
     return sentMessage;
   } catch (err) {
     Sentry.captureException(err);
     console.log(err);
+    
+    if (err instanceof AppError) {
+      throw err;
+    }
+    
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

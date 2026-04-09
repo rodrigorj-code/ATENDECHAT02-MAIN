@@ -861,6 +861,22 @@ export default function Options(props) {
           <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
             <OptionSelectField
               classes={classes}
+              label={"Notificar Novos Tickets Pendentes"}
+              value={showNotificationPending}
+              onChange={async (e) => {
+                handleShowNotificationPending(e.target.value);
+              }}
+              loading={loadingShowNotificationPending}
+              legend={"Se Sim, o sistema emitirá notificações visuais/sonoras para tickets que entrarem em Aguardando."}
+            >
+              <MenuItem value={true}>Sim</MenuItem>
+              <MenuItem value={false}>Não</MenuItem>
+            </OptionSelectField>
+          </Grid>
+
+          <Grid xs={12} sm={6} md={4} item className={classes.gridItem}>
+            <OptionSelectField
+              classes={classes}
               label={i18n.t(
                 "settings.settings.options.sendGreetingMessageOneQueues"
               )}

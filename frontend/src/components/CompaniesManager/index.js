@@ -729,9 +729,8 @@ export default function CompaniesManager() {
       setCompanyModalOpen(false);
       toast.success("Operação realizada com sucesso!");
     } catch (e) {
-      toast.error(
-        "Não foi possível realizar a operação. Verifique se já existe uma empresa com o mesmo nome ou se os campos foram preenchidos corretamente"
-      );
+      const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || "Erro desconhecido";
+      toast.error(`Não foi possível realizar a operação: ${msg}`);
     }
     setLoading(false);
   };

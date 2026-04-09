@@ -268,6 +268,7 @@ const SettingsCustom = () => {
     { value: "users", label: "Usuários" },
     { value: "connections", label: "Gerenciar Conexões" },
     { value: "integrations", label: "Integrações" },
+    { value: "birthday", label: "Aniversários" },
     { value: "email", label: "Email" },
     ...(isSpecificAdminUI() ? [{ value: "companies", label: "Assinaturas" }] : []),
     ...(canWLSettings() ? [{ value: "whitelabel", label: "Identidade Visual" }] : []),
@@ -376,6 +377,13 @@ const SettingsCustom = () => {
                 name={"integrations"}
               >
                 <QueueIntegration renderAsTab={true} />
+              </TabPanel>
+              <TabPanel
+                className={classes.container}
+                value={tab}
+                name={"birthday"}
+              >
+                <BirthdaySettings renderAsTab={true} />
               </TabPanel>
               <TabPanel
                 className={classes.container}

@@ -939,7 +939,7 @@ const MessageInput = ({
           } catch {
             setSignMessage(true);
           }
-        } else if (setting?.sendSignMessage === "dontSend") {
+        } else if (setting?.sendSignMessage === "dontSend" || setting?.sendSignMessage === "disabled") {
           localStorage.setItem("persistentSignMessage", false);
           setSignMessage(false);
           setSignMessagePar(false);

@@ -21,6 +21,38 @@ interface CompanyData {
   generateInvoice?: boolean;
   /** Quando true, não consulta ReceitaWS (cadastro freemium / evita falhas de rede/API). */
   skipExternalCnpjValidation?: boolean;
+  // Permissões e Configurações Globais
+  userRating?: string;
+  scheduleType?: string;
+  sendGreetingAccepted?: string;
+  userRandom?: string;
+  sendMsgTransfTicket?: string;
+  acceptCallWhatsapp?: string;
+  sendSignMessage?: string;
+  sendGreetingMessageOneQueues?: string;
+  sendQueuePosition?: string;
+  sendFarewellWaitingTicket?: string;
+  acceptAudioMessageContact?: string;
+  enableLGPD?: string;
+  requiredTag?: string;
+  closeTicketOnTransfer?: boolean;
+  DirectTicketsToWallets?: boolean;
+  showNotificationPending?: boolean;
+  // Novas Permissões de Módulos e Tickets
+  allHistoric?: string;
+  allTicket?: string;
+  allUserChat?: string;
+  viewMessagesPending?: string;
+  closePendingTicket?: string;
+  campaigns?: string;
+  contacts?: string;
+  dashboard?: string;
+  connections?: string;
+  flow?: string;
+  kanban?: string;
+  internalChat?: string;
+  financeiro?: string;
+  schedules?: string;
 }
 
 const validateCnpjWithReceita = async (cnpj: string): Promise<boolean> => {
@@ -108,7 +140,18 @@ const CreateCompanyService = async (
       email: company.email,
       password: password ? password : "mudar123",
       profile: "admin",
-      companyId: company.id
+      companyId: company.id,
+      allHistoric: companyData.allHistoric || "disabled",
+      allTicket: companyData.allTicket || "disabled",
+      allUserChat: companyData.allUserChat || "disabled",
+      userClosePendingTicket: companyData.closePendingTicket || "enabled",
+      showDashboard: companyData.dashboard || "enabled",
+      showContacts: companyData.contacts || "enabled",
+      showCampaign: companyData.campaigns || "enabled",
+      showFlow: companyData.flow || "enabled",
+      allowRealTime: companyData.dashboard || "enabled",
+      allowConnections: companyData.connections || "enabled",
+      allowSeeMessagesInPendingTickets: companyData.viewMessagesPending || "enabled",
     },
       { transaction: t }
     );
@@ -117,20 +160,20 @@ const CreateCompanyService = async (
           companyId: company.id,
           hoursCloseTicketsAuto: "9999999999",
           chatBotType: "text",
-          acceptCallWhatsapp: "enabled",
-          userRandom: "enabled",
-          sendGreetingMessageOneQueues: "enabled",
-          sendSignMessage: "enabled",
-          sendFarewellWaitingTicket: "disabled",
-          userRating: "disabled",
-          sendGreetingAccepted: "enabled",
+          acceptCallWhatsapp: companyData.acceptCallWhatsapp || "enabled",
+          userRandom: companyData.userRandom || "enabled",
+          sendGreetingMessageOneQueues: companyData.sendGreetingMessageOneQueues || "enabled",
+          sendSignMessage: companyData.sendSignMessage || "enabled",
+          sendFarewellWaitingTicket: companyData.sendFarewellWaitingTicket || "disabled",
+          userRating: companyData.userRating || "disabled",
+          sendGreetingAccepted: companyData.sendGreetingAccepted || "enabled",
           CheckMsgIsGroup: "enabled",
-          sendQueuePosition: "disabled",
-          scheduleType: "disabled",
-          acceptAudioMessageContact: "enabled",
-          sendMsgTransfTicket:"disabled",
-          enableLGPD: "disabled",
-          requiredTag: "disabled",
+          sendQueuePosition: companyData.sendQueuePosition || "disabled",
+          scheduleType: companyData.scheduleType || "disabled",
+          acceptAudioMessageContact: companyData.acceptAudioMessageContact || "enabled",
+          sendMsgTransfTicket: companyData.sendMsgTransfTicket || "disabled",
+          enableLGPD: companyData.enableLGPD || "disabled",
+          requiredTag: companyData.requiredTag || "disabled",
           lgpdDeleteMessage: "disabled",
           lgpdHideNumber: "disabled",
           lgpdConsent: "disabled",
@@ -138,8 +181,9 @@ const CreateCompanyService = async (
           lgpdMessage:"",
           createdAt: new Date(),
           updatedAt: new Date(),
-          closeTicketOnTransfer: false,
-          DirectTicketsToWallets: false
+          closeTicketOnTransfer: companyData.closeTicketOnTransfer || false,
+          DirectTicketsToWallets: companyData.DirectTicketsToWallets || false,
+          showNotificationPending: companyData.showNotificationPending || false
     },{ transaction: t })
     
     await t.commit();

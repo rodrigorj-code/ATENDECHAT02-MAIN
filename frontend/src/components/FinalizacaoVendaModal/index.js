@@ -49,31 +49,50 @@ const FinalizacaoVendaModal = ({ open, onClose, ticket, onFinalizar }) => {
   };
 
   useEffect(() => {
-    if (open) {
+    const fetchConfig = async () => {
       setLoadingConfig(true);
-      Promise.all([fetchMotivosFinalizacao(), fetchCompanySettings()]).then(
-        () => setLoadingConfig(false)
-      );
+      try {
+        const { data } = await api.get("/companySettings");
+        // Ajustando a lógica de busca conforme o padrão esperado no banco
+        const config = Array.isArray(data) ? data.find((s) => s.column === "informarValorVenda") : null;
+        if (config) {
+          setInformarValorVenda(config.data === "true" || config.data === true);
+        } else {
+          setInformarValorVenda(data.informarValorVenda || false);
+        }
+
+        const { data: motivos } = await api.get("/ticketFinalizationReasons");
+        
+        // ✅ ADIÇÃO DE OPÇÕES PADRÃO SE A LISTA ESTIVER VAZIA
+        if (!motivos || motivos.length === 0) {
+          setMotivosFinalizacao([
+            { id: 'default1', name: "Atendimento Concluído" },
+            { id: 'default2', name: "Suporte Realizado" },
+            { id: 'default3', name: "Venda Finalizada" },
+            { id: 'default4', name: "Dúvida Sanada" },
+            { id: 'default5', name: "Outros" }
+          ]);
+        } else {
+          setMotivosFinalizacao(motivos);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar configurações de finalização", err);
+        // ✅ FALLBACK EM CASO DE ERRO DE API
+        setMotivosFinalizacao([
+          { id: 'default1', name: "Atendimento Concluído" },
+          { id: 'default2', name: "Venda Realizada" },
+          { id: 'default3', name: "Suporte Técnico" },
+          { id: 'default4', name: "Outros" }
+        ]);
+      } finally {
+        setLoadingConfig(false);
+      }
+    };
+
+    if (open) {
+      fetchConfig();
     }
   }, [open]);
-
-  const fetchMotivosFinalizacao = async () => {
-    try {
-      const { data } = await api.get("/ticketFinalizationReasons");
-      setMotivosFinalizacao(data);
-    } catch (err) {
-      console.error("Erro ao buscar motivos de finalização:", err);
-    }
-  };
-
-  const fetchCompanySettings = async () => {
-    try {
-      const { data } = await api.get("/companySettings");
-      setInformarValorVenda(data.informarValorVenda || false);
-    } catch (err) {
-      console.error("Erro ao buscar configurações da empresa:", err);
-    }
-  };
 
   const handleSubmit = async () => {
     if (informarValorVenda) {

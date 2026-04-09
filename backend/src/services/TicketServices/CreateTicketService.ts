@@ -53,6 +53,10 @@ const CreateTicketService = async ({
   if (!defaultWhatsapp)
     defaultWhatsapp = await GetDefaultWhatsApp(companyId);
 
+  if (!defaultWhatsapp) {
+    throw new AppError("ERR_NO_DEF_WAPP_FOUND");
+  }
+
   // console.log("defaultWhatsapp", defaultWhatsapp.id, defaultWhatsapp.channel)
   await CheckContactOpenTickets(contactId, defaultWhatsapp.id);
 

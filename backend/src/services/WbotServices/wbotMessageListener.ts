@@ -1011,18 +1011,20 @@ export const verifyMediaMessage = async (
       }
     }
 
-    io.of("/" + String(companyId))
-      .emit(`company-${companyId}-ticket`, {
-        action: "update",
-        ticket
-      });
+    // Rodar emissões em paralelo
+    Promise.all([
+      io.of("/" + String(companyId))
+        .emit(`company-${companyId}-ticket`, {
+          action: "update",
+          ticket
+        }),
+      CreateMessageService({
+        messageData,
+        companyId: companyId
+      })
+    ]).catch(err => logger.error("Erro nas emissões de socket em verifyMediaMessage:", err));
 
-    const newMessage = await CreateMessageService({
-      messageData,
-      companyId: companyId
-    });
-
-    console.log(`[DEBUG 2026] Mensagem criada no DB: ${newMessage.id} para Ticket: ${ticket.id}`);
+    console.log(`[DEBUG 2026] Media message processing initiated for Ticket: ${ticket.id}`);
 
     if (!msg.key.fromMe && ["closed", "group", "chatbot"].includes(String(ticket.status))) {
       await ticket.update({ status: "pending" });
@@ -1059,12 +1061,12 @@ export const verifyMediaMessage = async (
         ]
       });
 
-      io.of(String(companyId))
-        .emit(`company-${companyId}-ticket`, {
-          action: "update",
-          ticket,
-          ticketId: ticket.id
-        });
+      io.of("/" + String(companyId))
+      .emit(`company-${companyId}-ticket`, {
+        action: "update",
+        ticket,
+        ticketId: ticket.id
+      });
     }
 
     return newMessage;
@@ -1153,16 +1155,16 @@ export const verifyMessage = async (
   
   console.log(`[DEBUG 2026] Emitting socket for ticket ${ticket.id}: status=${ticketToEmit.status}, queueId=${ticketToEmit.queueId}, userId=${ticketToEmit.userId}`);
 
-  io.of("/" + String(companyId))
-    //.to(ticketToEmit.status)
-    .emit(`company-${companyId}-ticket`, {
-      action: "update",
-      ticket: ticketToEmit,
-      ticketId: ticket.id
-    });
-
-  // CreateMessageService já emite company-*-appMessage com message + ticket (evitar 2º emit sem id, que o frontend ignorava).
-  await CreateMessageService({ messageData, companyId: companyId });
+  // Rodar emissões em paralelo para não bloquear o fluxo
+  Promise.all([
+    io.of("/" + String(companyId))
+      .emit(`company-${companyId}-ticket`, {
+        action: "update",
+        ticket: ticketToEmit,
+        ticketId: ticket.id
+      }),
+    CreateMessageService({ messageData, companyId: companyId })
+  ]).catch(err => logger.error("Erro nas emissões de socket em verifyMessage:", err));
 
   // Rastreamento de segunda interação: cliente -> agente -> cliente
   if (!msg.key.fromMe) {

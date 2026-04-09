@@ -126,18 +126,6 @@ const CreateMessageService = async ({
     ]
   });
 
-  if (message.ticket.queueId !== null && message.queueId === null) {
-    await message.update({ queueId: message.ticket.queueId });
-  }
-
-  if (message.isPrivate) {
-    await message.update({ wid: `PVT${message.id}` });
-    const ticket = await Ticket.findByPk(message.ticketId);
-    if (ticket) {
-      await ticket.update({ status: "open", isBot: true, useIntegration: true });
-    }
-  }
-
   if (!message) {
     throw new Error("ERR_CREATING_MESSAGE");
   }
@@ -152,6 +140,18 @@ const CreateMessageService = async ({
         ticket: message.ticket,
         contact: message.ticket.contact
       });
+  }
+
+  if (message.ticket.queueId !== null && message.queueId === null) {
+    await message.update({ queueId: message.ticket.queueId });
+  }
+
+  if (message.isPrivate) {
+    await message.update({ wid: `PVT${message.id}` });
+    const ticket = await Ticket.findByPk(message.ticketId);
+    if (ticket) {
+      await ticket.update({ status: "open", isBot: true, useIntegration: true });
+    }
   }
 
   return message;

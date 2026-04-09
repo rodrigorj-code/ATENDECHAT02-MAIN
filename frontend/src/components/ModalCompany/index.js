@@ -46,6 +46,11 @@ const CompanySchema = Yup.object().shape({
   name: Yup.string().required("Obrigatório"),
   email: Yup.string().email("E-mail inválido").required("Obrigatório"),
   planId: Yup.string().required("Obrigatório"),
+  password: Yup.string().when("id", {
+    is: (id) => id === undefined,
+    then: Yup.string().required("Obrigatório para novas empresas").min(5, "Mínimo 5 caracteres"),
+    otherwise: Yup.string().nullable(),
+  }),
 });
 
 const ModalCompany = ({ open, onClose, company, onSave }) => {
@@ -83,7 +88,7 @@ const ModalCompany = ({ open, onClose, company, onSave }) => {
     showNotificationPending: false,
     // Novas Permissões de Módulos e Tickets (Baseadas no ModalUsers)
     allHistoric: "disabled",
-    allTicket: "disabled",
+    allTicket: "disable",
     allUserChat: "disabled",
     allUserChatHistoric: "disabled",
     allUserChatHistoricTotal: "disabled",
@@ -96,7 +101,7 @@ const ModalCompany = ({ open, onClose, company, onSave }) => {
     dashboard: "enabled",
     connections: "enabled",
     flow: "enabled",
-    groups: "disabled",
+    groups: "disable",
     kanban: "enabled",
     internalChat: "enabled",
     schedules: "enabled",
@@ -121,7 +126,7 @@ const ModalCompany = ({ open, onClose, company, onSave }) => {
       if (company && open) {
         try {
           // Buscar configurações atuais da empresa se estiver editando
-          const { data: settings } = await api.get(`/settings/company/${company.id}`);
+          const { data: settings } = await api.get(`/companySettings/${company.id}`);
           
           const settingsObj = {};
           if (Array.isArray(settings)) {
@@ -174,7 +179,11 @@ const ModalCompany = ({ open, onClose, company, onSave }) => {
           enableReinitialize={true}
           validationSchema={CompanySchema}
           onSubmit={(values, actions) => {
-            onSave(values);
+            const data = {
+              ...values,
+              planId: values.planId ? parseInt(values.planId, 10) : undefined
+            };
+            onSave(data);
             actions.setSubmitting(false);
           }}
         >
@@ -329,8 +338,8 @@ const ModalCompany = ({ open, onClose, company, onSave }) => {
                       <FormControl margin="dense" variant="outlined" fullWidth>
                         <InputLabel>Ver Tickets de Outros</InputLabel>
                         <Field as={Select} label="Ver Tickets de Outros" name="allTicket">
-                          <MenuItem value="enabled">Habilitado</MenuItem>
-                          <MenuItem value="disabled">Desabilitado</MenuItem>
+                          <MenuItem value="enable">Habilitado</MenuItem>
+                          <MenuItem value="disable">Desabilitado</MenuItem>
                         </Field>
                       </FormControl>
                     </Grid>

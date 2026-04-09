@@ -76,7 +76,7 @@ const ListTicketsService = async ({
   const user = await ShowUserService(userId, companyId);
 
   const showTicketAllQueues = user.allHistoric === "enabled";
-  const showTicketWithoutQueue = user.allTicket === "enable";
+  const showTicketWithoutQueue = user.allTicket === "enable" || user.allTicket === "enabled";
   const showGroups = user.allowGroup === true;
   const showPendingNotification = await FindCompanySettingOneService({ companyId, column: "showNotificationPending" });
   const showNotificationPendingValue =

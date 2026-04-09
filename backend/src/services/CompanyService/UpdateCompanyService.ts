@@ -2,6 +2,7 @@ import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
 import Setting from "../../models/Setting";
 import User from "../../models/User";
+import CompaniesSettings from "../../models/CompaniesSettings";
 
 interface CompanyData {
   name: string;
@@ -17,6 +18,38 @@ interface CompanyData {
   paymentMethod?: string;
   password?: string;
   generateInvoice?: boolean;
+  // Permissões e Configurações Globais
+  userRating?: string;
+  scheduleType?: string;
+  sendGreetingAccepted?: string;
+  userRandom?: string;
+  sendMsgTransfTicket?: string;
+  acceptCallWhatsapp?: string;
+  sendSignMessage?: string;
+  sendGreetingMessageOneQueues?: string;
+  sendQueuePosition?: string;
+  sendFarewellWaitingTicket?: string;
+  acceptAudioMessageContact?: string;
+  enableLGPD?: string;
+  requiredTag?: string;
+  closeTicketOnTransfer?: boolean;
+  DirectTicketsToWallets?: boolean;
+  showNotificationPending?: boolean;
+  // Novas Permissões de Módulos e Tickets
+  allHistoric?: string;
+  allTicket?: string;
+  allUserChat?: string;
+  viewMessagesPending?: string;
+  closePendingTicket?: string;
+  campaigns?: string;
+  contacts?: string;
+  dashboard?: string;
+  connections?: string;
+  flow?: string;
+  kanban?: string;
+  internalChat?: string;
+  financeiro?: string;
+  schedules?: string;
 }
 
 const UpdateCompanyService = async (
@@ -65,7 +98,21 @@ const UpdateCompanyService = async (
     throw new AppError("ERR_NO_USER_FOUND", 404)
   }
   
-  await user.update({ email, password });
+  await user.update({
+    email,
+    password: password || undefined,
+    allHistoric: companyData.allHistoric || user.allHistoric,
+    allTicket: companyData.allTicket || user.allTicket,
+    allUserChat: companyData.allUserChat || user.allUserChat,
+    userClosePendingTicket: companyData.closePendingTicket || user.userClosePendingTicket,
+    showDashboard: companyData.dashboard || user.showDashboard,
+    showContacts: companyData.contacts || user.showContacts,
+    showCampaign: companyData.campaigns || user.showCampaign,
+    showFlow: companyData.flow || user.showFlow,
+    allowRealTime: companyData.dashboard || user.allowRealTime,
+    allowConnections: companyData.connections || user.allowConnections,
+    allowSeeMessagesInPendingTickets: companyData.viewMessagesPending || user.allowSeeMessagesInPendingTickets,
+  });
 
   await company.update({
     name,
@@ -78,6 +125,35 @@ const UpdateCompanyService = async (
     document,
     paymentMethod,
     generateInvoice
+  });
+
+  // Atualizar Configurações da Empresa
+  const [settings, created] = await CompaniesSettings.findOrCreate({
+    where: { companyId: company.id },
+    defaults: {
+      companyId: company.id,
+      hoursCloseTicketsAuto: "9999999999",
+      chatBotType: "text",
+    }
+  });
+
+  await settings.update({
+    acceptCallWhatsapp: companyData.acceptCallWhatsapp || settings.acceptCallWhatsapp,
+    userRandom: companyData.userRandom || settings.userRandom,
+    sendGreetingMessageOneQueues: companyData.sendGreetingMessageOneQueues || settings.sendGreetingMessageOneQueues,
+    sendSignMessage: companyData.sendSignMessage || settings.sendSignMessage,
+    sendFarewellWaitingTicket: companyData.sendFarewellWaitingTicket || settings.sendFarewellWaitingTicket,
+    userRating: companyData.userRating || settings.userRating,
+    sendGreetingAccepted: companyData.sendGreetingAccepted || settings.sendGreetingAccepted,
+    sendQueuePosition: companyData.sendQueuePosition || settings.sendQueuePosition,
+    scheduleType: companyData.scheduleType || settings.scheduleType,
+    acceptAudioMessageContact: companyData.acceptAudioMessageContact || settings.acceptAudioMessageContact,
+    sendMsgTransfTicket: companyData.sendMsgTransfTicket || settings.sendMsgTransfTicket,
+    enableLGPD: companyData.enableLGPD || settings.enableLGPD,
+    requiredTag: companyData.requiredTag || settings.requiredTag,
+    closeTicketOnTransfer: companyData.closeTicketOnTransfer !== undefined ? companyData.closeTicketOnTransfer : settings.closeTicketOnTransfer,
+    DirectTicketsToWallets: companyData.DirectTicketsToWallets !== undefined ? companyData.DirectTicketsToWallets : settings.DirectTicketsToWallets,
+    showNotificationPending: companyData.showNotificationPending !== undefined ? companyData.showNotificationPending : settings.showNotificationPending,
   });
 
   if (companyData.campaignsEnabled !== undefined) {
