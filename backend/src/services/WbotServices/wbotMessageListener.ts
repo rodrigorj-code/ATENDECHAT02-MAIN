@@ -1012,7 +1012,7 @@ export const verifyMediaMessage = async (
     }
 
     // Rodar emissões em paralelo
-    Promise.all([
+    const [_, newMessage] = await Promise.all([
       io.of("/" + String(companyId))
         .emit(`company-${companyId}-ticket`, {
           action: "update",
@@ -1022,7 +1022,10 @@ export const verifyMediaMessage = async (
         messageData,
         companyId: companyId
       })
-    ]).catch(err => logger.error("Erro nas emissões de socket em verifyMediaMessage:", err));
+    ]).catch(err => {
+      logger.error("Erro nas emissões de socket em verifyMediaMessage:", err);
+      return [null, null];
+    });
 
     console.log(`[DEBUG 2026] Media message processing initiated for Ticket: ${ticket.id}`);
 
@@ -1069,7 +1072,7 @@ export const verifyMediaMessage = async (
       });
     }
 
-    return ticket;
+    return newMessage;
   } catch (error) {
     console.log(error);
     logger.warn("Erro ao baixar media: ", JSON.stringify(msg));
