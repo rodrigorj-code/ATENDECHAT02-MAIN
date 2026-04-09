@@ -147,6 +147,8 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
     handleClose();
   };
 
+  const isSuperAdmin = loggedInUser.email === "admin@admin.com";
+
   return (
     <div className={classes.root}>
       <Dialog
@@ -197,6 +199,7 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
                     variant="outlined"
                     margin="dense"
                     fullWidth
+                    autoComplete="new-password"
                   />
                 </div>
                 <div className={classes.multFieldLine}>
@@ -209,35 +212,42 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
                     variant="outlined"
                     margin="dense"
                     fullWidth
+                    autoComplete="off"
                   />
                   <FormControl
                     variant="outlined"
                     className={classes.formControl}
                     margin="dense"
                   >
-                    <Can
-                      role={loggedInUser.profile}
-                      perform="user-modal:editProfile"
-                      yes={() => (
-                        <>
-                          <InputLabel id="profile-selection-input-label">
-                            {i18n.t("userModal.form.profile")}
-                          </InputLabel>
+                    {(isSuperAdmin || loggedInUser.profile === "admin") ? (
+                      <>
+                        <InputLabel id="profile-selection-input-label">
+                          {i18n.t("userModal.form.profile")}
+                        </InputLabel>
 
-                          <Field
-                            as={Select}
-                            label={i18n.t("userModal.form.profile")}
-                            name="profile"
-                            labelId="profile-selection-label"
-                            id="profile-selection"
-                            required
-                          >
-                            <MenuItem value="admin">Admin</MenuItem>
-                            <MenuItem value="user">User</MenuItem>
-                          </Field>
-                        </>
-                      )}
-                    />
+                        <Field
+                          as={Select}
+                          label={i18n.t("userModal.form.profile")}
+                          name="profile"
+                          labelId="profile-selection-label"
+                          id="profile-selection"
+                          required
+                        >
+                          <MenuItem value="admin">Admin</MenuItem>
+                          <MenuItem value="user">User</MenuItem>
+                        </Field>
+                      </>
+                    ) : (
+                      <Field
+                        as={TextField}
+                        label={i18n.t("userModal.form.profile")}
+                        name="profile"
+                        variant="outlined"
+                        margin="dense"
+                        fullWidth
+                        disabled
+                      />
+                    )}
                   </FormControl>
                 </div>
                 <div className={classes.multFieldLine}>
@@ -341,17 +351,15 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
                     </Field>
                   </FormControl>
                 </div>
-                <Can
-                  role={loggedInUser.profile}
-                  perform="user-modal:editQueues"
-                  yes={() => (
+                <div className={classes.multFieldLine}>
+                  {(isSuperAdmin || loggedInUser.profile === "admin") ? (
                     <QueueSelect
                       companyId={companyId}
                       selectedQueueIds={selectedQueueIds}
                       onChange={(values) => setSelectedQueueIds(values)}
                     />
-                  )}
-                />
+                  ) : null}
+                </div>
               </DialogContent>
               <DialogActions>
                 <Button

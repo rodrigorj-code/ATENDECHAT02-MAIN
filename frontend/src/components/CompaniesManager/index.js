@@ -27,6 +27,7 @@ import { toast } from "react-toastify";
 import useCompanies from "../../hooks/useCompanies";
 import usePlans from "../../hooks/usePlans";
 import ModalUsers from "../ModalUsers";
+import ModalCompany from "../ModalCompany";
 import api from "../../services/api";
 import { head, isArray, has } from "lodash";
 import { useDate } from "../../hooks/useDate";
@@ -141,7 +142,7 @@ export function CompanyForm(props) {
     status: true,
     // campaignsEnabled: false,
     dueDate: "",
-    recurrence: "",
+    recurrence: "MENSAL",
     password: "",
     generateInvoice: true,
     ...initialValue,
@@ -532,20 +533,6 @@ export function CompaniesManagerGrid(props) {
     return row.planId !== null ? row.plan.amount ? row.plan.amount.toLocaleString('pt-br', { minimumFractionDigits: 2 }) : '00.00' : "-";
   };
 
-  // const renderCampaignsStatus = (row) => {
-  //   if (
-  //     has(row, "settings") &&
-  //     isArray(row.settings) &&
-  //     row.settings.length > 0
-  //   ) {
-  //     const setting = row.settings.find((s) => s.key === "campaignsEnabled");
-  //     if (setting) {
-  //       return setting.value === "true" ? "Habilitadas" : "Desabilitadas";
-  //     }
-  //   }
-  //   return "Desabilitadas";
-  // };
-
   const rowStyle = (record) => {
     if (moment(record.dueDate).isValid()) {
       const now = moment();
@@ -614,9 +601,9 @@ export function CompaniesManagerGrid(props) {
         </TableHead>
         <TableBody>
           {records.map((row, key) => (
-            <TableRow style={rowStyle(row)} key={key}>
+            <TableRow style={rowStyle(row)} key={key} onClick={() => onSelect(row)} style={{ ...rowStyle(row), cursor: 'pointer' }}>
               <TableCell style={{...cellStyle(row), width: "1%"}} align="center">
-                <IconButton style={iconStyle(row)} onClick={() => onSelect(row)} aria-label="delete">
+                <IconButton style={iconStyle(row)} aria-label="edit">
                   <EditIcon style={iconStyle(row)} />
                 </IconButton>
               </TableCell>
@@ -652,6 +639,7 @@ export default function CompaniesManager() {
   const [ufFilter, setUfFilter] = useState("");
   const [users, setUsers] = useState([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [companyModalOpen, setCompanyModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState(undefined);
   const [record, setRecord] = useState({
     name: "",
@@ -661,7 +649,7 @@ export default function CompaniesManager() {
     status: true,
     // campaignsEnabled: false,
     dueDate: "",
-    recurrence: "",
+    recurrence: "MENSAL",
     password: "",
     document: "",
     paymentMethod: "",
@@ -738,6 +726,7 @@ export default function CompaniesManager() {
       }
       await loadPlans();
       handleCancel();
+      setCompanyModalOpen(false);
       toast.success("Operação realizada com sucesso!");
     } catch (e) {
       toast.error(
@@ -753,6 +742,7 @@ export default function CompaniesManager() {
       await remove(record.id);
       await loadPlans();
       handleCancel();
+      setShowConfirmDialog(false);
       toast.success("Operação realizada com sucesso!");
     } catch (e) {
       toast.error("Não foi possível realizar a operação");
@@ -765,123 +755,134 @@ export default function CompaniesManager() {
   };
 
   const handleCancel = () => {
-    setRecord((prev) => ({
-      ...prev,
+    setRecord({
+      id: undefined,
       name: "",
       email: "",
       phone: "",
       planId: "",
       status: true,
-      // campaignsEnabled: false,
       dueDate: "",
-      recurrence: "",
+      recurrence: "MENSAL",
       password: "",
       document: "",
       paymentMethod: "",
       generateInvoice: true
-    }));
+    });
   };
 
   const handleSelect = (data) => {
-    // let campaignsEnabled = false;
-
-    // const setting = data.settings.find(
-    //   (s) => s.key.indexOf("campaignsEnabled") > -1
-    // );
-    // if (setting) {
-    //   campaignsEnabled = setting.value === "true" || setting.value === "enabled";
-    // }
-
     console.log("Dados da empresa selecionada:", data);
-    setRecord((prev) => ({
-      ...prev,
+    const selectedRecord = {
       id: data.id,
       name: data.name || "",
       phone: data.phone || "",
       email: data.email || "",
       planId: data.planId || "",
       status: data.status === false ? false : true,
-      // campaignsEnabled,
       dueDate: data.dueDate || "",
-      recurrence: data.recurrence || "",
+      recurrence: data.recurrence || "MENSAL",
       password: "",
       document: data.document || "",
       paymentMethod: data.paymentMethod || "",
       generateInvoice: data.generateInvoice !== undefined ? data.generateInvoice : true,
-    }));
+    };
+    setRecord(selectedRecord);
+    setCompanyModalOpen(true);
+  };
+
+  const handleAddCompany = () => {
+    handleCancel();
+    setCompanyModalOpen(true);
   };
 
   return (
     <Paper className={classes.mainPaper} elevation={0}>
-      <Grid container spacing={2} style={{ marginBottom: 16 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <FormControl variant="outlined" size="small" fullWidth>
-            <InputLabel>Origem / assinatura</InputLabel>
-            <Select
-              label="Origem / assinatura"
-              value={natureFilter}
-              onChange={(e) => setNatureFilter(e.target.value)}
-              MenuProps={{
-                anchorOrigin: { vertical: "bottom", horizontal: "left" },
-                transformOrigin: { vertical: "top", horizontal: "left" },
-                getContentAnchorEl: null,
-                PaperProps: {
-                  style: { maxWidth: 280, minWidth: 220 }
-                }
-              }}
-            >
-              <MenuItem value="all">Todas</MenuItem>
-              <MenuItem value="freemium">Teste grátis (ativo)</MenuItem>
-              <MenuItem value="cadastro_gratis">Cadastro grátis (+ migrados)</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <TextField
-            label="Data inicial"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            variant="outlined"
-            size="small"
-            fullWidth
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <TextField
-            label="Data final"
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            variant="outlined"
-            size="small"
-            fullWidth
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <FormControl variant="outlined" size="small" fullWidth>
-            <InputLabel>UF (região)</InputLabel>
-            <Select label="UF (região)" value={ufFilter} onChange={(e) => setUfFilter(e.target.value)}>
-              {UFS.map((u) => (
-                <MenuItem key={u || "empty"} value={u}>
-                  {u || "—"}
+      <Grid container spacing={2} style={{ marginBottom: 16 }} alignItems="center" justifyContent="space-between">
+        <Grid item xs={12} sm={12} md={9}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl variant="outlined" size="small" fullWidth>
+                <InputLabel>Origem / assinatura</InputLabel>
+                <Select
+                  label="Origem / assinatura"
+                  value={natureFilter}
+                  onChange={(e) => setNatureFilter(e.target.value)}
+                  MenuProps={{
+                    anchorOrigin: { vertical: "bottom", horizontal: "left" },
+                    transformOrigin: { vertical: "top", horizontal: "left" },
+                    getContentAnchorEl: null,
+                    PaperProps: {
+                      style: { maxWidth: 280, minWidth: 220 }
+                    }
+                  }}
+                >
+                  <MenuItem value="all">Todas</MenuItem>
+                  <MenuItem value="freemium">Teste grátis (ativo)</MenuItem>
+                  <MenuItem value="cadastro_gratis">Cadastro grátis (+ migrados)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                label="Data inicial"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                variant="outlined"
+                size="small"
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                label="Data final"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                variant="outlined"
+                size="small"
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl variant="outlined" size="small" fullWidth>
+                <InputLabel>UF (região)</InputLabel>
+                <Select label="UF (região)" value={ufFilter} onChange={(e) => setUfFilter(e.target.value)}>
+                  {UFS.map((u) => (
+                    <MenuItem key={u || "empty"} value={u}>
+                      {u || "—"}
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3} style={{ display: "flex", alignItems: "flex-end", gap: 8, flexWrap: "wrap" }}>
+              <Button variant="contained" color="primary" onClick={() => loadPlans()} disabled={loading}>
+                Aplicar filtros
+              </Button>
+              <Button variant="outlined" onClick={exportExcel} disabled={!records.length}>
+                Exportar Excel
+              </Button>
+            </Grid>
+          </Grid>
         </Grid>
-        <Grid item xs={12} sm={6} md={3} style={{ display: "flex", alignItems: "flex-end", gap: 8,
-          flexWrap: "wrap" }}>
-          <Button variant="contained" color="primary" onClick={() => loadPlans()} disabled={loading}>
-            Aplicar filtros
-          </Button>
-          <Button variant="outlined" onClick={exportExcel} disabled={!records.length}>
-            Exportar Excel
+        <Grid item>
+          <Button variant="contained" color="primary" onClick={handleAddCompany}>
+            Adicionar Empresa
           </Button>
         </Grid>
       </Grid>
+
+      <ModalCompany
+        open={companyModalOpen}
+        onClose={() => setCompanyModalOpen(false)}
+        company={record.id ? record : null}
+        onSave={handleSubmit}
+      />
+
       <ModalUsers
         open={userModalOpen}
         onClose={() => {
@@ -892,25 +893,17 @@ export default function CompaniesManager() {
         userId={editingUserId}
         companyId={record?.id}
       />
+
       <Grid spacing={2} container>
-        <Grid xs={12} item>
-          <CompanyForm
-            initialValue={record}
-            onDelete={handleOpenDeleteDialog}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            loading={loading}
-          />
-        </Grid>
         {record?.id && (
           <Grid xs={12} item>
             <Paper className={classes.tableContainer}>
               <Grid container alignItems="center" justifyContent="space-between" style={{ padding: 8 }}>
                 <Grid item>
-                  <strong>Usuários da empresa selecionada</strong>
+                  <strong>Usuários da empresa: {record.name}</strong>
                 </Grid>
                 <Grid item>
-                  <ButtonWithSpinner
+                  <Button
                     onClick={() => {
                       setEditingUserId(undefined);
                       setUserModalOpen(true);
@@ -920,7 +913,16 @@ export default function CompaniesManager() {
                     startIcon={<PersonAddIcon />}
                   >
                     Adicionar usuário
-                  </ButtonWithSpinner>
+                  </Button>
+                  <Button
+                    onClick={handleOpenDeleteDialog}
+                    variant="contained"
+                    color="secondary"
+                    style={{ marginLeft: 8 }}
+                    disabled={record.id === 1}
+                  >
+                    Excluir Empresa
+                  </Button>
                 </Grid>
               </Grid>
               <Table className={classes.fullWidth} padding="none" aria-label="users-table">
