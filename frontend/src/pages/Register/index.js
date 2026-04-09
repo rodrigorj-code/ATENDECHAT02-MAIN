@@ -352,7 +352,7 @@ const Register = () => {
       anual: {
         starter: "https://pay.cakto.com.br/8jcckd5",
         essencial: "https://pay.cakto.com.br/h8woa7d",
-        pro: "https://pay.cakto.com.br/me8p4x3",
+        pro: "https://pay.cakto.com.br/dm2p96b",
       },
     };
     const c = String(cycle || "").toLowerCase();

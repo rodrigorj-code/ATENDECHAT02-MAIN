@@ -69,7 +69,14 @@ const useStyles = makeStyles(theme => ({
     right: 0,
     padding: theme.spacing(1, 2),
     zIndex: 20,
-    background: "transparent"
+    background: "transparent",
+    [theme.breakpoints.down("xs")]: {
+      flexDirection: "column",
+      gap: theme.spacing(1),
+      position: "static",
+      background: theme.palette.type === "light" ? "#f5f5f7" : theme.palette.background.default,
+      padding: theme.spacing(2, 1)
+    }
   },
   stepperWrap: {
     flex: 1,
@@ -77,7 +84,11 @@ const useStyles = makeStyles(theme => ({
     alignItems: "center",
     justifyContent: "center",
     padding: theme.spacing(0, 1),
-    marginTop: theme.spacing(1)
+    marginTop: theme.spacing(1),
+    [theme.breakpoints.down("xs")]: {
+      width: "100%",
+      marginTop: 0
+    }
   },
   stepperInner: {
     width: "100%",
@@ -185,22 +196,41 @@ const useStyles = makeStyles(theme => ({
     top: "50%",
     transform: "translateY(-50%)",
     zIndex: 40,
-    left: 96,
+    left: 20,
     [theme.breakpoints.up("sm")]: { left: 120 },
     [theme.breakpoints.up("md")]: { left: 144 },
     [theme.breakpoints.up("lg")]: { left: 168 },
-    [theme.breakpoints.up("xl")]: { left: 192 }
+    [theme.breakpoints.up("xl")]: { left: 192 },
+    [theme.breakpoints.down("xs")]: {
+      position: "static",
+      transform: "none",
+      margin: theme.spacing(2)
+    }
   },
   navButtonRight: {
     position: "fixed",
     top: "50%",
     transform: "translateY(-50%)",
     zIndex: 40,
-    right: 96,
+    right: 20,
     [theme.breakpoints.up("sm")]: { right: 120 },
     [theme.breakpoints.up("md")]: { right: 144 },
     [theme.breakpoints.up("lg")]: { right: 168 },
-    [theme.breakpoints.up("xl")]: { right: 192 }
+    [theme.breakpoints.up("xl")]: { right: 192 },
+    [theme.breakpoints.down("xs")]: {
+      position: "static",
+      transform: "none",
+      margin: theme.spacing(2)
+    }
+  },
+  mobileActions: {
+    display: "none",
+    [theme.breakpoints.down("xs")]: {
+      display: "flex",
+      justifyContent: "center",
+      gap: theme.spacing(2),
+      marginTop: theme.spacing(2)
+    }
   }
 }));
 
@@ -272,19 +302,17 @@ const needsOptions = [
 ];
 
 const Schema = Yup.object().shape({
-  companyName: Yup.string().required(),
-  legalName: Yup.string().required(),
-  legalEmail: Yup.string().email().required(),
-  email: Yup.string().email().required(),
-  password: Yup.string().min(5).required(),
-  phone: Yup.string().required(),
-  planId: Yup.string().nullable(),
-  hostingDomain: Yup.string(),
-  acceptTerms: Yup.boolean().oneOf([true]).required()
+  email: Yup.string().email("E-mail inválido").required("Obrigatório"),
+  password: Yup.string().min(6, "Mínimo 6 caracteres").required("Obrigatório"),
+  phone: Yup.string()
+    .matches(/^\d{10,11}$/, "Telefone inválido (apenas números, 10 ou 11 dígitos)")
+    .required("Obrigatório"),
+  acceptTerms: Yup.boolean().oneOf([true], "Você deve aceitar os termos").required("Obrigatório"),
+  hostingDomain: Yup.string()
 });
 
 const WHITE_LABEL_CHECKOUT =
-  process.env.REACT_APP_WHITE_LABEL_CHECKOUT_URL || "https://pay.cakto.com.br/me8p4x3";
+  process.env.REACT_APP_WHITE_LABEL_CHECKOUT_URL || "https://pay.cakto.com.br/dm2p96b";
 
 const RegisterWhiteLabel = () => {
   const classes = useStyles();
@@ -317,10 +345,6 @@ const RegisterWhiteLabel = () => {
 
   const steps = [
     "Pagamento",
-    tKey("register.steps.discovery", "Encontro e necessidades"),
-    tKey("register.steps.company", "Informações da empresa"),
-    tKey("register.steps.address", "Endereço"),
-    "Contatos",
     tKey("register.steps.access", "Acesso"),
     "Domínio de hospedagem",
     "Concluído"
@@ -440,27 +464,10 @@ const RegisterWhiteLabel = () => {
   };
 
   useEffect(() => {
-    if (activeStep !== 7 || notifyDoneRef.current) return;
+    if (activeStep !== 3 || notifyDoneRef.current) return;
     notifyDoneRef.current = true;
     const values = wlFormValuesRef.current || {};
     const payload = {
-      niche: values.niche,
-      foundUs: values.foundUs,
-      needs: values.needs,
-      address: {
-        cep: values.cep,
-        logradouro: values.logradouro,
-        numero: values.numero,
-        complemento: values.complemento,
-        bairro: values.bairro,
-        cidade: values.cidade,
-        uf: values.uf
-      },
-      contacts: {
-        legal: { name: values.legalName, email: values.legalEmail, phone: values.legalPhone },
-        tech: { name: values.techName, email: values.techEmail, phone: values.techPhone }
-      },
-      publicAccountName: values.publicAccountName,
       whiteLabel: true
     };
     (async () => {
@@ -707,14 +714,17 @@ const RegisterWhiteLabel = () => {
     const [mismatch, setMismatch] = React.useState(false);
     const passRef = React.useRef(null);
     const confirmRef = React.useRef(null);
+    const phoneRef = React.useRef(null);
     const recompute = React.useCallback(() => {
       const p = passRef.current?.value || "";
       const c = confirmRef.current?.value || "";
+      const ph = phoneRef.current?.value || "";
       const okLen = p.length >= 6;
       const okMix = /[A-Za-z]/.test(p) && /[0-9]/.test(p);
       const okMatch = c.length > 0 && p === c;
+      const okPhone = /^\d{10,11}$/.test(ph.replace(/\D/g, ""));
       setMismatch(c.length > 0 && p !== c);
-      setValid(okLen && okMix && okMatch);
+      setValid(okLen && okMix && okMatch && okPhone);
     }, []);
     if (confirmToken) {
       return (
@@ -757,8 +767,18 @@ const RegisterWhiteLabel = () => {
                 helperText={mismatch ? "As senhas não coincidem" : ""}
               />
             </Box>
+            <Box className={classes.inputGroup}>
+              <TextField
+                label={tKey("register.labels.whatsapp", "Telefone (apenas números)")}
+                inputRef={phoneRef}
+                onChange={recompute}
+                onInput={recompute}
+                variant="outlined"
+                fullWidth
+              />
+            </Box>
             <Typography variant="caption" color="textSecondary">
-              A senha deve ter no mínimo 6 caracteres, contendo letras e números.
+              A senha deve ter no mínimo 6 caracteres, contendo letras e números. O telefone deve ter 10 ou 11 dígitos.
             </Typography>
             <Box mt={1} display="flex" justifyContent="center">
               <Button
@@ -767,13 +787,15 @@ const RegisterWhiteLabel = () => {
                 disabled={accessBusy || !valid}
                 onClick={async () => {
                   const p = passRef.current?.value || "";
+                  const ph = phoneRef.current?.value || "";
                   const nameValue = values.legalName || values.companyName || (accessEmail || values.email || "").split("@")[0];
                   setAccessBusy(true);
                   setAccessErr("");
                   try {
                     await openApi.post(`/auth/confirm/${confirmToken}`, {
                       name: nameValue,
-                      password: p
+                      password: p,
+                      phone: ph
                     });
                     try {
                       // encerra qualquer sessão anterior
@@ -785,7 +807,7 @@ const RegisterWhiteLabel = () => {
                     } else {
                       window.location.assign("/login");
                     }
-                    setActiveStep(6);
+                    setActiveStep(2);
                   } catch (e) {
                     setAccessErr("Falha ao criar acesso");
                   }
@@ -806,15 +828,40 @@ const RegisterWhiteLabel = () => {
     }
     return (
       <Box>
-        <Grid container spacing={1} className={classes.inputGroup}>
-          <Grid item xs={12} sm={6}>
-            <Field as={TextField} name="email" label={tKey("register.labels.loginEmail", "E-mail de acesso")} variant="outlined" fullWidth error={touched.email && Boolean(errors.email)} helperText={touched.email && errors.email} />
+        <Grid container spacing={2} className={classes.inputGroup}>
+          <Grid item xs={12}>
+            <Field
+              as={TextField}
+              name="email"
+              label={tKey("register.labels.loginEmail", "E-mail de acesso")}
+              variant="outlined"
+              fullWidth
+              error={touched.email && Boolean(errors.email)}
+              helperText={touched.email && errors.email}
+            />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Field as={TextField} name="password" label={tKey("register.labels.password", "Senha")} type="password" variant="outlined" fullWidth error={touched.password && Boolean(errors.password)} helperText={touched.password && errors.password} />
+            <Field
+              as={TextField}
+              name="password"
+              label={tKey("register.labels.password", "Senha")}
+              type="password"
+              variant="outlined"
+              fullWidth
+              error={touched.password && Boolean(errors.password)}
+              helperText={touched.password && errors.password}
+            />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Field as={TextField} name="phone" label={tKey("register.labels.whatsapp", "Telefone (WhatsApp)")} variant="outlined" fullWidth />
+            <Field
+              as={TextField}
+              name="phone"
+              label={tKey("register.labels.whatsapp", "Telefone (apenas números)")}
+              variant="outlined"
+              fullWidth
+              error={touched.phone && Boolean(errors.phone)}
+              helperText={touched.phone && errors.phone}
+            />
           </Grid>
           <Grid item xs={12}>
             <FormControlLabel
@@ -824,7 +871,7 @@ const RegisterWhiteLabel = () => {
               label={tKey("register.labels.terms", "Li e aceito os Termos e a Política de Privacidade")}
             />
             {touched.acceptTerms && errors.acceptTerms && (
-              <Typography color="error" variant="caption">{errors.acceptTerms}</Typography>
+              <Typography color="error" variant="caption" style={{ display: "block" }}>{errors.acceptTerms}</Typography>
             )}
           </Grid>
         </Grid>
@@ -957,20 +1004,10 @@ const RegisterWhiteLabel = () => {
       case 0:
         return !!confirmToken;
       case 1:
-        return (values.niche && values.niche !== "") || (values.foundUs && values.foundUs.length > 0) || (values.needs && values.needs.length > 0);
-      case 2:
-        return values.companyName && values.legalName && values.legalEmail;
-      case 3:
-        return values.cep && values.logradouro && values.cidade && values.uf;
-      case 4:
-        return values.legalName && values.legalEmail && values.legalPhone;
-      case 5:
         if (confirmToken) return false;
-        return values.email && values.password && values.acceptTerms;
-      case 6:
+        return values.email && values.password && values.phone && values.acceptTerms;
+      case 2:
         return !!(values.hostingDomain && String(values.hostingDomain).trim());
-      case 7:
-        return false;
       default:
         return false;
     }
@@ -986,9 +1023,6 @@ const RegisterWhiteLabel = () => {
               alt="VB Solution"
               src={theme.mode === "light" ? theme.calculatedLogoLight() : theme.calculatedLogoDark()}
             />
-            <Typography variant="h6" style={{ fontWeight: 700, alignSelf: "center" }}>
-              White Label
-            </Typography>
           </div>
           <div className={classes.stepperWrap}>
             <div className={classes.stepperInner}>
@@ -1029,36 +1063,17 @@ const RegisterWhiteLabel = () => {
               return (
               <Form>
                 {activeStep === 0 && <SectionPayment values={values} setFieldValue={setFieldValue} />}
-                {activeStep === 1 && <Section1 values={values} setFieldValue={setFieldValue} />}
-                {activeStep === 2 && <Section2 setFieldValue={setFieldValue} />}
-                {activeStep === 3 && <SectionAddress setFieldValue={setFieldValue} />}
-                {activeStep === 4 && <Section3 touched={touched} errors={errors} values={values} setFieldValue={setFieldValue} />}
-                {activeStep === 5 && <Section5 touched={touched} errors={errors} values={values} />}
-                {activeStep === 6 && <SectionDomain />}
-                {activeStep === 7 && <SectionCongrats />}
+                {activeStep === 1 && <Section5 touched={touched} errors={errors} values={values} />}
+                {activeStep === 2 && <SectionDomain />}
+                {activeStep === 3 && <SectionCongrats />}
 
-                <IconButton
-                  className={classes.navButtonLeft}
-                  onClick={prev}
-                  disabled={activeStep === 0}
-                  style={{
-                    background: activeStep === 0 ? "#cbd5e1" : theme.palette.primary.main,
-                    color: "#fff",
-                    width: 46,
-                    height: 46,
-                    borderRadius: "50%",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-                  }}
-                >
-                  <ArrowBackIosIcon />
-                </IconButton>
-                {activeStep < steps.length - 1 && !(activeStep === 5 && confirmToken) ? (
+                <Box className={classes.mobileActions}>
                   <IconButton
-                    className={classes.navButtonRight}
-                    onClick={() => canGoNext(activeStep, values) && next()}
-                    disabled={!canGoNext(activeStep, values)}
+                    className={classes.navButtonLeft}
+                    onClick={prev}
+                    disabled={activeStep === 0}
                     style={{
-                      background: canGoNext(activeStep, values) ? theme.palette.primary.main : "#cbd5e1",
+                      background: activeStep === 0 ? "#cbd5e1" : theme.palette.primary.main,
                       color: "#fff",
                       width: 46,
                       height: 46,
@@ -1066,9 +1081,62 @@ const RegisterWhiteLabel = () => {
                       boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
                     }}
                   >
-                    <ArrowForwardIosIcon />
+                    <ArrowBackIosIcon />
                   </IconButton>
-                ) : null}
+                  {activeStep < steps.length - 1 && !(activeStep === 1 && confirmToken) ? (
+                    <IconButton
+                      className={classes.navButtonRight}
+                      onClick={() => canGoNext(activeStep, values) && next()}
+                      disabled={!canGoNext(activeStep, values)}
+                      style={{
+                        background: canGoNext(activeStep, values) ? theme.palette.primary.main : "#cbd5e1",
+                        color: "#fff",
+                        width: 46,
+                        height: 46,
+                        borderRadius: "50%",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+                      }}
+                    >
+                      <ArrowForwardIosIcon />
+                    </IconButton>
+                  ) : null}
+                </Box>
+
+                {/* Desktop Buttons (Fixed) */}
+                <Box display={{ xs: "none", sm: "block" }}>
+                  <IconButton
+                    className={classes.navButtonLeft}
+                    onClick={prev}
+                    disabled={activeStep === 0}
+                    style={{
+                      background: activeStep === 0 ? "#cbd5e1" : theme.palette.primary.main,
+                      color: "#fff",
+                      width: 46,
+                      height: 46,
+                      borderRadius: "50%",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+                    }}
+                  >
+                    <ArrowBackIosIcon />
+                  </IconButton>
+                  {activeStep < steps.length - 1 && !(activeStep === 1 && confirmToken) ? (
+                    <IconButton
+                      className={classes.navButtonRight}
+                      onClick={() => canGoNext(activeStep, values) && next()}
+                      disabled={!canGoNext(activeStep, values)}
+                      style={{
+                        background: canGoNext(activeStep, values) ? theme.palette.primary.main : "#cbd5e1",
+                        color: "#fff",
+                        width: 46,
+                        height: 46,
+                        borderRadius: "50%",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+                      }}
+                    >
+                      <ArrowForwardIosIcon />
+                    </IconButton>
+                  ) : null}
+                </Box>
               </Form>
             );}}
           </Formik>
